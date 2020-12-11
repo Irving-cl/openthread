@@ -432,6 +432,11 @@ void SubMac::BeginTransmit(void)
         mPcapCallback(&mTransmitFrame, true, mPcapCallbackContext);
     }
 
+    if (mTransmitFrame.mInfo.mTxInfo.mTxDelay > 0)
+    {
+        error = Get<Radio>().Sleep();
+        otLogWarnMac("sleep before transmit_at");
+    }
     error = Get<Radio>().Transmit(mTransmitFrame);
     if (error == OT_ERROR_INVALID_STATE && mTransmitFrame.mInfo.mTxInfo.mTxDelay > 0)
     {
@@ -468,7 +473,7 @@ void SubMac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, otError aEr
     mTimer.Stop();
 
     // Record CCA success or failure status.
-
+    otLogWarnMac("HandleTransmitDone, error:%s", otThreadErrorToString(aError));
     switch (aError)
     {
     case OT_ERROR_ABORT:
