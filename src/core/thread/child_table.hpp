@@ -34,9 +34,9 @@
 #ifndef CHILD_TABLE_HPP_
 #define CHILD_TABLE_HPP_
 
-#include "openthread-core-config.h"
-
 #if OPENTHREAD_FTD
+
+#include "openthread-core-config.h"
 
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
@@ -70,7 +70,7 @@ public:
          * @param[in] aFilter    A child state filter.
          *
          */
-        Iterator(Instance &aInstance, Child::StateFilter aFilter);
+        Iterator(Instance &aInstance, Neighbor::StateFilter aFilter);
 
         /**
          * This method resets the iterator to start over.
@@ -163,15 +163,15 @@ public:
     private:
         explicit Iterator(Instance &aInstance)
             : InstanceLocator(aInstance)
-            , mFilter(Child::StateFilter::kInStateValid)
+            , mFilter(Neighbor::StateFilter::kInStateValid)
             , mChild(nullptr)
         {
         }
 
         void Advance(void);
 
-        Child::StateFilter mFilter;
-        Child *            mChild;
+        Neighbor::StateFilter mFilter;
+        Child *               mChild;
     };
 
     /**
@@ -220,15 +220,11 @@ public:
     Child *GetNewChild(void);
 
     /**
-     * This method searches the child table for a `Child` with a given RLOC16 also matching a given state filter.
-     *
-     * @param[in]  aRloc16  A RLOC16 address.
-     * @param[in]  aFilter  A child state filter.
-     *
-     * @returns  A pointer to the `Child` entry if one is found, or `nullptr` otherwise.
+     * TODO: doc
      *
      */
-    Child *FindChild(uint16_t aRloc16, Child::StateFilter aFilter);
+    Child *FindChild(Mac::ShortAddress     aShortAddress,
+                     Neighbor::StateFilter aFilter = Neighbor::kInStateValidOrRestoring);
 
     /**
      * This method searches the child table for a `Child` with a given extended address also matching a given state
@@ -240,7 +236,7 @@ public:
      * @returns  A pointer to the `Child` entry if one is found, or `nullptr` otherwise.
      *
      */
-    Child *FindChild(const Mac::ExtAddress &aExtAddress, Child::StateFilter aFilter);
+    Child *FindChild(const Mac::ExtAddress &aExtAddress, Neighbor::StateFilter aFilter);
 
     /**
      * This method searches the child table for a `Child` with a given address also matching a given state filter.
@@ -251,7 +247,7 @@ public:
      * @returns  A pointer to the `Child` entry if one is found, or `nullptr` otherwise.
      *
      */
-    Child *FindChild(const Mac::Address &aMacAddress, Child::StateFilter aFilter);
+    Child *FindChild(const Mac::Address &aMacAddress, Neighbor::StateFilter aFilter);
 
     /**
      * This method indicates whether the child table contains any child matching a given state filter.
@@ -261,7 +257,7 @@ public:
      * @returns  TRUE if the table contains at least one child table matching the given filter, FALSE otherwise.
      *
      */
-    bool HasChildren(Child::StateFilter aFilter) const;
+    bool HasChildren(Neighbor::StateFilter aFilter) const;
 
     /**
      * This method returns the number of children in the child table matching a given state filter.
@@ -271,7 +267,7 @@ public:
      * @returns Number of children matching the given state filer.
      *
      */
-    uint16_t GetNumChildren(Child::StateFilter aFilter) const;
+    uint16_t GetNumChildren(Neighbor::StateFilter aFilter) const;
 
     /**
      * This method returns the maximum number of children that can be supported (build-time constant).
@@ -320,7 +316,7 @@ public:
      * @returns An IteratorBuilder instance.
      *
      */
-    IteratorBuilder Iterate(Child::StateFilter aFilter) { return IteratorBuilder(GetInstance(), aFilter); }
+    IteratorBuilder Iterate(Neighbor::StateFilter aFilter) { return IteratorBuilder(GetInstance(), aFilter); }
 
     /**
      * This method retains diagnostic information for an attached child by Child ID or RLOC16.
@@ -349,7 +345,7 @@ public:
     /**
      * This method removes a stored child information from non-volatile memory.
      *
-     * @param[in]  aChildRloc16     A reference to the child to remove from non-volatile memory.
+     * @param[in]  aChild    A reference to the child to remove from non-volatile memory.
      *
      */
     void RemoveStoredChild(const Child &aChild);
@@ -377,6 +373,27 @@ public:
      */
     bool HasSleepyChildWithAddress(const Ip6::Address &aIp6Address) const;
 
+    /**
+     * TODO: doc
+     *
+     */
+    SedCapableNeighbor *MapChildToSedCapableNeighbor(const Child &aChild);
+
+#if OPENTHREAD_FTD
+    /**
+     * TODO: doc
+     *
+     */
+    Child *MapSedCapableNeighborToChild(const SedCapableNeighbor &aSedCapableNeighbor);
+#endif
+
+    /**
+     * TODO: doc
+     *
+     */
+    Child *FindChild(const Ip6::Address &  aIp6Address,
+                     Neighbor::StateFilter aFilter = Neighbor::kInStateValidOrRestoring);
+
 private:
     enum
     {
@@ -386,7 +403,7 @@ private:
     class IteratorBuilder : public InstanceLocator
     {
     public:
-        IteratorBuilder(Instance &aInstance, Child::StateFilter aFilter)
+        IteratorBuilder(Instance &aInstance, Neighbor::StateFilter aFilter)
             : InstanceLocator(aInstance)
             , mFilter(aFilter)
         {
@@ -396,15 +413,15 @@ private:
         Iterator end(void) { return Iterator(GetInstance()); }
 
     private:
-        Child::StateFilter mFilter;
+        Neighbor::StateFilter mFilter;
     };
 
-    Child *FindChild(const Child::AddressMatcher &aMatcher)
+    Child *FindChild(const Neighbor::AddressMatcher &aMatcher)
     {
         return const_cast<Child *>(const_cast<const ChildTable *>(this)->FindChild(aMatcher));
     }
 
-    const Child *FindChild(const Child::AddressMatcher &aMatcher) const;
+    const Child *FindChild(const Neighbor::AddressMatcher &aMatcher) const;
     void         RefreshStoredChildren(void);
 
     uint16_t mMaxChildrenAllowed;

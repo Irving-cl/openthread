@@ -815,16 +815,38 @@ private:
 };
 
 /**
+ * TODO: doc
+ *
+ */
+class SedCapableNeighbor : public Neighbor,
+                           public IndirectSender::IndirectTxInfo,
+                           public DataPollHandler::IndirectTxInfo
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+    ,
+                           public CslTxScheduler::IndirectTxInfo
+#endif
+{
+public:
+    /**
+     * This method initializes the `Child` object.
+     *
+     * @param[in] aInstance  A reference to OpenThread instance.
+     *
+     */
+    void Init(Instance &aInstance) { Neighbor::Init(aInstance); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void Clear(void);
+};
+
+/**
  * This class represents a Thread Child.
  *
  */
-class Child : public Neighbor,
-              public IndirectSender::ChildInfo,
-              public DataPollHandler::ChildInfo
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
-    ,
-              public CslTxScheduler::ChildInfo
-#endif
+class Child : public InstanceLocatorInit
 {
     class AddressIteratorBuilder;
 
@@ -848,6 +870,12 @@ public:
          *
          */
         void SetFrom(const Child &aChild);
+
+        /**
+         * TODO: doc
+         *
+         */
+        void SetFrom(const SedCapableNeighbor &aSedCapableNeighbor);
     };
 
     /**
@@ -1013,7 +1041,7 @@ public:
      * @param[in] aInstance  A reference to OpenThread instance.
      *
      */
-    void Init(Instance &aInstance) { Neighbor::Init(aInstance); }
+    void Init(Instance &aInstance) { InstanceLocatorInit::Init(aInstance); }
 
     /**
      * This method clears the child entry.
@@ -1270,6 +1298,283 @@ public:
      */
     bool HasAnyMlrToRegisterAddress(void) const { return mMlrToRegisterMask.HasAny(); }
 #endif // OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE
+
+    /**
+     * TODO: doc
+     *
+     */
+    SedCapableNeighbor &GetNeighborComp(void) const;
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint16_t GetRloc16(void) const { return GetNeighborComp().GetRloc16(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetRloc16(uint16_t aRloc16) { GetNeighborComp().SetRloc16(aRloc16); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    const Mac::ExtAddress &GetExtAddress(void) const { return GetNeighborComp().GetExtAddress(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetExtAddress(const Mac::ExtAddress &aAddress) { GetNeighborComp().SetExtAddress(aAddress); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    LinkQualityInfo &GetLinkInfo(void) { return GetNeighborComp().GetLinkInfo(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    const LinkQualityInfo &GetLinkInfo(void) const { return GetNeighborComp().GetLinkInfo(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint8_t GetLinkFailures(void) const { return GetNeighborComp().GetLinkFailures(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    TimeMilli GetLastHeard(void) const { return GetNeighborComp().GetLastHeard(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetLastHeard(TimeMilli aLastHeard) { GetNeighborComp().SetLastHeard(aLastHeard); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsStateValid(void) const { return GetNeighborComp().IsStateValid(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsStateValidOrRestoring(void) const { return GetNeighborComp().IsStateValidOrRestoring(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsStateRestored(void) const { return GetNeighborComp().IsStateRestored(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsStateRestoring(void) const { return GetNeighborComp().IsStateRestoring(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsStateInvalid(void) const { return GetNeighborComp().IsStateInvalid(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsStateValidOrAttaching(void) const { return GetNeighborComp().IsStateValidOrAttaching(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    Neighbor::State GetState(void) const { return GetNeighborComp().GetState(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetState(Neighbor::State aState) { GetNeighborComp().SetState(aState); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool MatchesFilter(Neighbor::StateFilter aFilter) const { return GetNeighborComp().MatchesFilter(aFilter); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool Matches(const Neighbor::AddressMatcher &aMatcher) const { return aMatcher.Matches(GetNeighborComp()); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint8_t GetVersion(void) const { return GetNeighborComp().GetVersion(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetVersion(uint8_t aVersion) { GetNeighborComp().SetVersion(aVersion); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsRxOnWhenIdle(void) const { return GetNeighborComp().IsRxOnWhenIdle(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    Mle::DeviceMode GetDeviceMode(void) const { return GetNeighborComp().GetDeviceMode(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetDeviceMode(Mle::DeviceMode aMode) { GetNeighborComp().SetDeviceMode(aMode); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetUseShortAddress(bool aShort) { GetNeighborComp().SetIndirectSourceMatchShort(aShort); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void ResetLinkFailures(void) { GetNeighborComp().ResetLinkFailures(); }
+
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsCslSynchronized(void) const { return GetNeighborComp().IsCslSynchronized(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetCslSynchronized(bool aCslSynchronized) { GetNeighborComp().SetCslSynchronized(aCslSynchronized); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint8_t GetCslChannel(void) const { return GetNeighborComp().GetCslChannel(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetCslChannel(uint8_t aChannel) { GetNeighborComp().SetCslChannel(aChannel); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint32_t GetCslTimeout(void) const { return GetNeighborComp().GetCslTimeout(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetCslTimeout(uint32_t aTimeout) { GetNeighborComp().SetCslTimeout(aTimeout); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint16_t GetCslPhase(void) const { return GetNeighborComp().GetCslPhase(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetCslPhase(uint16_t aPhase) { GetNeighborComp().SetCslPhase(aPhase); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    TimeMilli GetCslLastHeard(void) const { return GetNeighborComp().GetCslLastHeard(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetCslLastHeard(TimeMilli aCslLastHeard) { GetNeighborComp().SetCslLastHeard(aCslLastHeard); }
+#endif // OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+
+    /**
+     * TODO: doc
+     *
+     */
+    Mac::LinkFrameCounters &GetLinkFrameCounters(void) { return GetNeighborComp().GetLinkFrameCounters(); }
+
+#if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
+    /**
+     * TODO: doc
+     *
+     */
+    uint32_t GetLinkAckFrameCounter(void) const { return GetNeighborComp().GetLinkAckFrameCounter(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetLinkAckFrameCounter(uint32_t aAckFrameCounter)
+    {
+        GetNeighborComp().SetLinkAckFrameCounter(aAckFrameCounter);
+    }
+#endif
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetMleFrameCounter(uint32_t aFrameCounter) { GetNeighborComp().SetMleFrameCounter(aFrameCounter); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    void SetKeySequence(uint32_t aKeySequence) { GetNeighborComp().SetKeySequence(aKeySequence); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsFullThreadDevice(void) const { return GetNeighborComp().IsFullThreadDevice(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    bool IsFullNetworkData(void) const { return GetNeighborComp().IsFullNetworkData(); }
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint16_t GetIndirectMessageCount(void) const { return GetNeighborComp().GetIndirectMessageCount(); }
 
 private:
 #if OPENTHREAD_CONFIG_MLE_IP_ADDRS_PER_CHILD < 2

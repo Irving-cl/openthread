@@ -48,7 +48,7 @@ otError MeshForwarder::SendMessage(Message &aMessage)
 {
     Mle::MleRouter &mle   = Get<Mle::MleRouter>();
     otError         error = OT_ERROR_NONE;
-    Neighbor *      neighbor;
+    Child *         child;
 
     aMessage.SetOffset(0);
     aMessage.SetDatagramTag(0);
@@ -80,33 +80,33 @@ otError MeshForwarder::SendMessage(Message &aMessage)
                     ip6Header.GetDestination() == mle.GetRealmLocalAllThreadNodesAddress())
                 {
                     // destined for all sleepy children
-                    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValidOrRestoring))
+                    for (SedCapableNeighbor &item :
+                         Get<SedCapableNeighborTable>().Iterate(Neighbor::kInStateValidOrRestoring))
                     {
-                        if (!child.IsRxOnWhenIdle())
+                        if (!item.IsRxOnWhenIdle())
                         {
-                            mIndirectSender.AddMessageForSleepyChild(aMessage, child);
+                            mIndirectSender.AddMessageForSedCapableNeighbor(aMessage, item);
                         }
                     }
                 }
                 else
                 {
                     // destined for some sleepy children which subscribed the multicast address.
-                    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValidOrRestoring))
+                    for (Child &item : Get<ChildTable>().Iterate(Neighbor::kInStateValidOrRestoring))
                     {
-                        if (!child.IsRxOnWhenIdle() && child.HasIp6Address(ip6Header.GetDestination()))
+                        if (!item.IsRxOnWhenIdle() && item.HasIp6Address(ip6Header.GetDestination()))
                         {
-                            mIndirectSender.AddMessageForSleepyChild(aMessage, child);
+                            mIndirectSender.AddMessageForSedCapableNeighbor(aMessage, item.GetNeighborComp());
                         }
                     }
                 }
             }
         }
-        else if ((neighbor = Get<NeighborTable>().FindNeighbor(ip6Header.GetDestination())) != nullptr &&
-                 !neighbor->IsRxOnWhenIdle() && !aMessage.GetDirectTransmission())
+        else if ((child = Get<ChildTable>().FindChild(ip6Header.GetDestination())) != nullptr &&
+                 !child->IsRxOnWhenIdle() && !aMessage.GetDirectTransmission())
         {
             // destined for a sleepy child
-            Child &child = *static_cast<Child *>(neighbor);
-            mIndirectSender.AddMessageForSleepyChild(aMessage, child);
+            mIndirectSender.AddMessageForSedCapableNeighbor(aMessage, child->GetNeighborComp());
         }
         else
         {
@@ -119,9 +119,9 @@ otError MeshForwarder::SendMessage(Message &aMessage)
 
     case Message::kTypeSupervision:
     {
-        Child *child = Get<Utils::ChildSupervisor>().GetDestination(aMessage);
+        child = Get<Utils::ChildSupervisor>().GetDestination(aMessage);
         OT_ASSERT((child != nullptr) && !child->IsRxOnWhenIdle());
-        mIndirectSender.AddMessageForSleepyChild(aMessage, *child);
+        mIndirectSender.AddMessageForSedCapableNeighbor(aMessage, child->GetNeighborComp());
         break;
     }
 
@@ -226,7 +226,7 @@ otError MeshForwarder::EvictMessage(Message::Priority aPriority)
                 continue;
             }
 
-            if (message->IsChildPending())
+            if (message->IsSedNeighborPending())
             {
                 evict = message;
                 ExitNow(error = OT_ERROR_NONE);
@@ -257,7 +257,7 @@ void MeshForwarder::RemoveMessages(Child &aChild, Message::SubType aSubType)
             continue;
         }
 
-        if (mIndirectSender.RemoveMessageFromSleepyChild(*message, aChild) != OT_ERROR_NONE)
+        if (mIndirectSender.RemoveMessageFromSedCapableNeighbor(*message, aChild.GetNeighborComp()) != OT_ERROR_NONE)
         {
             switch (message->GetType())
             {
@@ -267,7 +267,7 @@ void MeshForwarder::RemoveMessages(Child &aChild, Message::SubType aSubType)
 
                 IgnoreError(message->Read(0, ip6header));
 
-                if (&aChild == static_cast<Child *>(Get<NeighborTable>().FindNeighbor(ip6header.GetDestination())))
+                if (&aChild == Get<ChildTable>().FindChild(ip6header.GetDestination()))
                 {
                     message->ClearDirectTransmission();
                 }
@@ -281,7 +281,7 @@ void MeshForwarder::RemoveMessages(Child &aChild, Message::SubType aSubType)
 
                 IgnoreError(meshHeader.ParseFrom(*message));
 
-                if (&aChild == static_cast<Child *>(Get<NeighborTable>().FindNeighbor(meshHeader.GetDestination())))
+                if (&aChild == Get<ChildTable>().FindChild(meshHeader.GetDestination()))
                 {
                     message->ClearDirectTransmission();
                 }
@@ -294,7 +294,7 @@ void MeshForwarder::RemoveMessages(Child &aChild, Message::SubType aSubType)
             }
         }
 
-        if (!message->IsChildPending() && !message->GetDirectTransmission())
+        if (!message->IsSedNeighborPending() && !message->GetDirectTransmission())
         {
             if (mSendMessage == message)
             {
@@ -322,9 +322,9 @@ void MeshForwarder::RemoveDataResponseMessages(void)
 
         if (!(ip6Header.GetDestination().IsMulticast()))
         {
-            for (Child &child : Get<ChildTable>().Iterate(Child::kInStateAnyExceptInvalid))
+            for (SedCapableNeighbor &sed : Get<SedCapableNeighborTable>().Iterate(Neighbor::kInStateAnyExceptInvalid))
             {
-                IgnoreError(mIndirectSender.RemoveMessageFromSleepyChild(*message, child));
+                IgnoreError(mIndirectSender.RemoveMessageFromSedCapableNeighbor(*message, sed));
             }
         }
 
@@ -535,7 +535,7 @@ void MeshForwarder::SendIcmpErrorIfDstUnreach(const Message &     aMessage,
 
     VerifyOrExit(aMacSource.IsShort() && aMacDest.IsShort());
 
-    child = Get<ChildTable>().FindChild(aMacSource.GetShort(), Child::kInStateAnyExceptInvalid);
+    child = Get<ChildTable>().FindChild(aMacSource.GetShort(), Neighbor::kInStateAnyExceptInvalid);
     VerifyOrExit((child == nullptr) || child->IsFullThreadDevice());
 
     IgnoreError(aMessage.Read(0, ip6header));

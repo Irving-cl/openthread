@@ -42,7 +42,7 @@
 
 namespace ot {
 
-class Child;
+class SedCapableNeighbor;
 
 /**
  * @addtogroup core-source-match-controller
@@ -88,36 +88,36 @@ public:
     /**
      * This method increments the message count for a child and updates the source match table.
      *
-     * @param[in] aChild    A reference to the child.
+     * @param[in] aSedCapableNeighbor    A reference to the child.
      *
      */
-    void IncrementMessageCount(Child &aChild);
+    void IncrementMessageCount(SedCapableNeighbor &aSedCapableNeighbor);
 
     /**
      * This method decrements the message count for a child and updates the source match table.
      *
-     * @param[in] aChild    A reference to the child.
+     * @param[in] aSedCapableNeighbor    A reference to the child.
      *
      */
-    void DecrementMessageCount(Child &aChild);
+    void DecrementMessageCount(SedCapableNeighbor &aSedCapableNeighbor);
 
     /**
      * This method resets the message count for a child to zero and updates the source match table.
      *
-     * @param[in] aChild    A reference to the child.
+     * @param[in] aSedCapableNeighbor    A reference to the child.
      *
      */
-    void ResetMessageCount(Child &aChild);
+    void ResetMessageCount(SedCapableNeighbor &aSedCapableNeighbor);
 
     /**
      * This method sets whether or not to perform source address matching on the extended or short address for
      * a child.
      *
-     * @param[in] aChild            A reference to the child.
+     * @param[in] aSedCapableNeighbor            A reference to the child.
      * @param[in] aUseShortAddress  `true` to match on short source address, `false` otherwise.
      *
      */
-    void SetSrcMatchAsShort(Child &aChild, bool aUseShortAddress);
+    void SetSrcMatchAsShort(SedCapableNeighbor &aSedCapableNeighbor, bool aUseShortAddress);
 
 private:
     /**
@@ -146,10 +146,10 @@ private:
      * that there are no remaining pending entries. If the entry cannot be added (no space in source match table),
      * the child is marked to remember the pending entry and source matching is disabled.
      *
-     * @param[in] aChild    A reference to the child.
+     * @param[in] aSedCapableNeighbor    A reference to the child.
      *
      */
-    void AddEntry(Child &aChild);
+    void AddEntry(SedCapableNeighbor &aSedCapableNeighbor);
 
     /**
      * This method clears an entry in source match table for a given child and updates the state of source matching
@@ -158,22 +158,22 @@ private:
      * If the entry is removed successfully and frees up space in the source match table, any remaining pending
      * entries are added. If all pending entries are successfully added, source matching is enabled.
      *
-     * @param[in] aChild    A reference to the child.
+     * @param[in] aSedCapableNeighbor    A reference to the child.
      *
      */
-    void ClearEntry(Child &aChild);
+    void ClearEntry(SedCapableNeighbor &aSedCapableNeighbor);
 
     /**
      * This method adds a given child's address (short or extended address depending on child's setting) to the source
      * source match table (@sa SetSrcMatchAsShort.
      *
-     * @param[in] aChild            A reference to the child
+     * @param[in] aSedCapableNeighbor            A reference to the child
      *
-     * @retval OT_ERROR_NONE     Child's address was added successfully to the source match table.
+     * @retval OT_ERROR_NONE     SedCapableNeighbor's address was added successfully to the source match table.
      * @retval OT_ERROR_NO_BUFS  No available space in the source match table.
      *
      */
-    otError AddAddress(const Child &aChild);
+    otError AddAddress(const SedCapableNeighbor &aSedCapableNeighbor);
 
     /**
      * This method adds all pending entries to the source match table.

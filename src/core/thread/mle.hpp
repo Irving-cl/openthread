@@ -1241,7 +1241,7 @@ protected:
     otError AppendXtalAccuracy(Message &aMessage);
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
 
-#if (!OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE) || OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE || OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
     /**
      * This method appends a CSL Channel TLV to a message.
      *
@@ -1263,7 +1263,7 @@ protected:
      *
      */
     otError AppendCslTimeout(Message &aMessage);
-#endif // (!OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE) || OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
+#endif // OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE || OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 
     /**
      * This method appends a Active Timestamp TLV to a message.
@@ -1547,21 +1547,22 @@ protected:
 
     Ip6::NetifUnicastAddress mLeaderAloc; ///< Leader anycast locator
 
-    LeaderData    mLeaderData;               ///< Last received Leader Data TLV.
-    bool          mRetrieveNewNetworkData;   ///< Indicating new Network Data is needed if set.
-    DeviceRole    mRole;                     ///< Current Thread role.
-    Router        mParent;                   ///< Parent information.
-    Router        mParentCandidate;          ///< Parent candidate information.
-    NeighborTable mNeighborTable;            ///< The neighbor table.
-    DeviceMode    mDeviceMode;               ///< Device mode setting.
-    AttachState   mAttachState;              ///< The parent request state.
-    ReattachState mReattachState;            ///< Reattach state
-    uint16_t      mAttachCounter;            ///< Attach attempt counter.
-    uint16_t      mAnnounceDelay;            ///< Delay in between sending Announce messages during attach.
-    TimerMilli    mAttachTimer;              ///< The timer for driving the attach process.
-    TimerMilli    mDelayedResponseTimer;     ///< The timer to delay MLE responses.
-    TimerMilli    mMessageTransmissionTimer; ///< The timer for (re-)sending of MLE messages (e.g. Child Update).
-    uint8_t       mParentLeaderCost;
+    LeaderData              mLeaderData;             ///< Last received Leader Data TLV.
+    bool                    mRetrieveNewNetworkData; ///< Indicating new Network Data is needed if set.
+    DeviceRole              mRole;                   ///< Current Thread role.
+    Router                  mParent;                 ///< Parent information.
+    Router                  mParentCandidate;        ///< Parent candidate information.
+    NeighborTable           mNeighborTable;          ///< The neighbor table.
+    SedCapableNeighborTable mSedCapableNeighborTable;
+    DeviceMode              mDeviceMode;           ///< Device mode setting.
+    AttachState             mAttachState;          ///< The parent request state.
+    ReattachState           mReattachState;        ///< Reattach state
+    uint16_t                mAttachCounter;        ///< Attach attempt counter.
+    uint16_t                mAnnounceDelay;        ///< Delay in between sending Announce messages during attach.
+    TimerMilli              mAttachTimer;          ///< The timer for driving the attach process.
+    TimerMilli              mDelayedResponseTimer; ///< The timer to delay MLE responses.
+    TimerMilli mMessageTransmissionTimer;          ///< The timer for (re-)sending of MLE messages (e.g. Child Update).
+    uint8_t    mParentLeaderCost;
 
 private:
     enum

@@ -125,16 +125,16 @@ otError KeyManager::SetMasterKey(const MasterKey &aKey)
         router.SetLinkAckFrameCounter(0);
         router.SetMleFrameCounter(0);
     }
+#endif
 
     // reset child frame counters
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateAnyExceptInvalid))
+    for (SedCapableNeighbor &neighbor : Get<SedCapableNeighborTable>().Iterate(Neighbor::kInStateAnyExceptInvalid))
     {
-        child.SetKeySequence(0);
-        child.GetLinkFrameCounters().Reset();
-        child.SetLinkAckFrameCounter(0);
-        child.SetMleFrameCounter(0);
+        neighbor.SetKeySequence(0);
+        neighbor.GetLinkFrameCounters().Reset();
+        neighbor.SetLinkAckFrameCounter(0);
+        neighbor.SetMleFrameCounter(0);
     }
-#endif
 
 exit:
     return error;

@@ -107,7 +107,7 @@ void ChildSupervisor::UpdateOnSend(Child &aChild)
 
 void ChildSupervisor::HandleTimeTick(void)
 {
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         child.IncrementSecondsSinceLastSupervision();
 
@@ -127,7 +127,7 @@ void ChildSupervisor::CheckState(void)
     // "valid" child in the child table.
 
     shouldRun = ((mSupervisionInterval != 0) && !Get<Mle::MleRouter>().IsDisabled() &&
-                 Get<ChildTable>().HasChildren(Child::kInStateValid));
+                 Get<ChildTable>().HasChildren(Neighbor::kInStateValid));
 
     if (shouldRun && !Get<TimeTicker>().IsReceiverRegistered(TimeTicker::kChildSupervisor))
     {

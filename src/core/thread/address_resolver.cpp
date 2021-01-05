@@ -726,7 +726,7 @@ void AddressResolver::HandleAddressError(Coap::Message &aMessage, const Ip6::Mes
 
     meshLocalIid.ConvertToExtAddress(extAddr);
 
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         if (child.IsFullThreadDevice())
         {
@@ -781,7 +781,7 @@ void AddressResolver::HandleAddressQuery(Coap::Message &aMessage, const Ip6::Mes
         ExitNow();
     }
 
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         if (child.IsFullThreadDevice() || child.GetLinkFailures() >= Mle::kFailedChildTransmissions)
         {

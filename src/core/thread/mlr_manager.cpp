@@ -135,7 +135,7 @@ bool MlrManager::IsAddressMlrRegisteredByAnyChildExcept(const Ip6::Address &aAdd
 
     OT_ASSERT(aAddress.IsMulticastLargerThanRealmLocal());
 
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         if (&child != aExceptChild && child.HasMlrRegisteredAddress(aAddress))
         {
@@ -255,7 +255,7 @@ void MlrManager::SendMulticastListenerRegistration(void)
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE
     // Append Child multicast addresses
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         if (addressesNum >= kIPv6AddressesNumMax)
         {
@@ -540,7 +540,7 @@ void MlrManager::SetMulticastAddressMlrState(MlrState aFromState, MlrState aToSt
     }
 #endif
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         for (const Ip6::Address &address : child.IterateIp6Addresses(Ip6::Address::kTypeMulticastLargerThanRealmLocal))
         {
@@ -574,7 +574,7 @@ void MlrManager::FinishMulticastListenerRegistration(bool                aSucces
     }
 #endif
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         for (const Ip6::Address &address : child.IterateIp6Addresses(Ip6::Address::kTypeMulticastLargerThanRealmLocal))
         {
@@ -679,7 +679,7 @@ void MlrManager::LogMulticastAddresses(void)
 #endif
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         for (const Ip6::Address &address : child.IterateIp6Addresses(Ip6::Address::kTypeMulticastLargerThanRealmLocal))
         {
@@ -780,7 +780,7 @@ void MlrManager::CheckInvariants(void) const
     }
 #endif
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
+    for (Child &child : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
     {
         for (const Ip6::Address &address : child.IterateIp6Addresses(Ip6::Address::kTypeMulticastLargerThanRealmLocal))
         {

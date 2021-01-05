@@ -460,7 +460,7 @@ void DuaManager::PerformNextRegistration(void)
 
         if (!mRegisterCurrentChildIndex)
         {
-            for (Child &iter : Get<ChildTable>().Iterate(Child::kInStateValid))
+            for (Child &iter : Get<ChildTable>().Iterate(Neighbor::kInStateValid))
             {
                 uint16_t childIndex = Get<ChildTable>().GetChildIndex(iter);
 

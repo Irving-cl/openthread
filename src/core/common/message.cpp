@@ -593,24 +593,24 @@ exit:
     return messageCopy;
 }
 
-bool Message::GetChildMask(uint16_t aChildIndex) const
+bool Message::GetSedNeighborMask(uint16_t aSedNeighborIndex) const
 {
-    return GetMetadata().mChildMask.Get(aChildIndex);
+    return GetMetadata().mSedNeighborMask.Get(aSedNeighborIndex);
 }
 
-void Message::ClearChildMask(uint16_t aChildIndex)
+void Message::ClearSedNeighborMask(uint16_t aSedNeighborIndex)
 {
-    GetMetadata().mChildMask.Set(aChildIndex, false);
+    GetMetadata().mSedNeighborMask.Set(aSedNeighborIndex, false);
 }
 
-void Message::SetChildMask(uint16_t aChildIndex)
+void Message::SetSedNeighborMask(uint16_t aSedNeighborIndex)
 {
-    GetMetadata().mChildMask.Set(aChildIndex, true);
+    GetMetadata().mSedNeighborMask.Set(aSedNeighborIndex, true);
 }
 
-bool Message::IsChildPending(void) const
+bool Message::IsSedNeighborPending(void) const
 {
-    return GetMetadata().mChildMask.HasAny();
+    return GetMetadata().mSedNeighborMask.HasAny();
 }
 
 void Message::SetLinkInfo(const ThreadLinkInfo &aLinkInfo)

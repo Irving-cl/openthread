@@ -109,7 +109,7 @@ Mac::Mac(Instance &aInstance)
 #if OPENTHREAD_FTD
     , mMaxFrameRetriesIndirect(kDefaultMaxFrameRetriesIndirect)
 #endif
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     , mCslTxFireTime(TimeMilli::kMaxDuration)
 #endif
     , mActiveScanHandler(nullptr) // Initialize `mActiveScanHandler` and `mEnergyScanHandler` union
@@ -205,11 +205,9 @@ bool Mac::IsInTransmitState(void) const
     switch (mOperation)
     {
     case kOperationTransmitDataDirect:
-#if OPENTHREAD_FTD
     case kOperationTransmitDataIndirect:
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     case kOperationTransmitDataCsl:
-#endif
 #endif
     case kOperationTransmitBeacon:
     case kOperationTransmitPoll:
@@ -569,7 +567,6 @@ exit:
     return;
 }
 
-#if OPENTHREAD_FTD
 void Mac::RequestIndirectFrameTransmission(void)
 {
     VerifyOrExit(IsEnabled());
@@ -581,7 +578,7 @@ exit:
     return;
 }
 
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
 void Mac::RequestCslFrameTransmission(uint32_t aDelay)
 {
     VerifyOrExit(mEnabled);
@@ -594,7 +591,6 @@ exit:
     return;
 }
 #endif
-#endif // OPENTHREAD_FTD
 
 otError Mac::RequestOutOfBandFrameTransmission(otRadioFrame *aOobFrame)
 {
@@ -655,7 +651,7 @@ void Mac::UpdateIdleMode(void)
         }
 #endif
     }
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     else if (mPendingTransmitDataCsl)
     {
         mTimer.FireAt(mCslTxFireTime);
@@ -722,16 +718,14 @@ void Mac::StartOperation(Operation aOperation)
         mPendingTransmitDataDirect = true;
         break;
 
-#if OPENTHREAD_FTD
     case kOperationTransmitDataIndirect:
         mPendingTransmitDataIndirect = true;
         break;
 
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     case kOperationTransmitDataCsl:
         mPendingTransmitDataCsl = true;
         break;
-#endif
 #endif
 
     case kOperationTransmitPoll:
@@ -772,7 +766,7 @@ void Mac::PerformNextOperation(void)
         mPendingTransmitDataDirect = false;
 #if OPENTHREAD_FTD
         mPendingTransmitDataIndirect = false;
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
         mPendingTransmitDataCsl = false;
 #endif
 #endif
@@ -793,7 +787,7 @@ void Mac::PerformNextOperation(void)
         mPendingWaitingForData = false;
         mOperation             = kOperationWaitingForData;
     }
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     else if (mPendingTransmitDataCsl && TimerMilli::GetNow() >= mCslTxFireTime)
     {
         mPendingTransmitDataCsl = false;
@@ -868,11 +862,9 @@ void Mac::PerformNextOperation(void)
 
     case kOperationTransmitBeacon:
     case kOperationTransmitDataDirect:
-#if OPENTHREAD_FTD
     case kOperationTransmitDataIndirect:
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     case kOperationTransmitDataCsl:
-#endif
 #endif
     case kOperationTransmitPoll:
     case kOperationTransmitOutOfBandFrame:
@@ -1198,7 +1190,7 @@ void Mac::BeginTransmit(void)
         }
         break;
 
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     case kOperationTransmitDataCsl:
         txFrames.SetMaxCsmaBackoffs(kMaxCsmaBackoffsCsl);
         txFrames.SetMaxFrameRetries(kMaxFrameRetriesCsl);
@@ -1423,7 +1415,7 @@ void Mac::RecordFrameTransmitStatus(const TxFrame &aFrame,
 #if OPENTHREAD_FTD
         if (aAckFrame->GetVersion() == Frame::kFcfFrameVersion2015)
         {
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
             ProcessCsl(*aAckFrame, dstAddr);
 #endif
         }
@@ -1630,7 +1622,7 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, otError aError
         break;
 
 #if OPENTHREAD_FTD
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     case kOperationTransmitDataCsl:
         mCounters.mTxData++;
 
@@ -1711,7 +1703,7 @@ void Mac::HandleTimer(void)
             }
 #endif
         }
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
         else if (mPendingTransmitDataCsl)
         {
             PerformNextOperation();
@@ -2093,7 +2085,7 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, otError aError)
         ExitNow();
     }
 
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     if (aFrame->GetVersion() == Frame::kFcfFrameVersion2015)
     {
         ProcessCsl(*aFrame, srcaddr);
@@ -2388,16 +2380,14 @@ const char *Mac::OperationToString(Operation aOperation)
         retval = "TransmitDataDirect";
         break;
 
-#if OPENTHREAD_FTD
     case kOperationTransmitDataIndirect:
         retval = "TransmitDataIndirect";
         break;
 
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     case kOperationTransmitDataCsl:
         retval = "TransmitDataCsl";
         break;
-#endif
 #endif
 
     case kOperationTransmitPoll:
@@ -2559,33 +2549,34 @@ bool Mac::IsCslEnabled(void) const
 
 #endif // OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
 void Mac::ProcessCsl(const RxFrame &aFrame, const Address &aSrcAddr)
 {
-    const uint8_t *cur   = aFrame.GetHeaderIe(Frame::kHeaderIeCsl);
-    Child *        child = Get<ChildTable>().FindChild(aSrcAddr, Child::kInStateAnyExceptInvalid);
-    const CslIe *  csl;
+    const uint8_t *     cur = aFrame.GetHeaderIe(Frame::kHeaderIeCsl);
+    SedCapableNeighbor *sedNeighbor =
+        Get<SedCapableNeighborTable>().FindSedCapableNeighbor(aSrcAddr, Neighbor::kInStateAnyExceptInvalid);
+    const CslIe *csl;
 
-    VerifyOrExit(cur != nullptr && child != nullptr && aFrame.GetSecurityEnabled());
+    VerifyOrExit(cur != nullptr && sedNeighbor != nullptr && aFrame.GetSecurityEnabled());
 
     csl = reinterpret_cast<const CslIe *>(cur + sizeof(HeaderIe));
 
-    child->SetCslPeriod(csl->GetPeriod());
+    sedNeighbor->SetCslPeriod(csl->GetPeriod());
     // Use ceiling to ensure the the time diff will be within kUsPerTenSymbols
-    child->SetCslPhase(csl->GetPhase());
-    child->SetCslSynchronized(true);
-    child->SetCslLastHeard(TimerMilli::GetNow());
-    child->SetLastRxTimestamp(aFrame.GetTimestamp());
+    sedNeighbor->SetCslPhase(csl->GetPhase());
+    sedNeighbor->SetCslSynchronized(true);
+    sedNeighbor->SetCslLastHeard(TimerMilli::GetNow());
+    sedNeighbor->SetLastRxTimestamp(aFrame.GetTimestamp());
     otLogDebgMac("Timestamp=%u Sequence=%u CslPeriod=%hu CslPhase=%hu TransmitPhase=%hu",
                  static_cast<uint32_t>(aFrame.GetTimestamp()), aFrame.GetSequence(), csl->GetPeriod(), csl->GetPhase(),
-                 child->GetCslPhase());
+                 sedNeighbor->GetCslPhase());
 
     Get<CslTxScheduler>().Update();
 
 exit:
     return;
 }
-#endif // !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#endif // OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
 
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_ENABLE
 void Mac::ProcessEnhAckProbing(const RxFrame &aFrame, const Neighbor &aNeighbor)
@@ -2695,9 +2686,9 @@ void Mac::UpdateFrameControlField(const Neighbor *aNeighbor, bool aIsTimeSync, u
     }
     else
 #endif
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
         if (aNeighbor != nullptr && !Mle::MleRouter::IsActiveRouter(aNeighbor->GetRloc16()) &&
-            static_cast<const Child *>(aNeighbor)->IsCslSynchronized())
+            static_cast<const SedCapableNeighbor *>(aNeighbor)->IsCslSynchronized())
     {
         aFcf |= Frame::kFcfFrameVersion2015;
     }

@@ -36,6 +36,7 @@
 #include "common/code_utils.hpp"
 #include "common/instance.hpp"
 #include "common/locator-getters.hpp"
+#include "thread/child_table.hpp"
 #include "thread/dua_manager.hpp"
 
 namespace ot {
@@ -124,7 +125,7 @@ Neighbor *NeighborTable::FindChildOrRouter(const Neighbor::AddressMatcher &aMatc
 {
     Neighbor *neighbor;
 
-    neighbor = Get<ChildTable>().FindChild(aMatcher);
+    neighbor = Get<SedCapableNeighborTable>().FindSedCapableNeighbor(aMatcher);
 
     if (neighbor == nullptr)
     {
@@ -159,7 +160,7 @@ Neighbor *NeighborTable::FindNeighbor(const Ip6::Address &aIp6Address, Neighbor:
     {
         if (child.HasIp6Address(aIp6Address))
         {
-            ExitNow(neighbor = &child);
+            ExitNow(neighbor = &child.GetNeighborComp());
         }
     }
 
@@ -198,7 +199,7 @@ otError NeighborTable::GetNextNeighborInfo(otNeighborInfoIterator &aIterator, Ne
 
             if (child->IsStateValid())
             {
-                aNeighInfo.SetFrom(*child);
+                aNeighInfo.SetFrom(child->GetNeighborComp());
                 aNeighInfo.mIsChild = true;
                 index++;
                 aIterator = index;
@@ -255,32 +256,28 @@ exit:
 
 #endif
 
-void NeighborTable::Signal(Event aEvent, const Neighbor &aNeighbor)
+#if OPENTHREAD_FTD
+void NeighborTable::Signal(Event aEvent, const Child &aChild)
 {
-    if (mCallback != nullptr)
+    EntryInfo info;
+
+    VerifyOrExit(mCallback != nullptr);
+
+    info.mInstance = &GetInstance();
+    switch (aEvent)
     {
-        EntryInfo info;
-
-        info.mInstance = &GetInstance();
-
-        switch (aEvent)
-        {
-        case OT_NEIGHBOR_TABLE_EVENT_CHILD_ADDED:
-        case OT_NEIGHBOR_TABLE_EVENT_CHILD_REMOVED:
-            static_cast<Child::Info &>(info.mInfo.mChild).SetFrom(static_cast<const Child &>(aNeighbor));
-            break;
-
-        case OT_NEIGHBOR_TABLE_EVENT_ROUTER_ADDED:
-        case OT_NEIGHBOR_TABLE_EVENT_ROUTER_REMOVED:
-            static_cast<Neighbor::Info &>(info.mInfo.mRouter).SetFrom(aNeighbor);
-            break;
-        }
-
-        mCallback(aEvent, &info);
+    case OT_NEIGHBOR_TABLE_EVENT_CHILD_ADDED:
+    case OT_NEIGHBOR_TABLE_EVENT_CHILD_REMOVED:
+        static_cast<Child::Info &>(info.mInfo.mChild).SetFrom(aChild);
+        break;
+    default:
+        break;
     }
 
+    mCallback(aEvent, &info);
+
 #if OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().EmitNeighborChange(aEvent, aNeighbor);
+    Get<Utils::Otns>().EmitNeighborChange(aEvent, *Get<ChildTable>().MapChildToSedCapable(aChild));
 #endif
 
     switch (aEvent)
@@ -292,14 +289,123 @@ void NeighborTable::Signal(Event aEvent, const Neighbor &aNeighbor)
     case OT_NEIGHBOR_TABLE_EVENT_CHILD_REMOVED:
         Get<Notifier>().Signal(kEventThreadChildRemoved);
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_DUA_ENABLE
-        Get<DuaManager>().UpdateChildDomainUnicastAddress(static_cast<const Child &>(aNeighbor),
-                                                          Mle::ChildDuaState::kRemoved);
+        Get<DuaManager>().UpdateChildDomainUnicastAddress(aChild, Mle::ChildDuaState::kRemoved);
 #endif
         break;
-
     default:
         break;
     }
+
+exit:
+    return;
+}
+#endif // OPENTHREAD_FTD
+
+void NeighborTable::Signal(Event aEvent, const Router &aRouter)
+{
+    EntryInfo info;
+
+    VerifyOrExit(mCallback != nullptr);
+
+    info.mInstance = &GetInstance();
+    switch (aEvent)
+    {
+    case OT_NEIGHBOR_TABLE_EVENT_ROUTER_ADDED:
+    case OT_NEIGHBOR_TABLE_EVENT_ROUTER_REMOVED:
+        static_cast<Neighbor::Info &>(info.mInfo.mRouter).SetFrom(aRouter);
+        break;
+    default:
+        break;
+    }
+
+    mCallback(aEvent, &info);
+
+#if OPENTHREAD_CONFIG_OTNS_ENABLE
+    Get<Utils::Otns>().EmitNeighborChange(aEvent, aNeighbor);
+#endif
+
+exit:
+    return;
+}
+
+SedCapableNeighborTable::Iterator::Iterator(Instance &aInstance, Neighbor::StateFilter aFilter)
+    : InstanceLocator(aInstance)
+    , mFilter(aFilter)
+    , mSedCapableNeighbor(nullptr)
+{
+    Reset();
+}
+
+void SedCapableNeighborTable::Iterator::Reset(void)
+{
+    mSedCapableNeighbor = &Get<SedCapableNeighborTable>().mSedCapableNeighbors[0];
+
+    if (!mSedCapableNeighbor->MatchesFilter(mFilter))
+    {
+        Advance();
+    }
+}
+
+void SedCapableNeighborTable::Iterator::Advance(void)
+{
+    VerifyOrExit(mSedCapableNeighbor != nullptr);
+
+    do
+    {
+        mSedCapableNeighbor++;
+        VerifyOrExit(mSedCapableNeighbor <
+                         &Get<SedCapableNeighborTable>().mSedCapableNeighbors[kMaxSedCapableNeighbors],
+                     mSedCapableNeighbor = nullptr);
+    } while (!mSedCapableNeighbor->MatchesFilter(mFilter));
+
+exit:
+    return;
+}
+
+SedCapableNeighborTable::SedCapableNeighborTable(Instance &aInstance)
+    : InstanceLocator(aInstance)
+{
+    for (SedCapableNeighbor &neighbor : mSedCapableNeighbors)
+    {
+        neighbor.Init(aInstance);
+        neighbor.Clear();
+    }
+}
+
+SedCapableNeighbor *SedCapableNeighborTable::GetSedCapableNeighborAtIndex(uint16_t aIndex)
+{
+    SedCapableNeighbor *neighbor = nullptr;
+
+    VerifyOrExit(aIndex < kMaxSedCapableNeighbors);
+    neighbor = &mSedCapableNeighbors[aIndex];
+
+exit:
+    return neighbor;
+}
+
+SedCapableNeighbor *SedCapableNeighborTable::FindSedCapableNeighbor(const Mac::Address &  aMacAddress,
+                                                                    Neighbor::StateFilter aFilter)
+{
+    return FindSedCapableNeighbor(Neighbor::AddressMatcher(aMacAddress, aFilter));
+}
+
+const SedCapableNeighbor *SedCapableNeighborTable::FindSedCapableNeighbor(
+    const Neighbor::AddressMatcher &aMatcher) const
+{
+    const SedCapableNeighbor *neighbor = mSedCapableNeighbors;
+
+    for (uint16_t num = kMaxSedCapableNeighbors; num != 0; num--, neighbor++)
+    {
+        if (neighbor->Matches(aMatcher))
+        {
+            ExitNow();
+        }
+    }
+
+    neighbor = nullptr;
+
+exit:
+    return neighbor;
 }
 
 } // namespace ot

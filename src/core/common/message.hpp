@@ -163,9 +163,9 @@ struct MessageMetadata
     LqiAverager mLqiAverager; ///< The averager maintaining the Link quality indicator (LQI) average.
 #endif
 
-    ChildMask mChildMask; ///< A ChildMask to indicate which sleepy children need to receive this.
-    uint16_t  mMeshDest;  ///< Used for unicast non-link-local messages.
-    uint8_t   mTimeout;   ///< Seconds remaining before dropping the message.
+    SedNeighborMask mSedNeighborMask; ///< A SedNeighborMask to indicate which sleepy children need to receive this.
+    uint16_t        mMeshDest;        ///< Used for unicast non-link-local messages.
+    uint8_t         mTimeout;         ///< Seconds remaining before dropping the message.
     union
     {
         uint16_t mPanId;   ///< Used for MLE Discover Request and Response messages.
@@ -805,29 +805,29 @@ public:
     /**
      * This method returns whether or not the message forwarding is scheduled for the child.
      *
-     * @param[in]  aChildIndex  The index into the child table.
+     * @param[in]  aSedNeighborIndex  The index into the child table.
      *
      * @retval TRUE   If the message is scheduled to be forwarded to the child.
      * @retval FALSE  If the message is not scheduled to be forwarded to the child.
      *
      */
-    bool GetChildMask(uint16_t aChildIndex) const;
+    bool GetSedNeighborMask(uint16_t aSedNeighborIndex) const;
 
     /**
      * This method unschedules forwarding of the message to the child.
      *
-     * @param[in]  aChildIndex  The index into the child table.
+     * @param[in]  aSedNeighborIndex  The index into the child table.
      *
      */
-    void ClearChildMask(uint16_t aChildIndex);
+    void ClearSedNeighborMask(uint16_t aSedNeighborIndex);
 
     /**
      * This method schedules forwarding of the message to the child.
      *
-     * @param[in]  aChildIndex  The index into the child table.
+     * @param[in]  aSedNeighborIndex  The index into the child table.
      *
      */
-    void SetChildMask(uint16_t aChildIndex);
+    void SetSedNeighborMask(uint16_t aSedNeighborIndex);
 
     /**
      * This method returns whether or not the message forwarding is scheduled for at least one child.
@@ -836,7 +836,7 @@ public:
      * @retval FALSE  If message forwarding is not scheduled for any child.
      *
      */
-    bool IsChildPending(void) const;
+    bool IsSedNeighborPending(void) const;
 
     /**
      * This method returns the RLOC16 of the mesh destination.

@@ -34,6 +34,7 @@
 #include "common/code_utils.hpp"
 #include "common/instance.hpp"
 #include "thread/child_table.hpp"
+#include "thread/topology.hpp"
 
 namespace ot {
 
@@ -46,17 +47,17 @@ enum
 
 struct TestChild
 {
-    Child::State mState;
-    uint16_t     mRloc16;
-    otExtAddress mExtAddress;
+    Neighbor::State mState;
+    uint16_t        mRloc16;
+    otExtAddress    mExtAddress;
 };
 
-const Child::StateFilter kAllFilters[] = {
-    Child::kInStateValid,
-    Child::kInStateValidOrRestoring,
-    Child::kInStateChildIdRequest,
-    Child::kInStateValidOrAttaching,
-    Child::kInStateAnyExceptInvalid,
+const Neighbor::StateFilter kAllFilters[] = {
+    Neighbor::kInStateValid,
+    Neighbor::kInStateValidOrRestoring,
+    Neighbor::kInStateChildIdRequest,
+    Neighbor::kInStateValidOrAttaching,
+    Neighbor::kInStateAnyExceptInvalid,
 };
 
 // Checks whether a `Child` matches the `TestChild` struct.
@@ -67,7 +68,7 @@ static bool ChildMatches(const Child &aChild, const TestChild &aTestChild)
 }
 
 // Checks whether a `Child::State` matches a `Child::StateFilter`.
-static bool StateMatchesFilter(Child::State aState, Child::StateFilter aFilter)
+static bool StateMatchesFilter(Neighbor::State aState, Neighbor::StateFilter aFilter)
 {
     bool  rval = false;
     Child child;
@@ -76,35 +77,35 @@ static bool StateMatchesFilter(Child::State aState, Child::StateFilter aFilter)
 
     switch (aFilter)
     {
-    case Child::kInStateAnyExceptInvalid:
-        rval = (aState != Child::kStateInvalid);
+    case Neighbor::kInStateAnyExceptInvalid:
+        rval = (aState != Neighbor::kStateInvalid);
         break;
 
-    case Child::kInStateValid:
-        rval = (aState == Child::kStateValid);
+    case Neighbor::kInStateValid:
+        rval = (aState == Neighbor::kStateValid);
         break;
 
-    case Child::kInStateValidOrRestoring:
+    case Neighbor::kInStateValidOrRestoring:
         rval = child.IsStateValidOrRestoring();
         break;
 
-    case Child::kInStateChildIdRequest:
-        rval = (aState == Child::kStateChildIdRequest);
+    case Neighbor::kInStateChildIdRequest:
+        rval = (aState == Neighbor::kStateChildIdRequest);
         break;
 
-    case Child::kInStateValidOrAttaching:
+    case Neighbor::kInStateValidOrAttaching:
         rval = child.IsStateValidOrAttaching();
         break;
 
-    case Child::kInStateInvalid:
+    case Neighbor::kInStateInvalid:
         rval = child.IsStateInvalid();
         break;
 
-    case Child::kInStateAnyExceptValidOrRestoring:
+    case Neighbor::kInStateAnyExceptValidOrRestoring:
         rval = !child.IsStateValidOrRestoring();
         break;
 
-    case Child::kInStateAny:
+    case Neighbor::kInStateAny:
         rval = true;
         break;
     }
@@ -117,7 +118,7 @@ void VerifyChildTableContent(ChildTable &aTable, uint16_t aChildListLength, cons
 {
     printf("Test ChildTable with %d entries", aChildListLength);
 
-    for (Child::StateFilter filter : kAllFilters)
+    for (Neighbor::StateFilter filter : kAllFilters)
     {
         // Verify that we can find all children from given list by rloc or extended address.
 
@@ -239,52 +240,52 @@ void TestChildTable(void)
 {
     const TestChild testChildList[] = {
         {
-            Child::kStateValid,
+            Neighbor::kStateValid,
             0x8001,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x16}},
         },
         {
-            Child::kStateParentRequest,
+            Neighbor::kStateParentRequest,
             0x8002,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x17}},
         },
         {
-            Child::kStateValid,
+            Neighbor::kStateValid,
             0x8003,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x18}},
         },
         {
-            Child::kStateValid,
+            Neighbor::kStateValid,
             0x8004,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x19}},
         },
         {
-            Child::kStateRestored,
+            Neighbor::kStateRestored,
             0x8005,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x20}},
         },
         {
-            Child::kStateValid,
+            Neighbor::kStateValid,
             0x8006,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x21}},
         },
         {
-            Child::kStateChildIdRequest,
+            Neighbor::kStateChildIdRequest,
             0x8007,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x22}},
         },
         {
-            Child::kStateChildUpdateRequest,
+            Neighbor::kStateChildUpdateRequest,
             0x8008,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x23}},
         },
         {
-            Child::kStateParentResponse,
+            Neighbor::kStateParentResponse,
             0x8009,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x24}},
         },
         {
-            Child::kStateRestored,
+            Neighbor::kStateRestored,
             0x800a,
             {{0x10, 0x20, 0x03, 0x15, 0x10, 0x00, 0x60, 0x25}},
         },
@@ -308,7 +309,7 @@ void TestChildTable(void)
     VerifyOrQuit(table->GetMaxChildrenAllowed() == table->GetMaxChildren(),
                  "GetMaxChildrenAllowed() initial value is incorrect ");
 
-    for (Child::StateFilter filter : kAllFilters)
+    for (Neighbor::StateFilter filter : kAllFilters)
     {
         VerifyOrQuit(table->HasChildren(filter) == false, "HasChildren() failed after init");
         VerifyOrQuit(table->GetNumChildren(filter) == 0, "GetNumChildren() failed after init");
@@ -382,7 +383,7 @@ void TestChildTable(void)
         Child *child = table->GetNewChild();
 
         VerifyOrQuit(child != nullptr, "GetNewChild() failed");
-        child->SetState(Child::kStateValid);
+        child->SetState(Neighbor::kStateValid);
     }
 
     VerifyOrQuit(table->GetNewChild() == nullptr, "GetNewChild() did not fail when table was full");

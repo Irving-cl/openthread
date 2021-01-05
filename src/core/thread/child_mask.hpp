@@ -55,6 +55,7 @@ namespace ot {
  *
  */
 typedef BitVector<OPENTHREAD_CONFIG_MLE_MAX_CHILDREN> ChildMask;
+typedef BitVector<OPENTHREAD_CONFIG_MLE_MAX_CHILDREN> SedNeighborMask;
 
 /**
  * @}

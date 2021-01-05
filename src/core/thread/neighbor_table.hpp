@@ -219,6 +219,18 @@ public:
      */
     void Signal(Event aEvent, const Neighbor &aNeighbor);
 
+    /**
+     * TODO: doc
+     *
+     */
+    void Signal(Event aEvent, const Child &aChild);
+
+    /**
+     * TODO: doc
+     *
+     */
+    void Signal(Event aEvent, const Router &aRouter);
+
 private:
     Neighbor *FindParent(const Neighbor::AddressMatcher &aMatcher);
     Neighbor *FindNeighbor(const Neighbor::AddressMatcher &aMatcher);
@@ -227,6 +239,212 @@ private:
 #endif
 
     Callback mCallback;
+};
+
+/**
+ * TODO: doc
+ *
+ */
+class SedCapableNeighborTable : public InstanceLocator, private NonCopyable
+{
+    friend class NeighborTable;
+    class IteratorBuilder;
+
+public:
+    /**
+     * TODO: doc
+     *
+     */
+    class Iterator : public InstanceLocator
+    {
+        friend class IteratorBuilder;
+
+    public:
+        /**
+         * This constructor initializes an `Iterator` instance.
+         *
+         * @param[in] aInstance  A reference to the OpenThread instance.
+         * @param[in] aFilter    A child state filter.
+         *
+         */
+        Iterator(Instance &aInstance, Neighbor::StateFilter aFilter);
+
+        /**
+         * This method resets the iterator to start over.
+         *
+         */
+        void Reset(void);
+
+        /**
+         * This method indicates whether there are no more `Child` entries in the list (iterator has reached end of
+         * the list).
+         *
+         * @retval TRUE   There are no more entries in the list (reached end of the list).
+         * @retval FALSE  The current entry is valid.
+         *
+         */
+        bool IsDone(void) const { return (mSedCapableNeighbor == nullptr); }
+
+        /**
+         * This method overloads `++` operator (pre-increment) to advance the iterator.
+         *
+         * The iterator is moved to point to the next `SedCapableNeighbor` entry matching the given state filter in the
+         * constructor. If there are no more `SedCapableNeighbor` entries matching the given filter, the iterator
+         * becomes empty (i.e., `GetSedCapableNeighbor()` returns `nullptr` and `IsDone()` returns `true`).
+         *
+         */
+        void operator++(void) { Advance(); }
+
+        /**
+         * This method overloads `++` operator (post-increment) to advance the iterator.
+         *
+         * The iterator is moved to point to the next `SedCapableNeighbor` entry matching the given state filter in the
+         * constructor. If there are no more `SedCapableNeighbor` entries matching the given filter, the iterator
+         * becomes empty (i.e., `GetSedCapableNeighbor()` returns `nullptr` and `IsDone()` returns `true`).
+         *
+         */
+        void operator++(int) { Advance(); }
+
+        /**
+         * This method gets the `SedCapableNeighbor` entry to which the iterator is currently pointing.
+         *
+         * @returns A pointer to the `SedCapableNeighbor` entry, or `nullptr` if the iterator is done and/or empty.
+         *
+         */
+        SedCapableNeighbor *GetSedCapableNeighbor(void) { return mSedCapableNeighbor; }
+
+        /**
+         * This method overloads the `*` dereference operator and gets a reference to `SedCapableNeighbor` entry to
+         * which the iterator is currently pointing.
+         *
+         * This method MUST be used when the iterator is not empty/finished (i.e., `IsDone()` returns `false`).
+         *
+         * @returns A reference to the `SedCapableNeighbor` entry currently pointed by the iterator.
+         *
+         */
+        SedCapableNeighbor &operator*(void) { return *mSedCapableNeighbor; }
+
+        /**
+         * This method overloads the `->` dereference operator and gets a pointer to `SedCapableNeighbor` entry to which
+         * the iterator is currently pointing.
+         *
+         * @returns A pointer to the `SedCapableNeighbor` entry associated with the iterator, or `nullptr` if iterator
+         * is empty/done.
+         *
+         */
+        SedCapableNeighbor *operator->(void) { return mSedCapableNeighbor; }
+
+        /**
+         * This method overloads operator `==` to evaluate whether or not two `Iterator` instances point to the same
+         * child entry.
+         *
+         * @param[in]  aOther  The other `Iterator` to compare with.
+         *
+         * @retval TRUE   If the two `Iterator` objects point to the same child entry or both are done.
+         * @retval FALSE  If the two `Iterator` objects do not point to the same child entry.
+         *
+         */
+        bool operator==(const Iterator &aOther) const { return mSedCapableNeighbor == aOther.mSedCapableNeighbor; }
+
+        /**
+         * This method overloads operator `!=` to evaluate whether or not two `Iterator` instances point to the same
+         * child entry.
+         *
+         * @param[in]  aOther  The other `Iterator` to compare with.
+         *
+         * @retval TRUE   If the two `Iterator` objects do not point to the same child entry.
+         * @retval FALSE  If the two `Iterator` objects point to the same child entry or both are done.
+         *
+         */
+        bool operator!=(const Iterator &aOther) const { return mSedCapableNeighbor != aOther.mSedCapableNeighbor; }
+
+    private:
+        explicit Iterator(Instance &aInstance)
+            : InstanceLocator(aInstance)
+            , mFilter(Neighbor::StateFilter::kInStateValid)
+            , mSedCapableNeighbor(nullptr)
+        {
+        }
+
+        void Advance(void);
+
+        Neighbor::StateFilter mFilter;
+        SedCapableNeighbor *  mSedCapableNeighbor;
+    };
+
+    /**
+     * TODO: doc
+     *
+     */
+    explicit SedCapableNeighborTable(Instance &aInstance);
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint16_t GetSedCapableNeighborIndex(const SedCapableNeighbor *aSedCapableNeighbor) const
+    {
+        return static_cast<uint16_t>(aSedCapableNeighbor - mSedCapableNeighbors);
+    }
+
+    /**
+     * TODO: doc
+     *
+     */
+    uint16_t GetSedCapableNeighborIndex(const SedCapableNeighbor &aSedCapableNeighbor) const
+    {
+        return GetSedCapableNeighborIndex(&aSedCapableNeighbor);
+    }
+
+    /**
+     * TODO: doc
+     *
+     */
+    SedCapableNeighbor *GetSedCapableNeighborAtIndex(uint16_t aIndex);
+
+    /**
+     * TODO: doc
+     *
+     */
+    SedCapableNeighbor *FindSedCapableNeighbor(const Mac::Address &aMacAddress, Neighbor::StateFilter aFilter);
+
+    /**
+     * TODO: doc
+     *
+     */
+    IteratorBuilder Iterate(Neighbor::StateFilter aFilter) { return IteratorBuilder(GetInstance(), aFilter); }
+
+private:
+    enum
+    {
+        kMaxSedCapableNeighbors = OPENTHREAD_CONFIG_MLE_MAX_CHILDREN,
+    };
+
+    class IteratorBuilder : public InstanceLocator
+    {
+    public:
+        IteratorBuilder(Instance &aInstance, Neighbor::StateFilter aFilter)
+            : InstanceLocator(aInstance)
+            , mFilter(aFilter)
+        {
+        }
+
+        Iterator begin(void) { return Iterator(GetInstance(), mFilter); }
+        Iterator end(void) { return Iterator(GetInstance()); }
+
+    private:
+        Neighbor::StateFilter mFilter;
+    };
+
+    SedCapableNeighbor *FindSedCapableNeighbor(const Neighbor::AddressMatcher &aMatcher)
+    {
+        return const_cast<SedCapableNeighbor *>(
+            const_cast<const SedCapableNeighborTable *>(this)->FindSedCapableNeighbor(aMatcher));
+    }
+
+    const SedCapableNeighbor *FindSedCapableNeighbor(const Neighbor::AddressMatcher &aMatcher) const;
+
+    SedCapableNeighbor mSedCapableNeighbors[kMaxSedCapableNeighbors];
 };
 
 } // namespace ot

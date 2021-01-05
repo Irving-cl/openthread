@@ -41,7 +41,7 @@ namespace ot {
 
 #if OPENTHREAD_FTD
 
-ChildTable::Iterator::Iterator(Instance &aInstance, Child::StateFilter aFilter)
+ChildTable::Iterator::Iterator(Instance &aInstance, Neighbor::StateFilter aFilter)
     : InstanceLocator(aInstance)
     , mFilter(aFilter)
     , mChild(nullptr)
@@ -67,7 +67,7 @@ void ChildTable::Iterator::Advance(void)
     {
         mChild++;
         VerifyOrExit(mChild < &Get<ChildTable>().mChildren[Get<ChildTable>().mMaxChildrenAllowed], mChild = nullptr);
-    } while (!mChild->MatchesFilter(mFilter));
+    } while (!(mChild->MatchesFilter(mFilter)));
 
 exit:
     return;
@@ -105,7 +105,7 @@ exit:
 
 Child *ChildTable::GetNewChild(void)
 {
-    Child *child = FindChild(Child::AddressMatcher(Child::kInStateInvalid));
+    Child *child = FindChild(Neighbor::AddressMatcher(Neighbor::kInStateInvalid));
 
     VerifyOrExit(child != nullptr);
     child->Clear();
@@ -114,7 +114,7 @@ exit:
     return child;
 }
 
-const Child *ChildTable::FindChild(const Child::AddressMatcher &aMatcher) const
+const Child *ChildTable::FindChild(const Neighbor::AddressMatcher &aMatcher) const
 {
     const Child *child = mChildren;
 
@@ -132,27 +132,27 @@ exit:
     return child;
 }
 
-Child *ChildTable::FindChild(uint16_t aRloc16, Child::StateFilter aFilter)
+Child *ChildTable::FindChild(Mac::ShortAddress aShortAddress, Neighbor::StateFilter aFilter)
 {
-    return FindChild(Child::AddressMatcher(aRloc16, aFilter));
+    return FindChild(Neighbor::AddressMatcher(aShortAddress, aFilter));
 }
 
-Child *ChildTable::FindChild(const Mac::ExtAddress &aExtAddress, Child::StateFilter aFilter)
+Child *ChildTable::FindChild(const Mac::ExtAddress &aExtAddress, Neighbor::StateFilter aFilter)
 {
-    return FindChild(Child::AddressMatcher(aExtAddress, aFilter));
+    return FindChild(Neighbor::AddressMatcher(aExtAddress, aFilter));
 }
 
-Child *ChildTable::FindChild(const Mac::Address &aMacAddress, Child::StateFilter aFilter)
+Child *ChildTable::FindChild(const Mac::Address &aMacAddress, Neighbor::StateFilter aFilter)
 {
-    return FindChild(Child::AddressMatcher(aMacAddress, aFilter));
+    return FindChild(Neighbor::AddressMatcher(aMacAddress, aFilter));
 }
 
-bool ChildTable::HasChildren(Child::StateFilter aFilter) const
+bool ChildTable::HasChildren(Neighbor::StateFilter aFilter) const
 {
-    return (FindChild(Child::AddressMatcher(aFilter)) != nullptr);
+    return (FindChild(Neighbor::AddressMatcher(aFilter)) != nullptr);
 }
 
-uint16_t ChildTable::GetNumChildren(Child::StateFilter aFilter) const
+uint16_t ChildTable::GetNumChildren(Neighbor::StateFilter aFilter) const
 {
     uint16_t     numChildren = 0;
     const Child *child       = mChildren;
@@ -173,7 +173,7 @@ otError ChildTable::SetMaxChildrenAllowed(uint16_t aMaxChildren)
     otError error = OT_ERROR_NONE;
 
     VerifyOrExit(aMaxChildren > 0 && aMaxChildren <= kMaxChildren, error = OT_ERROR_INVALID_ARGS);
-    VerifyOrExit(!HasChildren(Child::kInStateAnyExceptInvalid), error = OT_ERROR_INVALID_STATE);
+    VerifyOrExit(!HasChildren(Neighbor::kInStateAnyExceptInvalid), error = OT_ERROR_INVALID_STATE);
 
     mMaxChildrenAllowed = aMaxChildren;
 
@@ -193,7 +193,7 @@ otError ChildTable::GetChildInfoById(uint16_t aChildId, Child::Info &aChildInfo)
     }
 
     rloc16 = Get<Mac::Mac>().GetShortAddress() | aChildId;
-    child  = FindChild(rloc16, Child::kInStateValidOrRestoring);
+    child  = FindChild(rloc16, Neighbor::kInStateValidOrRestoring);
     VerifyOrExit(child != nullptr, error = OT_ERROR_NOT_FOUND);
 
     aChildInfo.SetFrom(*child);
@@ -226,7 +226,7 @@ void ChildTable::Restore(void)
     {
         Child *child;
 
-        child = FindChild(childInfo.GetExtAddress(), Child::kInStateAnyExceptInvalid);
+        child = FindChild(childInfo.GetExtAddress(), Neighbor::kInStateAnyExceptInvalid);
 
         if (child == nullptr)
         {
@@ -247,7 +247,7 @@ void ChildTable::Restore(void)
         child->SetState(Neighbor::kStateRestored);
         child->SetLastHeard(TimerMilli::GetNow());
         child->SetVersion(static_cast<uint8_t>(childInfo.GetVersion()));
-        Get<IndirectSender>().SetChildUseShortAddress(*child, true);
+        child->SetUseShortAddress(true);
         numChildren++;
     }
 
@@ -328,6 +328,50 @@ bool ChildTable::HasSleepyChildWithAddress(const Ip6::Address &aIp6Address) cons
     }
 
     return hasChild;
+}
+
+SedCapableNeighbor *ChildTable::MapChildToSedCapableNeighbor(const Child &aChild)
+{
+    return Get<SedCapableNeighborTable>().GetSedCapableNeighborAtIndex(GetChildIndex(aChild));
+}
+
+Child *ChildTable::MapSedCapableNeighborToChild(const SedCapableNeighbor &aSedCapableNeighbor)
+{
+    return &mChildren[Get<SedCapableNeighborTable>().GetSedCapableNeighborIndex(aSedCapableNeighbor)];
+}
+
+Child *ChildTable::FindChild(const Ip6::Address &aIp6Address, Neighbor::StateFilter aFilter)
+{
+    Child *      child = nullptr;
+    Mac::Address macAddress;
+
+    // Special case for link local address
+    if (aIp6Address.IsLinkLocal())
+    {
+        aIp6Address.GetIid().ConvertToMacAddress(macAddress);
+    }
+
+    if (Get<Mle::Mle>().IsRoutingLocator(aIp6Address))
+    {
+        macAddress.SetShort(aIp6Address.GetIid().GetLocator());
+    }
+
+    if (!macAddress.IsNone())
+    {
+        child = FindChild(macAddress, aFilter);
+        ExitNow();
+    }
+
+    for (Child &item : Get<ChildTable>().Iterate(aFilter))
+    {
+        if (item.HasIp6Address(aIp6Address))
+        {
+            ExitNow(child = &item);
+        }
+    }
+
+exit:
+    return child;
 }
 
 #endif // OPENTHREAD_FTD

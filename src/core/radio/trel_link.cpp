@@ -255,12 +255,12 @@ void Link::HandleTimer(void)
 {
     mTimer.Start(kAckWaitWindow);
 
-#if OPENTHREAD_FTD
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateAnyExceptInvalid))
+    for (SedCapableNeighbor &neighbor : Get<SedCapableNeighborTable>().Iterate(Neighbor::kInStateAnyExceptInvalid))
     {
-        HandleTimer(child);
+        HandleTimer(neighbor);
     }
 
+#if OPENTHREAD_FTD
     for (Router &router : Get<RouterTable>().Iterate())
     {
         HandleTimer(router);

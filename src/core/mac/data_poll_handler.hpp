@@ -55,7 +55,7 @@ namespace ot {
  * @{
  */
 
-class Child;
+class SedCapableNeighbor;
 
 /**
  * This class implements the data poll (mac data request command) handler.
@@ -82,15 +82,15 @@ public:
     };
 
     /**
-     * This class defines all the child info required for handling of data polls and indirect frame transmissions.
+     * TODO: doc
      *
-     * `Child` class publicly inherits from this class.
      *
      */
-    class ChildInfo
+    class IndirectTxInfo
     {
+        friend class Neighbor;
         friend class DataPollHandler;
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
         friend class CslTxScheduler;
 #endif
 
@@ -121,7 +121,6 @@ public:
         Mac::RadioType GetLastPollRadioType(void) const { return mLastPollRadioType; }
         void           SetLastPollRadioType(Mac::RadioType aRadioType) { mLastPollRadioType = aRadioType; }
 #endif
-
         uint32_t mIndirectFrameCounter;    // Frame counter for current indirect frame (used for retx).
         uint8_t  mIndirectKeyId;           // Key Id for current indirect frame (used for retx).
         uint8_t  mIndirectDsn;             // MAC level Data Sequence Number (DSN) for retx attempts.
@@ -132,7 +131,6 @@ public:
 #if OPENTHREAD_CONFIG_MULTI_RADIO
         Mac::RadioType mLastPollRadioType; // The radio link last data poll frame was received on.
 #endif
-
         static_assert(kMaxPollTriggeredTxAttempts < (1 << 5), "mIndirectTxAttempts cannot fit max!");
     };
 
@@ -149,9 +147,9 @@ public:
          * This type defines the frame context associated with a prepared frame.
          *
          * Data poll handler treats `FrameContext` as an opaque data type. Data poll handler provides the buffer/object
-         * for the context when a new frame is prepared (from the callback `PrepareFrameForChild()`). It ensures
-         * to save the context along with the prepared frame and provide the same context back in the callback
-         * `HandleSentFrameToChild()` when the indirect transmission of the frame is finished.
+         * for the context when a new frame is prepared (from the callback `PrepareFrameForSedCapableNeighbor()`). It
+         * ensures to save the context along with the prepared frame and provide the same context back in the callback
+         * `HandleSentFrameToSedCapableNeighbor()` when the indirect transmission of the frame is finished.
          *
          */
         typedef IndirectSenderBase::FrameContext FrameContext;
@@ -169,13 +167,15 @@ public:
          *
          * @param[out] aFrame    A reference to a MAC frame where the new frame would be placed.
          * @param[out] aContext  A reference to a `FrameContext` where the context for the new frame would be placed.
-         * @param[in]  aChild    The child for which to prepare the frame.
+         * @param[in]  aSedCapableNeighbor    The child for which to prepare the frame.
          *
          * @retval OT_ERROR_NONE   Frame was prepared successfully.
          * @retval OT_ERROR_ABORT  Indirect transmission to child should be aborted (no frame for the child).
          *
          */
-        otError PrepareFrameForChild(Mac::TxFrame &aFrame, FrameContext &aContext, Child &aChild);
+        otError PrepareFrameForSedCapableNeighbor(Mac::TxFrame &      aFrame,
+                                                  FrameContext &      aContext,
+                                                  SedCapableNeighbor &aSedCapableNeighbor);
 
         /**
          * This callback method notifies the end of indirect frame transmission to a child.
@@ -186,13 +186,13 @@ public:
          *                        OT_ERROR_NO_ACK when the frame was transmitted but no ACK was received,
          *                        OT_ERROR_CHANNEL_ACCESS_FAILURE tx failed due to activity on the channel,
          *                        OT_ERROR_ABORT when transmission was aborted for other reasons.
-         * @param[in]  aChild     The child to which the frame was transmitted.
+         * @param[in]  aSedCapableNeighbor     The child to which the frame was transmitted.
          *
          */
-        void HandleSentFrameToChild(const Mac::TxFrame &aFrame,
-                                    const FrameContext &aContext,
-                                    otError             aError,
-                                    Child &             aChild);
+        void HandleSentFrameToSedCapableNeighbor(const Mac::TxFrame &aFrame,
+                                                 const FrameContext &aContext,
+                                                 otError             aError,
+                                                 SedCapableNeighbor &aSedCapableNeighbor);
 
         /**
          * This callback method notifies that a requested frame change from `RequestFrameChange()` is processed.
@@ -200,10 +200,10 @@ public:
          * This callback indicates to the next layer that the indirect frame/message for the child can be safely
          * updated.
          *
-         * @param[in]  aChild     The child to update.
+         * @param[in]  aSedCapableNeighbor     The child to update.
          *
          */
-        void HandleFrameChangeDone(Child &aChild);
+        void HandleFrameChangeDone(SedCapableNeighbor &aSedCapableNeighbor);
     };
 
     /**
@@ -223,16 +223,16 @@ public:
     /**
      * This method informs data poll handler that there is a new frame for a given child.
      *
-     * After this call, the data poll handler can use the `Callbacks::PrepareFrameForChild()` method to request the
-     * frame to be prepared. A subsequent call to `Callbacks::PrepareFrameForChild()` should ensure to prepare the same
-     * frame (this is used for retransmissions of frame by data poll handler). If/When the frame transmission is
-     * finished, the data poll handler will invoke the `Callbacks::HandleSentFrameToChild()` to indicate the status of
-     * the frame transmission.
+     * After this call, the data poll handler can use the `Callbacks::PrepareFrameForSedCapableNeighbor()` method to
+     * request the frame to be prepared. A subsequent call to `Callbacks::PrepareFrameForSedCapableNeighbor()` should
+     * ensure to prepare the same frame (this is used for retransmissions of frame by data poll handler). If/When the
+     * frame transmission is finished, the data poll handler will invoke the
+     * `Callbacks::HandleSentFrameToSedCapableNeighbor()` to indicate the status of the frame transmission.
      *
-     * @param[in]  aChild     The child which has a new frame.
+     * @param[in]  aSedCapableNeighbor     The child which has a new frame.
      *
      */
-    void HandleNewFrame(Child &aChild);
+    void HandleNewFrame(SedCapableNeighbor &aSedCapableNeighbor);
 
     /**
      * This method requests a frame change for a given child.
@@ -253,20 +253,20 @@ public:
      *    callback `HandleFrameChangeDone()` is invoked.
      *
      * 2) In case of "replace" request, the ongoing indirect transmission is allowed to finish (current tx attempt).
-     *    2.a) If the tx attempt is successful, the `Callbacks::HandleSentFrameToChild()` in invoked which indicates
-     *         the "replace" could not happen (in this case the `HandleFrameChangeDone()` is no longer called).
-     *    2.b) If the ongoing tx attempt is unsuccessful, then callback `HandleFrameChangeDone()` is invoked to allow
-     *         the next layer to update the frame/message for the child.
+     *    2.a) If the tx attempt is successful, the `Callbacks::HandleSentFrameToSedCapableNeighbor()` in invoked which
+     * indicates the "replace" could not happen (in this case the `HandleFrameChangeDone()` is no longer called). 2.b)
+     * If the ongoing tx attempt is unsuccessful, then callback `HandleFrameChangeDone()` is invoked to allow the next
+     * layer to update the frame/message for the child.
      *
      * If there is a pending request, a subsequent call to this method is ignored except for the case where pending
      * request is for "replace frame" and new one is for "purge frame" where the "purge" overrides the "replace"
      * request.
      *
      * @param[in]  aChange    The frame change type.
-     * @param[in]  aChild     The child to process its frame change.
+     * @param[in]  aSedCapableNeighbor     The child to process its frame change.
      *
      */
-    void RequestFrameChange(FrameChange aChange, Child &aChild);
+    void RequestFrameChange(FrameChange aChange, SedCapableNeighbor &aSedCapableNeighbor);
 
 private:
     // Callbacks from MAC
@@ -274,16 +274,16 @@ private:
     Mac::TxFrame *HandleFrameRequest(Mac::TxFrames &aTxFrames);
     void          HandleSentFrame(const Mac::TxFrame &aFrame, otError aError);
 
-    void HandleSentFrame(const Mac::TxFrame &aFrame, otError aError, Child &aChild);
+    void HandleSentFrame(const Mac::TxFrame &aFrame, otError aError, SedCapableNeighbor &aSedCapableNeighbor);
     void ProcessPendingPolls(void);
 
     // In the current implementation of `DataPollHandler`, we can have a
     // single indirect tx operation active at MAC layer at each point of
-    // time. `mIndirectTxChild` indicates the child being handled (nullptr
+    // time. `mIndirectTxSedCapableNeighbor` indicates the child being handled (nullptr
     // indicates no active indirect tx). `mFrameContext` tracks the
     // context for the prepared frame for the current indirect tx.
 
-    Child *                 mIndirectTxChild;
+    SedCapableNeighbor *    mSedCapableNeighbor;
     Callbacks::FrameContext mFrameContext;
     Callbacks               mCallbacks;
 };

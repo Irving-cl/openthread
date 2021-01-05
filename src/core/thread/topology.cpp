@@ -214,32 +214,47 @@ const char *Neighbor::StateToString(State aState)
     return static_cast<uint8_t>(aState) < OT_ARRAY_LENGTH(kStateStrings) ? kStateStrings[aState] : "Unknown";
 }
 
+void SedCapableNeighbor::Clear(void)
+{
+    Instance &instance = GetInstance();
+
+    memset(reinterpret_cast<void *>(this), 0, sizeof(SedCapableNeighbor));
+    Init(instance);
+}
+
+#if OPENTHREAD_FTD
 void Child::Info::SetFrom(const Child &aChild)
 {
     Clear();
-    mExtAddress         = aChild.GetExtAddress();
+    SetFrom(aChild.GetNeighborComp());
     mTimeout            = aChild.GetTimeout();
-    mRloc16             = aChild.GetRloc16();
-    mChildId            = Mle::Mle::ChildIdFromRloc16(aChild.GetRloc16());
     mNetworkDataVersion = aChild.GetNetworkDataVersion();
-    mAge                = Time::MsecToSec(TimerMilli::GetNow() - aChild.GetLastHeard());
-    mLinkQualityIn      = aChild.GetLinkInfo().GetLinkQuality();
-    mAverageRssi        = aChild.GetLinkInfo().GetAverageRss();
-    mLastRssi           = aChild.GetLinkInfo().GetLastRss();
-    mFrameErrorRate     = aChild.GetLinkInfo().GetFrameErrorRate();
-    mMessageErrorRate   = aChild.GetLinkInfo().GetMessageErrorRate();
-    mQueuedMessageCnt   = aChild.GetIndirectMessageCount();
-    mVersion            = aChild.GetVersion();
-    mRxOnWhenIdle       = aChild.IsRxOnWhenIdle();
-    mFullThreadDevice   = aChild.IsFullThreadDevice();
-    mFullNetworkData    = aChild.IsFullNetworkData();
-    mIsStateRestoring   = aChild.IsStateRestoring();
-#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
-    mIsCslSynced = aChild.IsCslSynchronized();
+}
+
+void Child::Info::SetFrom(const SedCapableNeighbor &aSedCapableNeighbor)
+{
+    mExtAddress       = aSedCapableNeighbor.GetExtAddress();
+    mRloc16           = aSedCapableNeighbor.GetRloc16();
+    mChildId          = Mle::Mle::ChildIdFromRloc16(mRloc16);
+    mAge              = Time::MsecToSec(TimerMilli::GetNow() - aSedCapableNeighbor.GetLastHeard());
+    mLinkQualityIn    = aSedCapableNeighbor.GetLinkInfo().GetLinkQuality();
+    mAverageRssi      = aSedCapableNeighbor.GetLinkInfo().GetAverageRss();
+    mLastRssi         = aSedCapableNeighbor.GetLinkInfo().GetLastRss();
+    mFrameErrorRate   = aSedCapableNeighbor.GetLinkInfo().GetFrameErrorRate();
+    mMessageErrorRate = aSedCapableNeighbor.GetLinkInfo().GetMessageErrorRate();
+    mQueuedMessageCnt = aSedCapableNeighbor.GetIndirectMessageCount();
+    mVersion          = aSedCapableNeighbor.GetVersion();
+    mRxOnWhenIdle     = aSedCapableNeighbor.IsRxOnWhenIdle();
+    mFullThreadDevice = aSedCapableNeighbor.IsFullThreadDevice();
+    mFullNetworkData  = aSedCapableNeighbor.IsFullNetworkData();
+    mIsStateRestoring = aSedCapableNeighbor.IsStateRestoring();
+#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+    mIsCslSynced = aSedCapableNeighbor.IsCslSynchronized();
 #else
     mIsCslSynced = false;
 #endif
 }
+#endif // OPENTHREAD_FTD
 
 const Ip6::Address *Child::AddressIterator::GetAddress(void) const
 {
@@ -470,6 +485,11 @@ void Child::SetAddressMlrState(const Ip6::Address &aAddress, MlrState aState)
 
     mMlrToRegisterMask.Set(addressIndex, aState == kMlrStateToRegister);
     mMlrRegisteredMask.Set(addressIndex, aState == kMlrStateRegistered);
+}
+
+SedCapableNeighbor &Child::GetNeighborComp(void) const
+{
+    return *Get<ChildTable>().MapChildToSedCapableNeighbor(*this);
 }
 #endif // OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE
 
