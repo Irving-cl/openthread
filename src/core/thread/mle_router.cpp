@@ -1141,6 +1141,7 @@ Error MleRouter::HandleAdvertisement(RxInfo &aRxInfo, uint16_t aSourceAddress, c
 
     Error                 error      = kErrorNone;
     const ThreadLinkInfo *linkInfo   = aRxInfo.mMessageInfo.GetThreadLinkInfo();
+    LogWarn("MleRouter::HandleAdvertisement");
     uint8_t               linkMargin = Get<Mac::Mac>().ComputeLinkMargin(linkInfo->GetRss());
     Mac::ExtAddress       extAddr;
     RouteTlv              routeTlv;
@@ -1148,6 +1149,7 @@ Error MleRouter::HandleAdvertisement(RxInfo &aRxInfo, uint16_t aSourceAddress, c
     uint8_t               routerId;
 
     aRxInfo.mMessageInfo.GetPeerAddr().GetIid().ConvertToExtAddress(extAddr);
+    LogWarn("ExtAddr: %s, linkMargin:%u", extAddr.ToString().AsCString(), linkMargin);
 
     if (Tlv::FindTlv(aRxInfo.mMessage, routeTlv) == kErrorNone)
     {
@@ -1446,6 +1448,7 @@ bool MleRouter::HasNeighborWithGoodLinkQuality(void) const
     uint8_t linkMargin;
 
     linkMargin = Get<Mac::Mac>().ComputeLinkMargin(mParent.GetLinkInfo().GetLastRss());
+    LogWarn("MleRouter::HasNeighborWithGoodLinkQuality, parent link Margin:%u", linkMargin);
 
     if (linkMargin >= kLinkRequestMinMargin)
     {
@@ -1460,6 +1463,7 @@ bool MleRouter::HasNeighborWithGoodLinkQuality(void) const
         }
 
         linkMargin = Get<Mac::Mac>().ComputeLinkMargin(router.GetLinkInfo().GetLastRss());
+        LogWarn("Router(%s), Link Margin:%u", router.GetExtAddress().ToString().AsCString(), linkMargin);
 
         if (linkMargin >= kLinkRequestMinMargin)
         {

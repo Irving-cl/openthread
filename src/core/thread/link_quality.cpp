@@ -178,6 +178,7 @@ LinkQualityInfo::InfoString LinkQualityInfo::ToInfoString(void) const
 
 uint8_t ComputeLinkMargin(int8_t aNoiseFloor, int8_t aRss)
 {
+    otLogWarnPlat("ComputeLinkMargin, aNoiseFloor:%d, aRss:%d", aNoiseFloor, aRss);
     int8_t linkMargin = aRss - aNoiseFloor;
 
     if (linkMargin < 0 || aRss == Radio::kInvalidRssi)
