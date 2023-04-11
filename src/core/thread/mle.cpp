@@ -1833,15 +1833,17 @@ exit:
     return error;
 }
 
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE || OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-Error Mle::SendDataRequest(const Ip6::Address                        &aDestination,
-                           const uint8_t                             *aTlvs,
-                           uint8_t                                    aTlvsLength,
-                           uint16_t                                   aDelay,
-                           const LinkMetrics::LinkMetrics::QueryInfo *aQueryInfo)
-#else
 Error Mle::SendDataRequest(const Ip6::Address &aDestination, const uint8_t *aTlvs, uint8_t aTlvsLength, uint16_t aDelay)
-#endif
+{
+    return SendDataRequest(aDestination, aTlvs, aTlvsLength, aDelay, nullptr, 0);
+}
+
+Error Mle::SendDataRequest(const Ip6::Address &aDestination,
+                           const uint8_t      *aTlvs,
+                           uint8_t             aTlvsLength,
+                           uint16_t            aDelay,
+                           const uint8_t      *aExtraTlvsBuf,
+                           uint8_t             aExtraTlvsBufLength)
 {
     Error      error = kErrorNone;
     TxMessage *message;
@@ -1851,12 +1853,10 @@ Error Mle::SendDataRequest(const Ip6::Address &aDestination, const uint8_t *aTlv
     VerifyOrExit((message = NewMleMessage(kCommandDataRequest)) != nullptr, error = kErrorNoBufs);
     SuccessOrExit(error = message->AppendTlvRequestTlv(aTlvs, aTlvsLength));
 
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE || OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-    if (aQueryInfo != nullptr)
+    if (aExtraTlvsBuf != nullptr && aExtraTlvsBufLength != 0)
     {
-        SuccessOrExit(error = Get<LinkMetrics::LinkMetrics>().AppendLinkMetricsQueryTlv(*message, *aQueryInfo));
+        SuccessOrExit(error = message->AppendBytes(aExtraTlvsBuf, aExtraTlvsBufLength));
     }
-#endif
 
     if (aDelay)
     {
@@ -2812,8 +2812,8 @@ void Mle::HandleDataResponse(RxInfo &aRxInfo)
 
         if (Tlv::FindTlvValueOffset(aRxInfo.mMessage, Tlv::kLinkMetricsReport, offset, length) == kErrorNone)
         {
-            Get<LinkMetrics::LinkMetrics>().HandleReport(aRxInfo.mMessage, offset, length,
-                                                         aRxInfo.mMessageInfo.GetPeerAddr());
+            Get<LinkMetrics::LinkMetrics>().GetInitiator().HandleReport(aRxInfo.mMessage, offset, length,
+                                                                        aRxInfo.mMessageInfo.GetPeerAddr());
         }
     }
 #endif
@@ -3733,17 +3733,14 @@ exit:
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
 void Mle::HandleLinkMetricsManagementRequest(RxInfo &aRxInfo)
 {
-    Error               error = kErrorNone;
-    LinkMetrics::Status status;
+    Error error = kErrorNone;
 
     Log(kMessageReceive, kTypeLinkMetricsManagementRequest, aRxInfo.mMessageInfo.GetPeerAddr());
 
     VerifyOrExit(aRxInfo.mNeighbor != nullptr, error = kErrorInvalidState);
 
-    SuccessOrExit(
-        error = Get<LinkMetrics::LinkMetrics>().HandleManagementRequest(aRxInfo.mMessage, *aRxInfo.mNeighbor, status));
-
-    error = SendLinkMetricsManagementResponse(aRxInfo.mMessageInfo.GetPeerAddr(), status);
+    SuccessOrExit(error = Get<LinkMetrics::LinkMetrics>().GetSubject().HandleManagementRequest(
+                      aRxInfo.mMessage, aRxInfo.mMessageInfo.GetPeerAddr(), *aRxInfo.mNeighbor));
 
     aRxInfo.mClass = RxInfo::kPeerMessage;
 
@@ -3751,6 +3748,20 @@ exit:
     LogProcessError(kTypeLinkMetricsManagementRequest, error);
 }
 
+void Mle::HandleLinkProbe(RxInfo &aRxInfo)
+{
+    Error error = kErrorNone;
+
+    Log(kMessageReceive, kTypeLinkProbe, aRxInfo.mMessageInfo.GetPeerAddr());
+
+    SuccessOrExit(
+        error = Get<LinkMetrics::LinkMetrics>().GetSubject().HandleLinkProbe(aRxInfo.mMessage, *aRxInfo.mNeighbor));
+
+    aRxInfo.mClass = RxInfo::kPeerMessage;
+
+exit:
+    LogProcessError(kTypeLinkProbe, error);
+}
 #endif // OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
 
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
@@ -3762,8 +3773,8 @@ void Mle::HandleLinkMetricsManagementResponse(RxInfo &aRxInfo)
 
     VerifyOrExit(aRxInfo.mNeighbor != nullptr, error = kErrorInvalidState);
 
-    error =
-        Get<LinkMetrics::LinkMetrics>().HandleManagementResponse(aRxInfo.mMessage, aRxInfo.mMessageInfo.GetPeerAddr());
+    error = Get<LinkMetrics::LinkMetrics>().GetInitiator().HandleManagementResponse(aRxInfo.mMessage,
+                                                                                    aRxInfo.mMessageInfo.GetPeerAddr());
 
     aRxInfo.mClass = RxInfo::kPeerMessage;
 
@@ -3771,25 +3782,6 @@ exit:
     LogProcessError(kTypeLinkMetricsManagementResponse, error);
 }
 #endif // OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
-
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-void Mle::HandleLinkProbe(RxInfo &aRxInfo)
-{
-    Error   error = kErrorNone;
-    uint8_t seriesId;
-
-    Log(kMessageReceive, kTypeLinkProbe, aRxInfo.mMessageInfo.GetPeerAddr());
-
-    SuccessOrExit(error = Get<LinkMetrics::LinkMetrics>().HandleLinkProbe(aRxInfo.mMessage, seriesId));
-    aRxInfo.mNeighbor->AggregateLinkMetrics(seriesId, LinkMetrics::SeriesInfo::kSeriesTypeLinkProbe,
-                                            aRxInfo.mMessage.GetAverageLqi(), aRxInfo.mMessage.GetAverageRss());
-
-    aRxInfo.mClass = RxInfo::kPeerMessage;
-
-exit:
-    LogProcessError(kTypeLinkProbe, error);
-}
-#endif // OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
 
 void Mle::ProcessAnnounce(void)
 {

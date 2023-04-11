@@ -539,6 +539,27 @@ target_link_libraries(ot-test-ip-address
 
 add_test(NAME ot-test-ip-address COMMAND ot-test-ip-address)
 
+add_executable(ot-test-link-metrics
+    test_link_metrics.cpp
+)
+
+target_include_directories(ot-test-link-metrics
+    PRIVATE
+        ${COMMON_INCLUDES}
+)
+
+target_compile_options(ot-test-link-metrics
+    PRIVATE
+        ${COMMON_COMPILE_OPTIONS}
+)
+
+target_link_libraries(ot-test-link-metrics
+    PRIVATE
+        ${COMMON_LIBS}
+)
+
+add_test(NAME ot-test-link-metrics COMMAND ot-test-link-metrics)
+
 add_executable(ot-test-link-quality
     test_link_quality.cpp
 )

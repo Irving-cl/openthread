@@ -58,7 +58,6 @@
 
 namespace ot {
 class Neighbor;
-class UnitTester;
 
 namespace LinkMetrics {
 
@@ -71,38 +70,34 @@ namespace LinkMetrics {
  * @{
  */
 
-/**
- * This class implements Thread Link Metrics query and management.
- *
- */
-class LinkMetrics : public InstanceLocator, private NonCopyable
-{
-    friend class ot::Neighbor;
-    friend class ot::UnitTester;
+// Common underlying APIs
+typedef Message *(*NewMleMessageApi)(uint8_t aCommand, void *aApiContext);
+typedef Error (*SendMleMessageApi)(const Ip6::Address &aDestination, Message &aMessage, void *ApiContext);
 
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
+
+class LinkMetricsInitiator : private NonCopyable
+{
 public:
+    // Initiator callbacks
     typedef otLinkMetricsReportCallback                ReportCallback;
     typedef otLinkMetricsMgmtResponseCallback          MgmtResponseCallback;
     typedef otLinkMetricsEnhAckProbingIeReportCallback EnhAckProbingIeReportCallback;
 
-    /**
-     * This structure provides the info used for appending MLE Link Metric Query TLV.
-     *
-     */
-    struct QueryInfo : public Clearable<QueryInfo>
-    {
-        uint8_t mSeriesId;             ///< Series ID.
-        uint8_t mTypeIds[kMaxTypeIds]; ///< Type IDs.
-        uint8_t mTypeIdCount;          ///< Number of entries in `mTypeIds[]`.
-    };
+    // Underlying APIs
+    typedef Error (*SendMleDataRequestApi)(const Ip6::Address &aDestination,
+                                           const uint8_t      *aTlvs,
+                                           uint8_t             aTlvsLength,
+                                           const uint8_t      *aExtraTlvsBuf,
+                                           uint8_t             aExtraTlvsBufLength,
+                                           void               *aApiContext);
+    typedef Error (*FindNeighborApi)(const Ip6::Address &aDestination, Neighbor *&aNeighbor, void *aApiContext);
 
-    /**
-     * This constructor initializes an instance of the LinkMetrics class.
-     *
-     * @param[in]  aInstance  A reference to the OpenThread interface.
-     *
-     */
-    explicit LinkMetrics(Instance &aInstance);
+    explicit LinkMetricsInitiator(SendMleDataRequestApi aSendMleDataRequestApi,
+                                  NewMleMessageApi      aNewMleMessageApi,
+                                  SendMleMessageApi     aSendMleMessageApi,
+                                  FindNeighborApi       aFindNeighborApi,
+                                  void                 *aApiContext);
 
     /**
      * This method sends an MLE Data Request containing Link Metrics Query TLV to query Link Metrics data.
@@ -121,7 +116,26 @@ public:
      */
     Error Query(const Ip6::Address &aDestination, uint8_t aSeriesId, const Metrics *aMetrics);
 
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
+    /**
+     * This method registers a callback to handle Link Metrics report received.
+     *
+     * @param[in]  aCallback  A pointer to a function that is called when a Link Metrics report is received.
+     * @param[in]  aContext   A pointer to application-specific context.
+     *
+     */
+    void SetReportCallback(ReportCallback aCallback, void *aContext) { mReportCallback.Set(aCallback, aContext); }
+
+    /**
+     * This method handles the received Link Metrics report contained in @p aMessage.
+     *
+     * @param[in]  aMessage      A reference to the message.
+     * @param[in]  aOffset       The offset in bytes where the metrics report sub-TLVs start.
+     * @param[in]  aLength       The length of the metrics report sub-TLVs in bytes.
+     * @param[in]  aAddress      A reference to the source address of the message.
+     *
+     */
+    void HandleReport(const Message &aMessage, uint16_t aOffset, uint16_t aLength, const Ip6::Address &aAddress);
+
     /**
      * This method sends an MLE Link Metrics Management Request to configure/clear a Forward Tracking Series.
      *
@@ -174,35 +188,6 @@ public:
      *
      */
     Error SendLinkProbe(const Ip6::Address &aDestination, uint8_t aSeriesId, uint8_t aLength);
-#endif
-
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-    /**
-     * This method appends a Link Metrics Report to a message according to the Link Metrics query.
-     *
-     * @param[out]  aMessage           A reference to the message to append report.
-     * @param[in]   aRequestMessage    A reference to the message of the Data Request.
-     * @param[in]   aNeighbor          A reference to the neighbor who queries the report.
-     *
-     * @retval kErrorNone         Successfully appended the Thread Discovery TLV.
-     * @retval kErrorParse        Cannot parse query sub TLV successfully.
-     * @retval kErrorInvalidArgs  QueryId is invalid or any Type ID is invalid.
-     *
-     */
-    Error AppendReport(Message &aMessage, const Message &aRequestMessage, Neighbor &aNeighbor);
-#endif
-    /**
-     * This method handles the received Link Metrics Management Request contained in @p aMessage and return a status.
-     *
-     * @param[in]   aMessage     A reference to the message that contains the Link Metrics Management Request.
-     * @param[in]   aNeighbor    A reference to the neighbor who sends the request.
-     * @param[out]  aStatus      A reference to the status which indicates the handling result.
-     *
-     * @retval kErrorNone     Successfully handled the Link Metrics Management Request.
-     * @retval kErrorParse    Cannot parse sub-TLVs from @p aMessage successfully.
-     *
-     */
-    Error HandleManagementRequest(const Message &aMessage, Neighbor &aNeighbor, Status &aStatus);
 
     /**
      * This method handles the received Link Metrics Management Response contained in @p aMessage.
@@ -215,38 +200,6 @@ public:
      *
      */
     Error HandleManagementResponse(const Message &aMessage, const Ip6::Address &aAddress);
-
-    /**
-     * This method handles the received Link Metrics report contained in @p aMessage.
-     *
-     * @param[in]  aMessage      A reference to the message.
-     * @param[in]  aOffset       The offset in bytes where the metrics report sub-TLVs start.
-     * @param[in]  aLength       The length of the metrics report sub-TLVs in bytes.
-     * @param[in]  aAddress      A reference to the source address of the message.
-     *
-     */
-    void HandleReport(const Message &aMessage, uint16_t aOffset, uint16_t aLength, const Ip6::Address &aAddress);
-
-    /**
-     * This method handles the Link Probe contained in @p aMessage.
-     *
-     * @param[in]   aMessage     A reference to the message that contains the Link Probe Message.
-     * @param[out]  aSeriesId    A reference to Series ID that parsed from the message.
-     *
-     * @retval kErrorNone     Successfully handled the Link Metrics Management Response.
-     * @retval kErrorParse    Cannot parse sub-TLVs from @p aMessage successfully.
-     *
-     */
-    Error HandleLinkProbe(const Message &aMessage, uint8_t &aSeriesId);
-
-    /**
-     * This method registers a callback to handle Link Metrics report received.
-     *
-     * @param[in]  aCallback  A pointer to a function that is called when a Link Metrics report is received.
-     * @param[in]  aContext   A pointer to application-specific context.
-     *
-     */
-    void SetReportCallback(ReportCallback aCallback, void *aContext) { mReportCallback.Set(aCallback, aContext); }
 
     /**
      * This method registers a callback to handle Link Metrics Management Response received.
@@ -282,39 +235,106 @@ public:
      */
     void ProcessEnhAckIeData(const uint8_t *aData, uint8_t aLength, const Neighbor &aNeighbor);
 
+private:
     /**
-     * This method appends MLE Link Metrics Query TLV to a given message.
-     *
-     * @param[in] aMessage     The message to append to.
-     * @param[in] aInfo        The link metrics query info to use to prepare the message.
-     *
-     * @retval kErrorNone     Successfully appended the TLV to the message.
-     * @retval kErrorNoBufs   Insufficient buffers available to append the TLV.
+     * This structure provides the info used for appending MLE Link Metric Query TLV.
      *
      */
-    Error AppendLinkMetricsQueryTlv(Message &aMessage, const QueryInfo &aInfo);
+    struct QueryInfo : public Clearable<QueryInfo>
+    {
+        uint8_t mSeriesId;             ///< Series ID.
+        uint8_t mTypeIds[kMaxTypeIds]; ///< Type IDs.
+        uint8_t mTypeIdCount;          ///< Number of entries in `mTypeIds[]`.
+    };
+
+    static constexpr uint8_t kLinkProbeMaxLen = 64; // Max length of data payload in Link Probe TLV.
+
+    Error SendLinkMetricsManagementRequest(const Ip6::Address &aDestination, const ot::Tlv &aSubTlv);
+
+    const SendMleDataRequestApi mSendMleDataRequestApi;
+    const NewMleMessageApi      mNewMleMessageApi;
+    const SendMleMessageApi     mSendMleMessageApi;
+    const FindNeighborApi       mFindNeighborApi;
+    void *const                 mApiContext;
+
+    Callback<ReportCallback>                mReportCallback;
+    Callback<MgmtResponseCallback>          mMgmtResponseCallback;
+    Callback<EnhAckProbingIeReportCallback> mEnhAckProbingIeReportCallback;
+};
+
+#endif // OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
+
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
+
+class LinkMetricsSubject : private NonCopyable
+{
+public:
+    typedef otLinkMetricsEnhAckProbingIeReportCallback EnhAckProbingIeReportCallback;
+
+    // Underlying APIs
+    typedef uint8_t (*ComputeLinkMarginApi)(int8_t aRss, void *aApiContext);
+    typedef Error (*ConfigureEnhAckProbingApi)(Metrics                  aLinkMetrics,
+                                               const Mac::ShortAddress &aShortAddress,
+                                               const Mac::ExtAddress   &aExtAddress,
+                                               void                    *aApiContext);
+    explicit LinkMetricsSubject(ComputeLinkMarginApi      aComputeLinkMarginApi,
+                                NewMleMessageApi          aNewMleMessageApi,
+                                SendMleMessageApi         aSendMleMessageApi,
+                                ConfigureEnhAckProbingApi aConfigureEnhAckProbingApi,
+                                void                     *aApiContext);
+
+    /**
+     * This method handles the Link Metrics query in MLE Data Request and appends a Link Metrics Report to the MLE Data
+     * Response.
+     *
+     * @param[out]  aMessage           A reference to the message to append report.
+     * @param[in]   aRequestMessage    A reference to the message of the Data Request.
+     * @param[in]   aNeighbor          A reference to the neighbor who queries the report.
+     *
+     * @retval kErrorNone         Successfully appended the Thread Discovery TLV.
+     * @retval kErrorParse        Cannot parse query sub TLV successfully.
+     * @retval kErrorInvalidArgs  QueryId is invalid or any Type ID is invalid.
+     *
+     */
+    Error HandleQueryAndAppendReport(Message &aMessage, const Message &aRequestMessage, Neighbor &aNeighbor);
+
+    /**
+     * This method handles the received Link Metrics Management Request contained in @p aMessage and sends responses for
+     * valid requests.
+     *
+     * @param[in]   aMessage     A reference to the message that contains the Link Metrics Management Request.
+     * @param[in]   aPeerAddr    A reference to Ip6 address of the peer that sends the request.
+     * @param[in]   aNeighbor    A reference to the neighbor who sends the request.
+     *
+     * @retval kErrorNone     Successfully handled the Link Metrics Management Request.
+     * @retval kErrorParse    Cannot parse sub-TLVs from @p aMessage successfully.
+     *
+     */
+    Error HandleManagementRequest(const Message &aMessage, const Ip6::Address &aPeerAddr, Neighbor &aNeighbor);
+
+    /**
+     * This method handles the Link Probe contained in @p aMessage.
+     *
+     * @param[in]   aMessage     A reference to the message that contains the Link Probe Message.
+     * @param[in]   aNeighbor    A reference to neighbor that sent the message.
+     *
+     * @retval kErrorNone     Successfully handled the Link Probe Message.
+     * @retval kErrorParse    Cannot parse sub-TLVs from @p aMessage successfully.
+     *
+     */
+    Error HandleLinkProbe(const Message &aMessage, Neighbor &aNeighbor);
+
+    /**
+     * This method frees a SeriesInfo entry that was allocated from the LinkMetricsSubject object.
+     *
+     * @param[in]  aSeries    A reference to the SeriesInfo to free.
+     *
+     */
+    void Free(SeriesInfo &aSeriesInfo);
 
 private:
     // Max number of SeriesInfo that could be allocated by the pool.
     static constexpr uint16_t kMaxSeriesSupported = OPENTHREAD_CONFIG_MLE_LINK_METRICS_MAX_SERIES_SUPPORTED;
-
-    static constexpr uint8_t kQueryIdSingleProbe = 0;   // This query ID represents Single Probe.
-    static constexpr uint8_t kSeriesIdAllSeries  = 255; // This series ID represents all series.
-    static constexpr uint8_t kLinkProbeMaxLen    = 64;  // Max length of data payload in Link Probe TLV.
-
-    // Constants for scaling Link Margin and RSSI to raw value
-    static constexpr uint8_t kMaxLinkMargin = 130;
-    static constexpr int32_t kMinRssi       = -130;
-    static constexpr int32_t kMaxRssi       = 0;
-
-    Status ConfigureForwardTrackingSeries(uint8_t        aSeriesId,
-                                          uint8_t        aSeriesFlags,
-                                          const Metrics &aMetrics,
-                                          Neighbor      &aNeighbor);
-
-    Status ConfigureEnhAckProbing(uint8_t aEnhAckFlags, const Metrics &aMetrics, Neighbor &aNeighbor);
-
-    Error FindNeighbor(const Ip6::Address &aDestination, Neighbor *&aNeighbor) const;
 
     static Error ReadTypeIdsFromMessage(const Message &aMessage,
                                         uint16_t       aStartOffset,
@@ -322,16 +342,91 @@ private:
                                         Metrics       &aMetrics);
     static Error AppendReportSubTlvToMessage(Message &aMessage, const MetricsValues &aValues);
 
+    Error  SendLinkMetricsManagementResponse(const Ip6::Address &aDestination, Status aStatus);
+    Status ConfigureForwardTrackingSeries(uint8_t        aSeriesId,
+                                          uint8_t        aSeriesFlags,
+                                          const Metrics &aMetrics,
+                                          Neighbor      &aNeighbor);
+    Status ConfigureEnhAckProbing(uint8_t aEnhAckFlags, const Metrics &aMetrics, Neighbor &aNeighbor);
+
+    ComputeLinkMarginApi            mComputeLinkMarginApi;
+    const NewMleMessageApi          mNewMleMessageApi;
+    const SendMleMessageApi         mSendMleMessageApi;
+    const ConfigureEnhAckProbingApi mConfigureEnhAckProbingApi;
+    void *const                     mApiContext;
+
+    Pool<SeriesInfo, kMaxSeriesSupported> mSeriesInfoPool;
+};
+
+#endif // OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
+
+/**
+ * This class implements Thread Link Metrics query and management.
+ *
+ */
+class LinkMetrics : public InstanceLocator, private NonCopyable
+{
+public:
+    /**
+     * This constructor initializes an instance of the LinkMetrics class.
+     *
+     * @param[in]  aInstance  A reference to the OpenThread interface.
+     *
+     */
+    explicit LinkMetrics(Instance &aInstance);
+
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
+    LinkMetricsInitiator &GetInitiator() { return mInitiator; }
+#endif
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
+    LinkMetricsSubject &GetSubject() { return mSubject; }
+#endif
+
     static uint8_t ScaleLinkMarginToRawValue(uint8_t aLinkMargin);
     static uint8_t ScaleRawValueToLinkMargin(uint8_t aRawValue);
     static uint8_t ScaleRssiToRawValue(int8_t aRssi);
     static int8_t  ScaleRawValueToRssi(uint8_t aRawValue);
 
-    Callback<ReportCallback>                mReportCallback;
-    Callback<MgmtResponseCallback>          mMgmtResponseCallback;
-    Callback<EnhAckProbingIeReportCallback> mEnhAckProbingIeReportCallback;
+private:
+    // Constants for scaling Link Margin and RSSI to raw value
+    static constexpr uint8_t kMaxLinkMargin = 130;
+    static constexpr int32_t kMinRssi       = -130;
+    static constexpr int32_t kMaxRssi       = 0;
 
-    Pool<SeriesInfo, kMaxSeriesSupported> mSeriesInfoPool;
+    // Implement Underlying APIs for LinkMetricsInitiator and LinkMetricsSubject
+    static Message *NewMleMessage(uint8_t aCommand, void *aContext);
+    Message        *NewMleMessage(uint8_t aCommand);
+    static Error    SendMleMessage(const Ip6::Address &aDestination, Message &aMessage, void *aContext);
+    Error           SendMleMessage(const Ip6::Address &aDestination, Message &aMessage);
+    static Error    SendMleDataRequest(const Ip6::Address &aDestination,
+                                       const uint8_t      *aTlvs,
+                                       uint8_t             aTlvsLength,
+                                       const uint8_t      *aExtraTlvsBuf,
+                                       uint8_t             aExtraTlvsBufLength,
+                                       void               *aContext);
+    Error           SendMleDataRequest(const Ip6::Address &aDestination,
+                                       const uint8_t      *aTlvs,
+                                       uint8_t             aTlvsLength,
+                                       const uint8_t      *aExtraTlvsBuf,
+                                       uint8_t             aExtraTlvsBufLength);
+    static Error    FindNeighbor(const Ip6::Address &aDestination, Neighbor *&aNeighbor, void *aContext);
+    Error           FindNeighbor(const Ip6::Address &aDestination, Neighbor *&aNeighbor);
+    static uint8_t  ComputeLinkMargin(int8_t aRss, void *aContext);
+    uint8_t         ComputeLinkMargin(int8_t aRss);
+    static Error    ConfigureEnhAckProbing(Metrics                  aLinkMetrics,
+                                           const Mac::ShortAddress &aShortAddress,
+                                           const Mac::ExtAddress   &aExtAddress,
+                                           void                    *aContext);
+    Error           ConfigureEnhAckProbing(Metrics                  aLinkMetrics,
+                                           const Mac::ShortAddress &aShortAddress,
+                                           const Mac::ExtAddress   &aExtAddress);
+
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
+    LinkMetricsInitiator mInitiator;
+#endif
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
+    LinkMetricsSubject mSubject;
+#endif
 };
 
 /**

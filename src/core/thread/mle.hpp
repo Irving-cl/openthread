@@ -105,8 +105,13 @@ class Mle : public InstanceLocator, private NonCopyable
     friend class ot::SupervisionListener;
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE || OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
     friend class ot::LinkMetrics::LinkMetrics;
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
+    friend class ot::LinkMetrics::LinkMetricsInitiator;
 #endif
-
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
+    friend class ot::LinkMetrics::LinkMetricsSubject;
+#endif
+#endif
 public:
     /**
      * This constructor initializes the MLE object.
@@ -733,7 +738,6 @@ protected:
         kCommandLinkProbe                     = 20, ///< Link Probe
         kCommandTimeSync                      = 99, ///< Time Sync (when OPENTHREAD_CONFIG_TIME_SYNC_ENABLE enabled)
     };
-
     /**
      * Attach mode.
      *
@@ -1519,30 +1523,6 @@ protected:
      */
     Mac::ShortAddress GetNextHop(uint16_t aDestination) const;
 
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE || OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-    /**
-     * This method generates an MLE Data Request message which includes a Link Metrics Query TLV.
-     *
-     * @param[in]  aDestination      A reference to the IPv6 address of the destination.
-     * @param[in]  aTlvs             A pointer to requested TLV types.
-     * @param[in]  aTlvsLength       The number of TLV types in @p aTlvs.
-     * @param[in]  aDelay            Delay in milliseconds before the Data Request message is sent.
-     * @param[in]  aQueryInfo        A Link Metrics query info.
-     *
-     * @retval kErrorNone     Successfully generated an MLE Data Request message.
-     * @retval kErrorNoBufs   Insufficient buffers to generate the MLE Data Request message.
-     *
-     */
-    Error SendDataRequest(const Ip6::Address                        &aDestination,
-                          const uint8_t                             *aTlvs,
-                          uint8_t                                    aTlvsLength,
-                          uint16_t                                   aDelay,
-                          const LinkMetrics::LinkMetrics::QueryInfo &aQueryInfo)
-    {
-        return SendDataRequest(aDestination, aTlvs, aTlvsLength, aDelay, &aQueryInfo);
-    }
-#endif
-
     /**
      * This method generates an MLE Data Request message.
      *
@@ -1980,15 +1960,13 @@ private:
     bool        IsDetachingGracefully(void) { return mDetachGracefullyTimer.IsRunning(); }
     Error       SendChildUpdateRequest(bool aAppendChallenge, uint32_t aTimeout);
 
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE || OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-    Error SendDataRequest(const Ip6::Address                        &aDestination,
-                          const uint8_t                             *aTlvs,
-                          uint8_t                                    aTlvsLength,
-                          uint16_t                                   aDelay,
-                          const LinkMetrics::LinkMetrics::QueryInfo *aQueryInfo = nullptr);
-#else
     Error SendDataRequest(const Ip6::Address &aDestination, const uint8_t *aTlvs, uint8_t aTlvsLength, uint16_t aDelay);
-#endif
+    Error SendDataRequest(const Ip6::Address &aDestination,
+                          const uint8_t      *aTlvs,
+                          uint8_t             aTlvsLength,
+                          uint16_t            aDelay,
+                          const uint8_t      *aExtraTlvsBuf,
+                          uint8_t             aExtraTlvsBufLength);
 
 #if OPENTHREAD_FTD
     static void HandleDetachGracefullyAddressReleaseResponse(void                *aContext,
