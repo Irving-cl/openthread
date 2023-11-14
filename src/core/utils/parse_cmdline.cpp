@@ -238,20 +238,20 @@ exit:
 }
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
 
-Error ParseAsIp6Address(const char *aString, otIp6Address &aAddress)
-{
-    return (aString != nullptr) ? otIp6AddressFromString(aString, &aAddress) : kErrorInvalidArgs;
-}
+// Error ParseAsIp6Address(const char *aString, otIp6Address &aAddress)
+// {
+//     return (aString != nullptr) ? otIp6AddressFromString(aString, &aAddress) : kErrorInvalidArgs;
+// }
 
-Error ParseAsIp4Address(const char *aString, otIp4Address &aAddress)
-{
-    return (aString != nullptr) ? otIp4AddressFromString(aString, &aAddress) : kErrorInvalidArgs;
-}
+// Error ParseAsIp4Address(const char *aString, otIp4Address &aAddress)
+// {
+//     return (aString != nullptr) ? otIp4AddressFromString(aString, &aAddress) : kErrorInvalidArgs;
+// }
 
-Error ParseAsIp6Prefix(const char *aString, otIp6Prefix &aPrefix)
-{
-    return (aString != nullptr) ? otIp6PrefixFromString(aString, &aPrefix) : kErrorInvalidArgs;
-}
+// Error ParseAsIp6Prefix(const char *aString, otIp6Prefix &aPrefix)
+// {
+//     return (aString != nullptr) ? otIp6PrefixFromString(aString, &aPrefix) : kErrorInvalidArgs;
+// }
 #endif // #if OPENTHREAD_FTD || OPENTHREAD_MTD
 
 enum HexStringParseMode

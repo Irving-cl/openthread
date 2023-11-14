@@ -160,20 +160,20 @@ void Output::OutputEnabledDisabledStatus(bool aEnabled) { OutputLine(aEnabled ? 
 
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
 
-void Output::OutputIp6Address(const otIp6Address &aAddress)
-{
-    char string[OT_IP6_ADDRESS_STRING_SIZE];
+// void Output::OutputIp6Address(const otIp6Address &aAddress)
+// {
+//     char string[OT_IP6_ADDRESS_STRING_SIZE];
 
-    otIp6AddressToString(&aAddress, string, sizeof(string));
+//     otIp6AddressToString(&aAddress, string, sizeof(string));
 
-    return OutputFormat("%s", string);
-}
+//     return OutputFormat("%s", string);
+// }
 
-void Output::OutputIp6AddressLine(const otIp6Address &aAddress)
-{
-    OutputIp6Address(aAddress);
-    OutputNewLine();
-}
+// void Output::OutputIp6AddressLine(const otIp6Address &aAddress)
+// {
+//     OutputIp6Address(aAddress);
+//     OutputNewLine();
+// }
 
 void Output::OutputIp6Prefix(const otIp6Prefix &aPrefix)
 {
@@ -202,65 +202,77 @@ void Output::OutputIp6PrefixLine(const otIp6NetworkPrefix &aPrefix)
     OutputNewLine();
 }
 
-void Output::OutputSockAddr(const otSockAddr &aSockAddr)
-{
-    char string[OT_IP6_SOCK_ADDR_STRING_SIZE];
+// void Output::OutputIp6Prefix(const otIp6NetworkPrefix &aPrefix)
+// {
+//     OutputFormat("%x:%x:%x:%x::/64", (aPrefix.m8[0] << 8) | aPrefix.m8[1], (aPrefix.m8[2] << 8) | aPrefix.m8[3],
+//                  (aPrefix.m8[4] << 8) | aPrefix.m8[5], (aPrefix.m8[6] << 8) | aPrefix.m8[7]);
+// }
 
-    otIp6SockAddrToString(&aSockAddr, string, sizeof(string));
+// void Output::OutputIp6PrefixLine(const otIp6NetworkPrefix &aPrefix)
+// {
+//     OutputIp6Prefix(aPrefix);
+//     OutputNewLine();
+// }
 
-    return OutputFormat("%s", string);
-}
+// void Output::OutputSockAddr(const otSockAddr &aSockAddr)
+// {
+//     char string[OT_IP6_SOCK_ADDR_STRING_SIZE];
 
-void Output::OutputSockAddrLine(const otSockAddr &aSockAddr)
-{
-    OutputSockAddr(aSockAddr);
-    OutputNewLine();
-}
+//     otIp6SockAddrToString(&aSockAddr, string, sizeof(string));
 
-void Output::OutputDnsTxtData(const uint8_t *aTxtData, uint16_t aTxtDataLength)
-{
-    otDnsTxtEntry         entry;
-    otDnsTxtEntryIterator iterator;
-    bool                  isFirst = true;
+//     return OutputFormat("%s", string);
+// }
 
-    otDnsInitTxtEntryIterator(&iterator, aTxtData, aTxtDataLength);
+// void Output::OutputSockAddrLine(const otSockAddr &aSockAddr)
+// {
+//     OutputSockAddr(aSockAddr);
+//     OutputNewLine();
+// }
 
-    OutputFormat("[");
+// void Output::OutputDnsTxtData(const uint8_t *aTxtData, uint16_t aTxtDataLength)
+// {
+//     otDnsTxtEntry         entry;
+//     otDnsTxtEntryIterator iterator;
+//     bool                  isFirst = true;
 
-    while (otDnsGetNextTxtEntry(&iterator, &entry) == OT_ERROR_NONE)
-    {
-        if (!isFirst)
-        {
-            OutputFormat(", ");
-        }
+//     otDnsInitTxtEntryIterator(&iterator, aTxtData, aTxtDataLength);
 
-        if (entry.mKey == nullptr)
-        {
-            // A null `mKey` indicates that the key in the entry is
-            // longer than the recommended max key length, so the entry
-            // could not be parsed. In this case, the whole entry is
-            // returned encoded in `mValue`.
+//     OutputFormat("[");
 
-            OutputFormat("[");
-            OutputBytes(entry.mValue, entry.mValueLength);
-            OutputFormat("]");
-        }
-        else
-        {
-            OutputFormat("%s", entry.mKey);
+//     while (otDnsGetNextTxtEntry(&iterator, &entry) == OT_ERROR_NONE)
+//     {
+//         if (!isFirst)
+//         {
+//             OutputFormat(", ");
+//         }
 
-            if (entry.mValue != nullptr)
-            {
-                OutputFormat("=");
-                OutputBytes(entry.mValue, entry.mValueLength);
-            }
-        }
+//         if (entry.mKey == nullptr)
+//         {
+//             // A null `mKey` indicates that the key in the entry is
+//             // longer than the recommended max key length, so the entry
+//             // could not be parsed. In this case, the whole entry is
+//             // returned encoded in `mValue`.
 
-        isFirst = false;
-    }
+//             OutputFormat("[");
+//             OutputBytes(entry.mValue, entry.mValueLength);
+//             OutputFormat("]");
+//         }
+//         else
+//         {
+//             OutputFormat("%s", entry.mKey);
 
-    OutputFormat("]");
-}
+//             if (entry.mValue != nullptr)
+//             {
+//                 OutputFormat("=");
+//                 OutputBytes(entry.mValue, entry.mValueLength);
+//             }
+//         }
+
+//         isFirst = false;
+//     }
+
+//     OutputFormat("]");
+// }
 
 const char *Output::PercentageToString(uint16_t aValue, PercentageStringBuffer &aBuffer)
 {

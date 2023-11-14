@@ -78,7 +78,7 @@ static mbedtls_entropy_context  sEntropyContext;
 static constexpr uint16_t kEntropyMinThreshold = 16;
 #endif
 #endif
-
+/*
 OT_TOOL_WEAK void otPlatCryptoInit(void)
 {
     // Intentionally empty.
@@ -444,6 +444,7 @@ exit:
     return error;
 }
 
+*/
 #ifndef OT_MBEDTLS_STRONG_DEFAULT_ENTROPY_PRESENT
 
 static int handleMbedtlsEntropyPoll(void *aData, unsigned char *aOutput, size_t aInLen, size_t *aOutLen)
@@ -460,7 +461,6 @@ exit:
     OT_UNUSED_VARIABLE(aData);
     return rval;
 }
-
 #endif // OT_MBEDTLS_STRONG_DEFAULT_ENTROPY_PRESENT
 
 OT_TOOL_WEAK void otPlatCryptoRandomInit(void)
@@ -491,6 +491,7 @@ OT_TOOL_WEAK otError otPlatCryptoRandomGet(uint8_t *aBuffer, uint16_t aSize)
         mbedtls_ctr_drbg_random(&sCtrDrbgContext, static_cast<unsigned char *>(aBuffer), static_cast<size_t>(aSize)));
 }
 
+/*
 #if OPENTHREAD_CONFIG_ECDSA_ENABLE
 
 OT_TOOL_WEAK otError otPlatCryptoEcdsaGenerateKey(otPlatCryptoEcdsaKeyPair *aKeyPair)
@@ -708,9 +709,9 @@ OT_TOOL_WEAK otError otPlatCryptoEcdsaVerify(const otPlatCryptoEcdsaPublicKey *a
 #endif // #if OPENTHREAD_CONFIG_ECDSA_ENABLE
 
 #endif // #if !OPENTHREAD_RADIO
-
+*/
 #endif // #if OPENTHREAD_CONFIG_CRYPTO_LIB == OPENTHREAD_CONFIG_CRYPTO_LIB_MBEDTLS
-
+/*
 //---------------------------------------------------------------------------------------------------------------------
 // APIs to be used in "hybrid" mode by every OPENTHREAD_CONFIG_CRYPTO_LIB variant until full PSA support is ready
 
@@ -792,3 +793,4 @@ OT_TOOL_WEAK void otPlatCryptoPbkdf2GenerateKey(const uint8_t *aPassword,
 }
 
 #endif // #if OPENTHREAD_FTD
+*/

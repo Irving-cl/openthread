@@ -163,486 +163,488 @@ exit:
     return;
 }
 
-KeyManager::KeyManager(Instance &aInstance)
-    : InstanceLocator(aInstance)
-    , mKeySequence(0)
-    , mMleFrameCounter(0)
-    , mStoredMacFrameCounter(0)
-    , mStoredMleFrameCounter(0)
-    , mHoursSinceKeyRotation(0)
-    , mKeySwitchGuardTime(kDefaultKeySwitchGuardTime)
-    , mKeySwitchGuardEnabled(false)
-    , mKeyRotationTimer(aInstance)
-    , mKekFrameCounter(0)
-    , mIsPskcSet(false)
-{
-    otPlatCryptoInit();
-
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    {
-        NetworkKey networkKey;
-
-        mNetworkKeyRef = Crypto::Storage::kInvalidKeyRef;
-        mPskcRef       = Crypto::Storage::kInvalidKeyRef;
-
-        IgnoreError(networkKey.GenerateRandom());
-        StoreNetworkKey(networkKey, /* aOverWriteExisting */ false);
-    }
-#else
-    IgnoreError(mNetworkKey.GenerateRandom());
-    mPskc.Clear();
-#endif
-
-    mMacFrameCounters.Reset();
-}
-
-void KeyManager::Start(void)
-{
-    mKeySwitchGuardEnabled = false;
-    StartKeyRotationTimer();
-}
-
-void KeyManager::Stop(void) { mKeyRotationTimer.Stop(); }
-
-void KeyManager::SetPskc(const Pskc &aPskc)
-{
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    if (Crypto::Storage::IsKeyRefValid(mPskcRef))
-    {
-        Pskc pskc;
-
-        GetPskc(pskc);
-        VerifyOrExit(aPskc != pskc, Get<Notifier>().SignalIfFirst(kEventPskcChanged));
-    }
-
-    StorePskc(aPskc);
-    Get<Notifier>().Signal(kEventPskcChanged);
-#else
-    SuccessOrExit(Get<Notifier>().Update(mPskc, aPskc, kEventPskcChanged));
-#endif
-
-exit:
-    mIsPskcSet = true;
-}
-
-void KeyManager::ResetFrameCounters(void)
-{
-    Router *parent;
-
-    // reset parent frame counters
-    parent = &Get<Mle::MleRouter>().GetParent();
-    parent->SetKeySequence(0);
-    parent->GetLinkFrameCounters().Reset();
-    parent->SetLinkAckFrameCounter(0);
-    parent->SetMleFrameCounter(0);
-
-#if OPENTHREAD_FTD
-    // reset router frame counters
-    for (Router &router : Get<RouterTable>())
-    {
-        router.SetKeySequence(0);
-        router.GetLinkFrameCounters().Reset();
-        router.SetLinkAckFrameCounter(0);
-        router.SetMleFrameCounter(0);
-    }
-
-    // reset child frame counters
-    for (Child &child : Get<ChildTable>().Iterate(Child::kInStateAnyExceptInvalid))
-    {
-        child.SetKeySequence(0);
-        child.GetLinkFrameCounters().Reset();
-        child.SetLinkAckFrameCounter(0);
-        child.SetMleFrameCounter(0);
-    }
-#endif
-}
-
-void KeyManager::SetNetworkKey(const NetworkKey &aNetworkKey)
-{
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    if (Crypto::Storage::IsKeyRefValid(mNetworkKeyRef))
-    {
-        NetworkKey networkKey;
-
-        GetNetworkKey(networkKey);
-        VerifyOrExit(networkKey != aNetworkKey, Get<Notifier>().SignalIfFirst(kEventNetworkKeyChanged));
-    }
 
-    StoreNetworkKey(aNetworkKey, /* aOverWriteExisting */ true);
-    Get<Notifier>().Signal(kEventNetworkKeyChanged);
-#else
-    SuccessOrExit(Get<Notifier>().Update(mNetworkKey, aNetworkKey, kEventNetworkKeyChanged));
-#endif
-
-    Get<Notifier>().Signal(kEventThreadKeySeqCounterChanged);
-
-    mKeySequence = 0;
-    UpdateKeyMaterial();
-    ResetFrameCounters();
-
-exit:
-    return;
-}
-
-void KeyManager::ComputeKeys(uint32_t aKeySequence, HashKeys &aHashKeys) const
-{
-    Crypto::HmacSha256 hmac;
-    uint8_t            keySequenceBytes[sizeof(uint32_t)];
-    Crypto::Key        cryptoKey;
-
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    cryptoKey.SetAsKeyRef(mNetworkKeyRef);
-#else
-    cryptoKey.Set(mNetworkKey.m8, NetworkKey::kSize);
-#endif
+// KeyManager::KeyManager(Instance &aInstance)
+//     : InstanceLocator(aInstance)
+//     , mKeySequence(0)
+//     , mMleFrameCounter(0)
+//     , mStoredMacFrameCounter(0)
+//     , mStoredMleFrameCounter(0)
+//     , mHoursSinceKeyRotation(0)
+//     , mKeySwitchGuardTime(kDefaultKeySwitchGuardTime)
+//     , mKeySwitchGuardEnabled(false)
+//     , mKeyRotationTimer(aInstance)
+//     , mKekFrameCounter(0)
+//     , mIsPskcSet(false)
+// {
+//     otPlatCryptoInit();
+
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     {
+//         NetworkKey networkKey;
+
+//         mNetworkKeyRef = Crypto::Storage::kInvalidKeyRef;
+//         mPskcRef       = Crypto::Storage::kInvalidKeyRef;
+
+//         IgnoreError(networkKey.GenerateRandom());
+//         StoreNetworkKey(networkKey, /* aOverWriteExisting */ false);
+//     }
+// #else
+//     IgnoreError(mNetworkKey.GenerateRandom());
+//     mPskc.Clear();
+// #endif
+
+//     mMacFrameCounters.Reset();
+// }
+
+// void KeyManager::Start(void)
+// {
+//     mKeySwitchGuardEnabled = false;
+//     StartKeyRotationTimer();
+// }
+
+// void KeyManager::Stop(void) { mKeyRotationTimer.Stop(); }
+
+// void KeyManager::SetPskc(const Pskc &aPskc)
+// {
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     if (Crypto::Storage::IsKeyRefValid(mPskcRef))
+//     {
+//         Pskc pskc;
+
+//         GetPskc(pskc);
+//         VerifyOrExit(aPskc != pskc, Get<Notifier>().SignalIfFirst(kEventPskcChanged));
+//     }
+
+//     StorePskc(aPskc);
+//     Get<Notifier>().Signal(kEventPskcChanged);
+// #else
+//     SuccessOrExit(Get<Notifier>().Update(mPskc, aPskc, kEventPskcChanged));
+// #endif
+
+// exit:
+//     mIsPskcSet = true;
+// }
+
+// void KeyManager::ResetFrameCounters(void)
+// {
+//     Router *parent;
+
+//     // reset parent frame counters
+//     parent = &Get<Mle::MleRouter>().GetParent();
+//     parent->SetKeySequence(0);
+//     parent->GetLinkFrameCounters().Reset();
+//     parent->SetLinkAckFrameCounter(0);
+//     parent->SetMleFrameCounter(0);
+
+// #if OPENTHREAD_FTD
+//     // reset router frame counters
+//     for (Router &router : Get<RouterTable>())
+//     {
+//         router.SetKeySequence(0);
+//         router.GetLinkFrameCounters().Reset();
+//         router.SetLinkAckFrameCounter(0);
+//         router.SetMleFrameCounter(0);
+//     }
+
+//     // reset child frame counters
+//     for (Child &child : Get<ChildTable>().Iterate(Child::kInStateAnyExceptInvalid))
+//     {
+//         child.SetKeySequence(0);
+//         child.GetLinkFrameCounters().Reset();
+//         child.SetLinkAckFrameCounter(0);
+//         child.SetMleFrameCounter(0);
+//     }
+// #endif
+// }
+
+// void KeyManager::SetNetworkKey(const NetworkKey &aNetworkKey)
+// {
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     if (Crypto::Storage::IsKeyRefValid(mNetworkKeyRef))
+//     {
+//         NetworkKey networkKey;
+
+//         GetNetworkKey(networkKey);
+//         VerifyOrExit(networkKey != aNetworkKey, Get<Notifier>().SignalIfFirst(kEventNetworkKeyChanged));
+//     }
+
+//     StoreNetworkKey(aNetworkKey, /* aOverWriteExisting */ true);
+//     Get<Notifier>().Signal(kEventNetworkKeyChanged);
+// #else
+//     SuccessOrExit(Get<Notifier>().Update(mNetworkKey, aNetworkKey, kEventNetworkKeyChanged));
+// #endif
+
+//     Get<Notifier>().Signal(kEventThreadKeySeqCounterChanged);
+
+//     mKeySequence = 0;
+//     UpdateKeyMaterial();
+//     ResetFrameCounters();
+
+// exit:
+//     return;
+// }
+
+// void KeyManager::ComputeKeys(uint32_t aKeySequence, HashKeys &aHashKeys) const
+// {
+//     Crypto::HmacSha256 hmac;
+//     uint8_t            keySequenceBytes[sizeof(uint32_t)];
+//     Crypto::Key        cryptoKey;
+
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     cryptoKey.SetAsKeyRef(mNetworkKeyRef);
+// #else
+//     cryptoKey.Set(mNetworkKey.m8, NetworkKey::kSize);
+// #endif
+
+//     hmac.Start(cryptoKey);
 
-    hmac.Start(cryptoKey);
+//     Encoding::BigEndian::WriteUint32(aKeySequence, keySequenceBytes);
+//     hmac.Update(keySequenceBytes);
+//     hmac.Update(kThreadString);
 
-    Encoding::BigEndian::WriteUint32(aKeySequence, keySequenceBytes);
-    hmac.Update(keySequenceBytes);
-    hmac.Update(kThreadString);
+//     hmac.Finish(aHashKeys.mHash);
+// }
+
+// #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+// void KeyManager::ComputeTrelKey(uint32_t aKeySequence, Mac::Key &aKey) const
+// {
+//     Crypto::HkdfSha256 hkdf;
+//     uint8_t            salt[sizeof(uint32_t) + sizeof(kHkdfExtractSaltString)];
+//     Crypto::Key        cryptoKey;
+
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     cryptoKey.SetAsKeyRef(mNetworkKeyRef);
+// #else
+//     cryptoKey.Set(mNetworkKey.m8, NetworkKey::kSize);
+// #endif
 
-    hmac.Finish(aHashKeys.mHash);
-}
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-void KeyManager::ComputeTrelKey(uint32_t aKeySequence, Mac::Key &aKey) const
-{
-    Crypto::HkdfSha256 hkdf;
-    uint8_t            salt[sizeof(uint32_t) + sizeof(kHkdfExtractSaltString)];
-    Crypto::Key        cryptoKey;
-
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    cryptoKey.SetAsKeyRef(mNetworkKeyRef);
-#else
-    cryptoKey.Set(mNetworkKey.m8, NetworkKey::kSize);
-#endif
-
-    Encoding::BigEndian::WriteUint32(aKeySequence, salt);
-    memcpy(salt + sizeof(uint32_t), kHkdfExtractSaltString, sizeof(kHkdfExtractSaltString));
-
-    hkdf.Extract(salt, sizeof(salt), cryptoKey);
-    hkdf.Expand(kTrelInfoString, sizeof(kTrelInfoString), aKey.m8, Mac::Key::kSize);
-}
-#endif
-
-void KeyManager::UpdateKeyMaterial(void)
-{
-    HashKeys hashKeys;
-
-    ComputeKeys(mKeySequence, hashKeys);
-
-    mMleKey.SetFrom(hashKeys.GetMleKey());
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
-    {
-        Mac::KeyMaterial curKey;
-        Mac::KeyMaterial prevKey;
-        Mac::KeyMaterial nextKey;
-
-        curKey.SetFrom(hashKeys.GetMacKey(), kExportableMacKeys);
-
-        ComputeKeys(mKeySequence - 1, hashKeys);
-        prevKey.SetFrom(hashKeys.GetMacKey(), kExportableMacKeys);
-
-        ComputeKeys(mKeySequence + 1, hashKeys);
-        nextKey.SetFrom(hashKeys.GetMacKey(), kExportableMacKeys);
-
-        Get<Mac::SubMac>().SetMacKey(Mac::Frame::kKeyIdMode1, (mKeySequence & 0x7f) + 1, prevKey, curKey, nextKey);
-    }
-#endif
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    {
-        Mac::Key key;
-
-        ComputeTrelKey(mKeySequence, key);
-        mTrelKey.SetFrom(key);
-    }
-#endif
-}
-
-void KeyManager::SetCurrentKeySequence(uint32_t aKeySequence)
-{
-    VerifyOrExit(aKeySequence != mKeySequence, Get<Notifier>().SignalIfFirst(kEventThreadKeySeqCounterChanged));
-
-    if ((aKeySequence == (mKeySequence + 1)) && mKeyRotationTimer.IsRunning())
-    {
-        if (mKeySwitchGuardEnabled)
-        {
-            // Check if the guard timer has expired if key rotation is requested.
-            VerifyOrExit(mHoursSinceKeyRotation >= mKeySwitchGuardTime);
-            StartKeyRotationTimer();
-        }
-
-        mKeySwitchGuardEnabled = true;
-    }
-
-    mKeySequence = aKeySequence;
-    UpdateKeyMaterial();
-
-    SetAllMacFrameCounters(0, /* aSetIfLarger */ false);
-    mMleFrameCounter = 0;
-
-    Get<Notifier>().Signal(kEventThreadKeySeqCounterChanged);
-
-exit:
-    return;
-}
-
-const Mle::KeyMaterial &KeyManager::GetTemporaryMleKey(uint32_t aKeySequence)
-{
-    HashKeys hashKeys;
-
-    ComputeKeys(aKeySequence, hashKeys);
-    mTemporaryMleKey.SetFrom(hashKeys.GetMleKey());
-
-    return mTemporaryMleKey;
-}
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-const Mac::KeyMaterial &KeyManager::GetTemporaryTrelMacKey(uint32_t aKeySequence)
-{
-    Mac::Key key;
-
-    ComputeTrelKey(aKeySequence, key);
-    mTemporaryTrelKey.SetFrom(key);
-
-    return mTemporaryTrelKey;
-}
-#endif
-
-void KeyManager::SetAllMacFrameCounters(uint32_t aFrameCounter, bool aSetIfLarger)
-{
-    mMacFrameCounters.SetAll(aFrameCounter);
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
-    Get<Mac::SubMac>().SetFrameCounter(aFrameCounter, aSetIfLarger);
-#else
-    OT_UNUSED_VARIABLE(aSetIfLarger);
-#endif
-}
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
-void KeyManager::MacFrameCounterUsed(uint32_t aMacFrameCounter)
-{
-    // This is callback from `SubMac` to indicate that a frame
-    // counter value is used for tx. We ensure to handle it
-    // even if it is called out of order.
-
-    VerifyOrExit(mMacFrameCounters.Get154() <= aMacFrameCounter);
-
-    mMacFrameCounters.Set154(aMacFrameCounter + 1);
-
-    if (mMacFrameCounters.Get154() >= mStoredMacFrameCounter)
-    {
-        IgnoreError(Get<Mle::MleRouter>().Store());
-    }
-
-exit:
-    return;
-}
-#else
-void KeyManager::MacFrameCounterUsed(uint32_t) {}
-#endif
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-void KeyManager::IncrementTrelMacFrameCounter(void)
-{
-    mMacFrameCounters.IncrementTrel();
-
-    if (mMacFrameCounters.GetTrel() >= mStoredMacFrameCounter)
-    {
-        IgnoreError(Get<Mle::MleRouter>().Store());
-    }
-}
-#endif
-
-void KeyManager::IncrementMleFrameCounter(void)
-{
-    mMleFrameCounter++;
-
-    if (mMleFrameCounter >= mStoredMleFrameCounter)
-    {
-        IgnoreError(Get<Mle::MleRouter>().Store());
-    }
-}
-
-void KeyManager::SetKek(const Kek &aKek)
-{
-    mKek.SetFrom(aKek, /* aIsExportable */ true);
-    mKekFrameCounter = 0;
-}
-
-void KeyManager::SetSecurityPolicy(const SecurityPolicy &aSecurityPolicy)
-{
-    if (aSecurityPolicy.mRotationTime < SecurityPolicy::kMinKeyRotationTime)
-    {
-        LogNote("Key Rotation Time too small: %d", aSecurityPolicy.mRotationTime);
-        ExitNow();
-    }
-
-    IgnoreError(Get<Notifier>().Update(mSecurityPolicy, aSecurityPolicy, kEventSecurityPolicyChanged));
-
-exit:
-    return;
-}
-
-void KeyManager::StartKeyRotationTimer(void)
-{
-    mHoursSinceKeyRotation = 0;
-    mKeyRotationTimer.Start(kOneHourIntervalInMsec);
-}
-
-void KeyManager::HandleKeyRotationTimer(void)
-{
-    mHoursSinceKeyRotation++;
-
-    // Order of operations below is important. We should restart the timer (from
-    // last fire time for one hour interval) before potentially calling
-    // `SetCurrentKeySequence()`. `SetCurrentKeySequence()` uses the fact that
-    // timer is running to decide to check for the guard time and to reset the
-    // rotation timer (and the `mHoursSinceKeyRotation`) if it updates the key
-    // sequence.
-
-    mKeyRotationTimer.StartAt(mKeyRotationTimer.GetFireTime(), kOneHourIntervalInMsec);
-
-    if (mHoursSinceKeyRotation >= mSecurityPolicy.mRotationTime)
-    {
-        SetCurrentKeySequence(mKeySequence + 1);
-    }
-}
-
-void KeyManager::GetNetworkKey(NetworkKey &aNetworkKey) const
-{
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    if (Crypto::Storage::IsKeyRefValid(mNetworkKeyRef))
-    {
-        size_t keyLen;
-
-        SuccessOrAssert(Crypto::Storage::ExportKey(mNetworkKeyRef, aNetworkKey.m8, NetworkKey::kSize, keyLen));
-        OT_ASSERT(keyLen == NetworkKey::kSize);
-    }
-    else
-    {
-        aNetworkKey.Clear();
-    }
-#else
-    aNetworkKey = mNetworkKey;
-#endif
-}
-
-void KeyManager::GetPskc(Pskc &aPskc) const
-{
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    if (Crypto::Storage::IsKeyRefValid(mPskcRef))
-    {
-        size_t keyLen;
-
-        SuccessOrAssert(Crypto::Storage::ExportKey(mPskcRef, aPskc.m8, Pskc::kSize, keyLen));
-        OT_ASSERT(keyLen == Pskc::kSize);
-    }
-    else
-    {
-        aPskc.Clear();
-    }
-#else
-    aPskc = mPskc;
-#endif
-}
-
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-
-void KeyManager::StoreNetworkKey(const NetworkKey &aNetworkKey, bool aOverWriteExisting)
-{
-    NetworkKeyRef keyRef;
-
-    keyRef = Crypto::Storage::kNetworkKeyRef;
-
-    if (!aOverWriteExisting)
-    {
-        // Check if there is already a network key stored in ITS. If
-        // stored, and we are not overwriting the existing key,
-        // return without doing anything.
-        if (Crypto::Storage::HasKey(keyRef))
-        {
-            ExitNow();
-        }
-    }
-
-    Crypto::Storage::DestroyKey(keyRef);
-
-    SuccessOrAssert(Crypto::Storage::ImportKey(keyRef, Crypto::Storage::kKeyTypeHmac,
-                                               Crypto::Storage::kKeyAlgorithmHmacSha256,
-                                               Crypto::Storage::kUsageSignHash | Crypto::Storage::kUsageExport,
-                                               Crypto::Storage::kTypePersistent, aNetworkKey.m8, NetworkKey::kSize));
-
-exit:
-    if (mNetworkKeyRef != keyRef)
-    {
-        Crypto::Storage::DestroyKey(mNetworkKeyRef);
-    }
-
-    mNetworkKeyRef = keyRef;
-}
-
-void KeyManager::StorePskc(const Pskc &aPskc)
-{
-    PskcRef keyRef = Crypto::Storage::kPskcRef;
-
-    Crypto::Storage::DestroyKey(keyRef);
-
-    SuccessOrAssert(Crypto::Storage::ImportKey(keyRef, Crypto::Storage::kKeyTypeRaw,
-                                               Crypto::Storage::kKeyAlgorithmVendor, Crypto::Storage::kUsageExport,
-                                               Crypto::Storage::kTypePersistent, aPskc.m8, Pskc::kSize));
-
-    if (mPskcRef != keyRef)
-    {
-        Crypto::Storage::DestroyKey(mPskcRef);
-    }
-
-    mPskcRef = keyRef;
-}
-
-void KeyManager::SetPskcRef(PskcRef aKeyRef)
-{
-    VerifyOrExit(mPskcRef != aKeyRef, Get<Notifier>().SignalIfFirst(kEventPskcChanged));
-
-    Crypto::Storage::DestroyKey(mPskcRef);
-
-    mPskcRef = aKeyRef;
-    Get<Notifier>().Signal(kEventPskcChanged);
-
-exit:
-    mIsPskcSet = true;
-}
-
-void KeyManager::SetNetworkKeyRef(otNetworkKeyRef aKeyRef)
-{
-    VerifyOrExit(mNetworkKeyRef != aKeyRef, Get<Notifier>().SignalIfFirst(kEventNetworkKeyChanged));
-
-    Crypto::Storage::DestroyKey(mNetworkKeyRef);
-
-    mNetworkKeyRef = aKeyRef;
-    Get<Notifier>().Signal(kEventNetworkKeyChanged);
-    Get<Notifier>().Signal(kEventThreadKeySeqCounterChanged);
-    mKeySequence = 0;
-    UpdateKeyMaterial();
-    ResetFrameCounters();
-
-exit:
-    return;
-}
-
-void KeyManager::DestroyTemporaryKeys(void)
-{
-    mMleKey.Clear();
-    mKek.Clear();
-    Get<Mac::SubMac>().ClearMacKeys();
-    Get<Mac::Mac>().ClearMode2Key();
-}
-
-void KeyManager::DestroyPersistentKeys(void) { Crypto::Storage::DestroyPersistentKeys(); }
-#endif // OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     Encoding::BigEndian::WriteUint32(aKeySequence, salt);
+//     memcpy(salt + sizeof(uint32_t), kHkdfExtractSaltString, sizeof(kHkdfExtractSaltString));
+
+//     hkdf.Extract(salt, sizeof(salt), cryptoKey);
+//     hkdf.Expand(kTrelInfoString, sizeof(kTrelInfoString), aKey.m8, Mac::Key::kSize);
+// }
+// #endif
+
+// void KeyManager::UpdateKeyMaterial(void)
+// {
+//     HashKeys hashKeys;
+
+//     ComputeKeys(mKeySequence, hashKeys);
+
+//     mMleKey.SetFrom(hashKeys.GetMleKey());
+
+// #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+//     {
+//         Mac::KeyMaterial curKey;
+//         Mac::KeyMaterial prevKey;
+//         Mac::KeyMaterial nextKey;
+
+//         curKey.SetFrom(hashKeys.GetMacKey(), kExportableMacKeys);
+
+//         ComputeKeys(mKeySequence - 1, hashKeys);
+//         prevKey.SetFrom(hashKeys.GetMacKey(), kExportableMacKeys);
+
+//         ComputeKeys(mKeySequence + 1, hashKeys);
+//         nextKey.SetFrom(hashKeys.GetMacKey(), kExportableMacKeys);
+
+//         Get<Mac::SubMac>().SetMacKey(Mac::Frame::kKeyIdMode1, (mKeySequence & 0x7f) + 1, prevKey, curKey, nextKey);
+//     }
+// #endif
+
+// #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+//     {
+//         Mac::Key key;
+
+//         ComputeTrelKey(mKeySequence, key);
+//         mTrelKey.SetFrom(key);
+//     }
+// #endif
+// }
+
+// void KeyManager::SetCurrentKeySequence(uint32_t aKeySequence)
+// {
+//     VerifyOrExit(aKeySequence != mKeySequence, Get<Notifier>().SignalIfFirst(kEventThreadKeySeqCounterChanged));
+
+//     if ((aKeySequence == (mKeySequence + 1)) && mKeyRotationTimer.IsRunning())
+//     {
+//         if (mKeySwitchGuardEnabled)
+//         {
+//             // Check if the guard timer has expired if key rotation is requested.
+//             VerifyOrExit(mHoursSinceKeyRotation >= mKeySwitchGuardTime);
+//             StartKeyRotationTimer();
+//         }
+
+//         mKeySwitchGuardEnabled = true;
+//     }
+
+//     mKeySequence = aKeySequence;
+//     UpdateKeyMaterial();
+
+//     SetAllMacFrameCounters(0, /* aSetIfLarger */ false);
+//     mMleFrameCounter = 0;
+
+//     Get<Notifier>().Signal(kEventThreadKeySeqCounterChanged);
+
+// exit:
+//     return;
+// }
+
+// const Mle::KeyMaterial &KeyManager::GetTemporaryMleKey(uint32_t aKeySequence)
+// {
+//     HashKeys hashKeys;
+
+//     ComputeKeys(aKeySequence, hashKeys);
+//     mTemporaryMleKey.SetFrom(hashKeys.GetMleKey());
+
+//     return mTemporaryMleKey;
+// }
+
+// #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+// const Mac::KeyMaterial &KeyManager::GetTemporaryTrelMacKey(uint32_t aKeySequence)
+// {
+//     Mac::Key key;
+
+//     ComputeTrelKey(aKeySequence, key);
+//     mTemporaryTrelKey.SetFrom(key);
+
+//     return mTemporaryTrelKey;
+// }
+// #endif
+
+// void KeyManager::SetAllMacFrameCounters(uint32_t aFrameCounter, bool aSetIfLarger)
+// {
+//     mMacFrameCounters.SetAll(aFrameCounter);
+
+// #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+//     Get<Mac::SubMac>().SetFrameCounter(aFrameCounter, aSetIfLarger);
+// #else
+//     OT_UNUSED_VARIABLE(aSetIfLarger);
+// #endif
+// }
+
+// #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+// void KeyManager::MacFrameCounterUsed(uint32_t aMacFrameCounter)
+// {
+//     // This is callback from `SubMac` to indicate that a frame
+//     // counter value is used for tx. We ensure to handle it
+//     // even if it is called out of order.
+
+//     VerifyOrExit(mMacFrameCounters.Get154() <= aMacFrameCounter);
+
+//     mMacFrameCounters.Set154(aMacFrameCounter + 1);
+
+//     if (mMacFrameCounters.Get154() >= mStoredMacFrameCounter)
+//     {
+//         IgnoreError(Get<Mle::MleRouter>().Store());
+//     }
+
+// exit:
+//     return;
+// }
+// #else
+// void KeyManager::MacFrameCounterUsed(uint32_t) {}
+// #endif
+
+// #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+// void KeyManager::IncrementTrelMacFrameCounter(void)
+// {
+//     mMacFrameCounters.IncrementTrel();
+
+//     if (mMacFrameCounters.GetTrel() >= mStoredMacFrameCounter)
+//     {
+//         IgnoreError(Get<Mle::MleRouter>().Store());
+//     }
+// }
+// #endif
+
+// void KeyManager::IncrementMleFrameCounter(void)
+// {
+//     mMleFrameCounter++;
+
+//     if (mMleFrameCounter >= mStoredMleFrameCounter)
+//     {
+//         IgnoreError(Get<Mle::MleRouter>().Store());
+//     }
+// }
+
+// void KeyManager::SetKek(const Kek &aKek)
+// {
+//     mKek.SetFrom(aKek, /* aIsExportable */ true);
+//     mKekFrameCounter = 0;
+// }
+
+// void KeyManager::SetSecurityPolicy(const SecurityPolicy &aSecurityPolicy)
+// {
+//     if (aSecurityPolicy.mRotationTime < SecurityPolicy::kMinKeyRotationTime)
+//     {
+//         LogNote("Key Rotation Time too small: %d", aSecurityPolicy.mRotationTime);
+//         ExitNow();
+//     }
+
+//     IgnoreError(Get<Notifier>().Update(mSecurityPolicy, aSecurityPolicy, kEventSecurityPolicyChanged));
+
+// exit:
+//     return;
+// }
+
+// void KeyManager::StartKeyRotationTimer(void)
+// {
+//     mHoursSinceKeyRotation = 0;
+//     mKeyRotationTimer.Start(kOneHourIntervalInMsec);
+// }
+
+// void KeyManager::HandleKeyRotationTimer(void)
+// {
+//     mHoursSinceKeyRotation++;
+
+//     // Order of operations below is important. We should restart the timer (from
+//     // last fire time for one hour interval) before potentially calling
+//     // `SetCurrentKeySequence()`. `SetCurrentKeySequence()` uses the fact that
+//     // timer is running to decide to check for the guard time and to reset the
+//     // rotation timer (and the `mHoursSinceKeyRotation`) if it updates the key
+//     // sequence.
+
+//     mKeyRotationTimer.StartAt(mKeyRotationTimer.GetFireTime(), kOneHourIntervalInMsec);
+
+//     if (mHoursSinceKeyRotation >= mSecurityPolicy.mRotationTime)
+//     {
+//         SetCurrentKeySequence(mKeySequence + 1);
+//     }
+// }
+
+// void KeyManager::GetNetworkKey(NetworkKey &aNetworkKey) const
+// {
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     if (Crypto::Storage::IsKeyRefValid(mNetworkKeyRef))
+//     {
+//         size_t keyLen;
+
+//         SuccessOrAssert(Crypto::Storage::ExportKey(mNetworkKeyRef, aNetworkKey.m8, NetworkKey::kSize, keyLen));
+//         OT_ASSERT(keyLen == NetworkKey::kSize);
+//     }
+//     else
+//     {
+//         aNetworkKey.Clear();
+//     }
+// #else
+//     aNetworkKey = mNetworkKey;
+// #endif
+// }
+
+// void KeyManager::GetPskc(Pskc &aPskc) const
+// {
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     if (Crypto::Storage::IsKeyRefValid(mPskcRef))
+//     {
+//         size_t keyLen;
+
+//         SuccessOrAssert(Crypto::Storage::ExportKey(mPskcRef, aPskc.m8, Pskc::kSize, keyLen));
+//         OT_ASSERT(keyLen == Pskc::kSize);
+//     }
+//     else
+//     {
+//         aPskc.Clear();
+//     }
+// #else
+//     aPskc = mPskc;
+// #endif
+// }
+
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+
+// void KeyManager::StoreNetworkKey(const NetworkKey &aNetworkKey, bool aOverWriteExisting)
+// {
+//     NetworkKeyRef keyRef;
+
+//     keyRef = Crypto::Storage::kNetworkKeyRef;
+
+//     if (!aOverWriteExisting)
+//     {
+//         // Check if there is already a network key stored in ITS. If
+//         // stored, and we are not overwriting the existing key,
+//         // return without doing anything.
+//         if (Crypto::Storage::HasKey(keyRef))
+//         {
+//             ExitNow();
+//         }
+//     }
+
+//     Crypto::Storage::DestroyKey(keyRef);
+
+//     SuccessOrAssert(Crypto::Storage::ImportKey(keyRef, Crypto::Storage::kKeyTypeHmac,
+//                                                Crypto::Storage::kKeyAlgorithmHmacSha256,
+//                                                Crypto::Storage::kUsageSignHash | Crypto::Storage::kUsageExport,
+//                                                Crypto::Storage::kTypePersistent, aNetworkKey.m8, NetworkKey::kSize));
+
+// exit:
+//     if (mNetworkKeyRef != keyRef)
+//     {
+//         Crypto::Storage::DestroyKey(mNetworkKeyRef);
+//     }
+
+//     mNetworkKeyRef = keyRef;
+// }
+
+// void KeyManager::StorePskc(const Pskc &aPskc)
+// {
+//     PskcRef keyRef = Crypto::Storage::kPskcRef;
+
+//     Crypto::Storage::DestroyKey(keyRef);
+
+//     SuccessOrAssert(Crypto::Storage::ImportKey(keyRef, Crypto::Storage::kKeyTypeRaw,
+//                                                Crypto::Storage::kKeyAlgorithmVendor, Crypto::Storage::kUsageExport,
+//                                                Crypto::Storage::kTypePersistent, aPskc.m8, Pskc::kSize));
+
+//     if (mPskcRef != keyRef)
+//     {
+//         Crypto::Storage::DestroyKey(mPskcRef);
+//     }
+
+//     mPskcRef = keyRef;
+// }
+
+// void KeyManager::SetPskcRef(PskcRef aKeyRef)
+// {
+//     VerifyOrExit(mPskcRef != aKeyRef, Get<Notifier>().SignalIfFirst(kEventPskcChanged));
+
+//     Crypto::Storage::DestroyKey(mPskcRef);
+
+//     mPskcRef = aKeyRef;
+//     Get<Notifier>().Signal(kEventPskcChanged);
+
+// exit:
+//     mIsPskcSet = true;
+// }
+
+// void KeyManager::SetNetworkKeyRef(otNetworkKeyRef aKeyRef)
+// {
+//     VerifyOrExit(mNetworkKeyRef != aKeyRef, Get<Notifier>().SignalIfFirst(kEventNetworkKeyChanged));
+
+//     Crypto::Storage::DestroyKey(mNetworkKeyRef);
+
+//     mNetworkKeyRef = aKeyRef;
+//     Get<Notifier>().Signal(kEventNetworkKeyChanged);
+//     Get<Notifier>().Signal(kEventThreadKeySeqCounterChanged);
+//     mKeySequence = 0;
+//     UpdateKeyMaterial();
+//     ResetFrameCounters();
+
+// exit:
+//     return;
+// }
+
+// void KeyManager::DestroyTemporaryKeys(void)
+// {
+//     mMleKey.Clear();
+//     mKek.Clear();
+//     Get<Mac::SubMac>().ClearMacKeys();
+//     Get<Mac::Mac>().ClearMode2Key();
+// }
+
+// void KeyManager::DestroyPersistentKeys(void) { Crypto::Storage::DestroyPersistentKeys(); }
+
+// #endif // OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
 
 } // namespace ot

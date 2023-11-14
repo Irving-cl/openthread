@@ -121,6 +121,7 @@ add_library(openthread-posix
     backtrace.cpp
     configuration.cpp
     config_file.cpp
+    cp_controller.cpp
     daemon.cpp
     entropy.cpp
     firewall.cpp
@@ -131,16 +132,17 @@ add_library(openthread-posix
     memory.cpp
     misc.cpp
     multicast_routing.cpp
-    netif.cpp
+    #netif.cpp
+    netif_offload.cpp
     power.cpp
-    radio.cpp
+    #radio.cpp
     radio_url.cpp
     resolver.cpp
     settings.cpp
     spi_interface.cpp
     system.cpp
     trel.cpp
-    udp.cpp
+    #udp.cpp
     utils.cpp
     virtual_time.cpp
 )
@@ -151,7 +153,7 @@ target_link_libraries(openthread-posix
     PUBLIC
         openthread-platform
     PRIVATE
-        openthread-cli-ftd
+        #openthread-cli-ftd
         openthread-ftd
         openthread-hdlc
         openthread-radio-spinel

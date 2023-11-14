@@ -259,11 +259,11 @@ void platformAlarmProcess(otInstance *aInstance)
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
 
-            if (otPlatDiagModeGet())
-            {
-                otPlatDiagAlarmFired(aInstance);
-            }
-            else
+            // if (otPlatDiagModeGet())
+            // {
+            //     otPlatDiagAlarmFired(aInstance);
+            // }
+            // else
 #endif
             {
                 otPlatAlarmMilliFired(aInstance);

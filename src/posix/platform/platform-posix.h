@@ -486,6 +486,12 @@ bool platformInfraIfIsRunning(void);
  */
 void platformBacktraceInit(void);
 
+void platformCpInit(const char *aUrl);
+
+void platformCpProcess(otInstance *aInstance, const otSysMainloopContext *aContex);
+
+void platformCpUpdateFdSet(otSysMainloopContext *aContext);
+
 #ifdef __cplusplus
 }
 #endif

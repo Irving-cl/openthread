@@ -159,7 +159,7 @@ void TxChallenge::GenerateRandom(void) { IgnoreError(Random::Crypto::Fill(*this)
 
 //---------------------------------------------------------------------------------------------------------------------
 // RxChallenge
-
+/*
 Error RxChallenge::ReadFrom(const Message &aMessage, uint16_t aOffset, uint16_t aLength)
 {
     Error error = kErrorNone;
@@ -175,7 +175,7 @@ Error RxChallenge::ReadFrom(const Message &aMessage, uint16_t aOffset, uint16_t 
 exit:
     return error;
 }
-
+*/
 bool RxChallenge::operator==(const TxChallenge &aTxChallenge) const
 {
     return (mArray.GetLength() == kMaxSize) && (memcmp(mArray.GetArrayBuffer(), aTxChallenge.m8, kMaxSize) == 0);

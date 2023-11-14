@@ -40,6 +40,7 @@
 namespace ot {
 namespace MeshCoP {
 
+
 uint8_t NameData::CopyTo(char *aBuffer, uint8_t aMaxSize) const
 {
     MutableData<kWithUint8Length> destData;
@@ -50,7 +51,7 @@ uint8_t NameData::CopyTo(char *aBuffer, uint8_t aMaxSize) const
 
     return destData.GetLength();
 }
-
+/*
 NameData NetworkName::GetAsData(void) const
 {
     return NameData(m8, static_cast<uint8_t>(StringLength(m8, kMaxSize + 1)));
@@ -160,6 +161,12 @@ Error NetworkNameManager::SetDomainName(const NameData &aNameData)
     return (error == kErrorAlready) ? kErrorNone : error;
 }
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
+*/
+
+NameData NetworkName::GetAsData(void) const
+{
+    return NameData(m8, static_cast<uint8_t>(StringLength(m8, kMaxSize + 1)));
+}
 
 } // namespace MeshCoP
 } // namespace ot

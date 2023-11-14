@@ -35,12 +35,15 @@
 #define RADIO_SPINEL_HPP_
 
 #include <openthread/platform/radio.h>
+#include <openthread/platform/offload.h>
 
 #include "openthread-spinel-config.h"
+#include "core/net/ip6_types.hpp"
 #include "core/radio/max_power_table.hpp"
 #include "lib/spinel/radio_spinel_metrics.h"
 #include "lib/spinel/spinel.h"
 #include "lib/spinel/spinel_interface.hpp"
+#include "lib/spinel/ncp_spinel_parser.hpp"
 #include "ncp/ncp_config.h"
 
 namespace ot {
@@ -310,6 +313,8 @@ public:
     otError GetCoexMetrics(otRadioCoexMetrics &aCoexMetrics);
 #endif // OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
 
+    otError GetDeviceRole(otDeviceRole &aRole);
+
     /**
      * Returns a reference to the transmit buffer.
      *
@@ -421,6 +426,8 @@ public:
      */
     otError EnergyScan(uint8_t aScanChannel, uint16_t aScanDuration);
 
+    otError ActiveScan(uint8_t aScanChannel, uint16_t aScanDuration);
+
     /**
      * Switches the radio state from Receive to Transmit.
      *
@@ -432,6 +439,8 @@ public:
      * @retval  OT_ERROR_INVALID_STATE      The radio was not in the Receive state.
      */
     otError Transmit(otRadioFrame &aFrame);
+
+    otError Ip6Send(uint8_t *aBuffer, uint16_t aLen);
 
     /**
      * Switches the radio state from Sleep to Receive.
@@ -464,6 +473,8 @@ public:
      *
      */
     otError Enable(otInstance *aInstance);
+
+    void EnableCp(otInstance *aInstance) { mInstance = aInstance; }
 
     /**
      * Disable the radio.
@@ -516,6 +527,8 @@ public:
      *
      */
     void Process(const void *aContext);
+
+    void ProcessCp(const void *aContext);
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
     /**
@@ -896,6 +909,10 @@ public:
      */
     static otError SpinelStatusToOtError(spinel_status_t aStatus);
 
+    otError DatasetInitNew(otOperationalDataset *aDataset);
+
+    otError ThreadStartStop(bool aStart);
+
 private:
     enum
     {
@@ -989,6 +1006,7 @@ private:
     void HandleNotification(SpinelInterface::RxFrameBuffer &aFrameBuffer);
     void HandleNotification(const uint8_t *aFrame, uint16_t aLength);
     void HandleValueIs(spinel_prop_key_t aKey, const uint8_t *aBuffer, uint16_t aLength);
+    void HandleValueInserted(spinel_prop_key_t aKey, const uint8_t *aBuffer, uint16_t aLength);
 
     void HandleResponse(const uint8_t *aBuffer, uint16_t aLength);
     void HandleTransmitDone(uint32_t aCommand, spinel_prop_key_t aKey, const uint8_t *aBuffer, uint16_t aLength);
@@ -1119,6 +1137,9 @@ private:
     MaxPowerTable mMaxPowerTable;
 
     otRadioSpinelMetrics mRadioSpinelMetrics;
+
+    uint8_t mIpDatagramRecv[Ip6::kMaxDatagramLength];
+    uint16_t mIpDatagramRecvLength;
 };
 
 } // namespace Spinel

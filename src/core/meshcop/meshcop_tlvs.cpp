@@ -342,6 +342,7 @@ exit:
     return mask;
 }
 
+/*
 uint32_t ChannelMaskTlv::GetChannelMask(const Message &aMessage)
 {
     uint32_t mask = 0;
@@ -386,6 +387,7 @@ uint32_t ChannelMaskTlv::GetChannelMask(const Message &aMessage)
 exit:
     return mask;
 }
+*/
 
 } // namespace MeshCoP
 } // namespace ot

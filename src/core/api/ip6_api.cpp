@@ -44,6 +44,14 @@
 
 using namespace ot;
 
+void otIp6PrefixToString(const otIp6Prefix *aPrefix, char *aBuffer, uint16_t aSize)
+{
+    AssertPointerIsNotNull(aBuffer);
+
+    AsCoreType(aPrefix).ToString(aBuffer, aSize);
+}
+
+/*
 otError otIp6SetEnabled(otInstance *aInstance, bool aEnabled)
 {
     Error     error    = kErrorNone;
@@ -202,14 +210,14 @@ otError otIp6PrefixFromString(const char *aString, otIp6Prefix *aPrefix)
 {
     return AsCoreType(aPrefix).FromString(aString);
 }
-
+*/
 void otIp6AddressToString(const otIp6Address *aAddress, char *aBuffer, uint16_t aSize)
 {
     AssertPointerIsNotNull(aBuffer);
 
     AsCoreType(aAddress).ToString(aBuffer, aSize);
 }
-
+/*
 void otIp6SockAddrToString(const otSockAddr *aSockAddr, char *aBuffer, uint16_t aSize)
 {
     AssertPointerIsNotNull(aBuffer);
@@ -301,3 +309,5 @@ void otIp6ResetBorderRoutingCounters(otInstance *aInstance)
     AsCoreType(aInstance).Get<Ip6::Ip6>().ResetBorderRoutingCounters();
 }
 #endif
+
+*/

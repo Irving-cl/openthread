@@ -54,7 +54,7 @@ OT_DEFINE_ALIGNED_VAR(sHeapRaw, sizeof(Utils::Heap), uint64_t);
 Utils::Heap *Instance::sHeap{nullptr};
 #endif
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-bool Instance::sDnsNameCompressionEnabled = true;
+// bool Instance::sDnsNameCompressionEnabled = true;
 #endif
 #endif
 
@@ -65,188 +65,189 @@ LogLevel Instance::sLogLevel = static_cast<LogLevel>(OPENTHREAD_CONFIG_LOG_LEVEL
 Instance::Instance(void)
     : mTimerMilliScheduler(*this)
 #if OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE
-    , mTimerMicroScheduler(*this)
+    //, mTimerMicroScheduler(*this)
 #endif
-    , mRadio(*this)
+    //, mRadio(*this)
 #if OPENTHREAD_CONFIG_UPTIME_ENABLE
     , mUptime(*this)
 #endif
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
-    , mNotifier(*this)
-    , mTimeTicker(*this)
-    , mSettings(*this)
-    , mSettingsDriver(*this)
-    , mMessagePool(*this)
-    , mIp6(*this)
-    , mThreadNetif(*this)
-    , mTmfAgent(*this)
+    //, mNotifier(*this)
+    //, mTimeTicker(*this)
+    //, mSettings(*this)
+    //, mSettingsDriver(*this)
+    //, mMessagePool(*this)
+    //, mIp6(*this)
+    //, mThreadNetif(*this)
+    //, mTmfAgent(*this)
 #if OPENTHREAD_CONFIG_DHCP6_CLIENT_ENABLE
-    , mDhcp6Client(*this)
+    //, mDhcp6Client(*this)
 #endif
 #if OPENTHREAD_CONFIG_DHCP6_SERVER_ENABLE
-    , mDhcp6Server(*this)
+    //, mDhcp6Server(*this)
 #endif
 #if OPENTHREAD_CONFIG_NEIGHBOR_DISCOVERY_AGENT_ENABLE
-    , mNeighborDiscoveryAgent(*this)
+    //, mNeighborDiscoveryAgent(*this)
 #endif
 #if OPENTHREAD_CONFIG_IP6_SLAAC_ENABLE
-    , mSlaac(*this)
+    //, mSlaac(*this)
 #endif
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-    , mDnsClient(*this)
+    //, mDnsClient(*this)
 #endif
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
-    , mSrpClient(*this)
+    //, mSrpClient(*this)
 #endif
 #if OPENTHREAD_CONFIG_SRP_CLIENT_BUFFERS_ENABLE
-    , mSrpClientBuffers(*this)
+    //, mSrpClientBuffers(*this)
 #endif
 #if OPENTHREAD_CONFIG_DNSSD_SERVER_ENABLE
-    , mDnssdServer(*this)
+    //, mDnssdServer(*this)
 #endif
 #if OPENTHREAD_CONFIG_DNS_DSO_ENABLE
-    , mDnsDso(*this)
+    //, mDnsDso(*this)
 #endif
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
-    , mSntpClient(*this)
+    //, mSntpClient(*this)
 #endif
-    , mActiveDataset(*this)
-    , mPendingDataset(*this)
-    , mExtendedPanIdManager(*this)
-    , mNetworkNameManager(*this)
-    , mIp6Filter(*this)
-    , mKeyManager(*this)
-    , mLowpan(*this)
-    , mMac(*this)
-    , mMeshForwarder(*this)
-    , mMleRouter(*this)
-    , mDiscoverScanner(*this)
-    , mAddressResolver(*this)
+    //, mActiveDataset(*this)
+    //, mPendingDataset(*this)
+    //, mExtendedPanIdManager(*this)
+    //, mNetworkNameManager(*this)
+    //, mIp6Filter(*this)
+    //, mKeyManager(*this)
+    //, mLowpan(*this)
+    //, mMac(*this)
+    //, mMeshForwarder(*this)
+    //, mMleRouter(*this)
+    //, mDiscoverScanner(*this)
+    //, mAddressResolver(*this)
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    , mRadioSelector(*this)
+    //, mRadioSelector(*this)
 #endif
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
-    , mNetworkDataLocal(*this)
+    //, mNetworkDataLocal(*this)
 #endif
-    , mNetworkDataLeader(*this)
+    //, mNetworkDataLeader(*this)
 #if OPENTHREAD_FTD || OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
-    , mNetworkDataNotifier(*this)
+    //, mNetworkDataNotifier(*this)
 #endif
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_ENABLE
-    , mNetworkDataPublisher(*this)
+    //, mNetworkDataPublisher(*this)
 #endif
-    , mNetworkDataServiceManager(*this)
-    , mNetworkDiagnosticServer(*this)
+    //, mNetworkDataServiceManager(*this)
+    //, mNetworkDiagnosticServer(*this)
 #if OPENTHREAD_CONFIG_TMF_NETDIAG_CLIENT_ENABLE
-    , mNetworkDiagnosticClient(*this)
+    //, mNetworkDiagnosticClient(*this)
 #endif
 #if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
-    , mBorderAgent(*this)
+    //, mBorderAgent(*this)
 #endif
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
-    , mCommissioner(*this)
+    //, mCommissioner(*this)
 #endif
 #if OPENTHREAD_CONFIG_DTLS_ENABLE
-    , mTmfSecureAgent(*this)
+    //, mTmfSecureAgent(*this)
 #endif
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
-    , mJoiner(*this)
+    //, mJoiner(*this)
 #endif
 #if OPENTHREAD_CONFIG_JAM_DETECTION_ENABLE
-    , mJamDetector(*this)
+    //, mJamDetector(*this)
 #endif
 #if OPENTHREAD_FTD
-    , mJoinerRouter(*this)
-    , mLeader(*this)
+    //, mJoinerRouter(*this)
+    //, mLeader(*this)
 #endif
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
-    , mBackboneRouterLeader(*this)
+    //, mBackboneRouterLeader(*this)
 #endif
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
-    , mBackboneRouterLocal(*this)
-    , mBackboneRouterManager(*this)
+    //, mBackboneRouterLocal(*this)
+    //, mBackboneRouterManager(*this)
 #endif
 #if OPENTHREAD_CONFIG_MLR_ENABLE || (OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE)
-    , mMlrManager(*this)
+    //, mMlrManager(*this)
 #endif
 
 #if OPENTHREAD_CONFIG_DUA_ENABLE || (OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_DUA_ENABLE)
-    , mDuaManager(*this)
+    //, mDuaManager(*this)
 #endif
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-    , mSrpServer(*this)
+    //, mSrpServer(*this)
 #endif
 #if OPENTHREAD_FTD
-    , mChildSupervisor(*this)
+    //, mChildSupervisor(*this)
 #endif
-    , mSupervisionListener(*this)
-    , mAnnounceBegin(*this)
-    , mPanIdQuery(*this)
-    , mEnergyScan(*this)
+    //, mSupervisionListener(*this)
+    //, mAnnounceBegin(*this)
+    //, mPanIdQuery(*this)
+    //, mEnergyScan(*this)
 #if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_ENABLE
-    , mAnycastLocator(*this)
+    //, mAnycastLocator(*this)
 #endif
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
-    , mTimeSync(*this)
+    //, mTimeSync(*this)
 #endif
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
-    , mInitiator(*this)
+    //, mInitiator(*this)
 #endif
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-    , mSubject(*this)
+    //, mSubject(*this)
 #endif
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
-    , mApplicationCoap(*this)
+    //, mApplicationCoap(*this)
 #endif
 #if OPENTHREAD_CONFIG_COAP_SECURE_API_ENABLE
-    , mApplicationCoapSecure(*this, /* aLayerTwoSecurity */ true)
+    //, mApplicationCoapSecure(*this, [> aLayerTwoSecurity <] true)
 #endif
 #if OPENTHREAD_CONFIG_PING_SENDER_ENABLE
-    , mPingSender(*this)
+    //, mPingSender(*this)
 #endif
 #if OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE
-    , mChannelMonitor(*this)
+    //, mChannelMonitor(*this)
 #endif
 #if OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE && OPENTHREAD_FTD
-    , mChannelManager(*this)
+    //, mChannelManager(*this)
 #endif
 #if OPENTHREAD_CONFIG_MESH_DIAG_ENABLE && OPENTHREAD_FTD
-    , mMeshDiag(*this)
+    //, mMeshDiag(*this)
 #endif
 #if OPENTHREAD_CONFIG_HISTORY_TRACKER_ENABLE
-    , mHistoryTracker(*this)
+    //, mHistoryTracker(*this)
 #endif
 #if OPENTHREAD_CONFIG_LINK_METRICS_MANAGER_ENABLE
-    , mLinkMetricsManager(*this)
+    //, mLinkMetricsManager(*this)
 #endif
 #if (OPENTHREAD_CONFIG_DATASET_UPDATER_ENABLE || OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE) && OPENTHREAD_FTD
-    , mDatasetUpdater(*this)
+    //, mDatasetUpdater(*this)
 #endif
 #if OPENTHREAD_CONFIG_ANNOUNCE_SENDER_ENABLE
-    , mAnnounceSender(*this)
+    //, mAnnounceSender(*this)
 #endif
 #if OPENTHREAD_CONFIG_OTNS_ENABLE
-    , mOtns(*this)
+    //, mOtns(*this)
 #endif
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-    , mRoutingManager(*this)
+    //, mRoutingManager(*this)
 #endif
 #if OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE
-    , mNat64Translator(*this)
+    //, mNat64Translator(*this)
 #endif
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 #if OPENTHREAD_RADIO || OPENTHREAD_CONFIG_LINK_RAW_ENABLE
-    , mLinkRaw(*this)
+    //, mLinkRaw(*this)
 #endif
 #if OPENTHREAD_ENABLE_VENDOR_EXTENSION
-    , mExtension(Extension::ExtensionBase::Init(*this))
+    //, mExtension(Extension::ExtensionBase::Init(*this))
 #endif
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
-    , mDiags(*this)
+    //, mDiags(*this)
 #endif
 #if OPENTHREAD_CONFIG_POWER_CALIBRATION_ENABLE && OPENTHREAD_CONFIG_PLATFORM_POWER_CALIBRATION_ENABLE
-    , mPowerCalibration(*this)
+    //, mPowerCalibration(*this)
 #endif
+    , mOffload(*this)
     , mIsInitialized(false)
     , mId(Random::NonCrypto::GetUint32())
 {
@@ -331,17 +332,17 @@ void Instance::AfterInit(void)
 
     // Restore datasets and network information
 
-    Get<Settings>().Init();
-    Get<Mle::MleRouter>().Restore();
+    // Get<Settings>().Init();
+    // Get<Mle::MleRouter>().Restore();
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    Get<Trel::Link>().AfterInit();
+    // Get<Trel::Link>().AfterInit();
 #endif
 
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 
 #if OPENTHREAD_ENABLE_VENDOR_EXTENSION
-    Get<Extension::ExtensionBase>().SignalInstanceInit();
+    // Get<Extension::ExtensionBase>().SignalInstanceInit();
 #endif
 }
 
@@ -349,21 +350,21 @@ void Instance::Finalize(void)
 {
     VerifyOrExit(mIsInitialized);
 
-    mIsInitialized = false;
+    // mIsInitialized = false;
 
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
-    IgnoreError(otThreadSetEnabled(this, false));
-    IgnoreError(otIp6SetEnabled(this, false));
-    IgnoreError(otLinkSetEnabled(this, false));
+    // IgnoreError(otThreadSetEnabled(this, false));
+    // IgnoreError(otIp6SetEnabled(this, false));
+    // IgnoreError(otLinkSetEnabled(this, false));
 
 #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    Get<KeyManager>().DestroyTemporaryKeys();
+    // Get<KeyManager>().DestroyTemporaryKeys();
 #endif
 
-    Get<Settings>().Deinit();
+    // Get<Settings>().Deinit();
 #endif
 
-    IgnoreError(Get<Mac::SubMac>().Disable());
+    // IgnoreError(Get<Mac::SubMac>().Disable());
 
 #if !OPENTHREAD_CONFIG_MULTIPLE_INSTANCE_ENABLE
 
@@ -383,62 +384,62 @@ exit:
 
 void Instance::FactoryReset(void)
 {
-    Get<Settings>().Wipe();
+    // Get<Settings>().Wipe();
 #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    Get<KeyManager>().DestroyTemporaryKeys();
-    Get<KeyManager>().DestroyPersistentKeys();
+    // Get<KeyManager>().DestroyTemporaryKeys();
+    // Get<KeyManager>().DestroyPersistentKeys();
 #endif
     otPlatReset(this);
 }
 
-Error Instance::ErasePersistentInfo(void)
-{
-    Error error = kErrorNone;
+// Error Instance::ErasePersistentInfo(void)
+// {
+//     Error error = kErrorNone;
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
-    Get<Settings>().Wipe();
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-    Get<KeyManager>().DestroyTemporaryKeys();
-    Get<KeyManager>().DestroyPersistentKeys();
-#endif
+//     VerifyOrExit(Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
+//     Get<Settings>().Wipe();
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+//     Get<KeyManager>().DestroyTemporaryKeys();
+//     Get<KeyManager>().DestroyPersistentKeys();
+// #endif
 
-exit:
-    return error;
-}
+// exit:
+//     return error;
+// }
 
-void Instance::GetBufferInfo(BufferInfo &aInfo)
-{
-    aInfo.Clear();
+// void Instance::GetBufferInfo(BufferInfo &aInfo)
+// {
+    // aInfo.Clear();
+// 
+    // aInfo.mTotalBuffers   = Get<MessagePool>().GetTotalBufferCount();
+    // aInfo.mFreeBuffers    = Get<MessagePool>().GetFreeBufferCount();
+    // aInfo.mMaxUsedBuffers = Get<MessagePool>().GetMaxUsedBufferCount();
+// 
+    // Get<MeshForwarder>().GetSendQueue().GetInfo(aInfo.m6loSendQueue);
+    // Get<MeshForwarder>().GetReassemblyQueue().GetInfo(aInfo.m6loReassemblyQueue);
+    // Get<Ip6::Ip6>().GetSendQueue().GetInfo(aInfo.mIp6Queue);
+// 
+// #if OPENTHREAD_FTD
+    // Get<Ip6::Mpl>().GetBufferedMessageSet().GetInfo(aInfo.mMplQueue);
+// #endif
+// 
+    // Get<Mle::MleRouter>().GetMessageQueue().GetInfo(aInfo.mMleQueue);
+// 
+    // Get<Tmf::Agent>().GetRequestMessages().GetInfo(aInfo.mCoapQueue);
+    // Get<Tmf::Agent>().GetCachedResponses().GetInfo(aInfo.mCoapQueue);
+// 
+// #if OPENTHREAD_CONFIG_DTLS_ENABLE
+    // Get<Tmf::SecureAgent>().GetRequestMessages().GetInfo(aInfo.mCoapSecureQueue);
+    // Get<Tmf::SecureAgent>().GetCachedResponses().GetInfo(aInfo.mCoapSecureQueue);
+// #endif
+// 
+// #if OPENTHREAD_CONFIG_COAP_API_ENABLE
+    // GetApplicationCoap().GetRequestMessages().GetInfo(aInfo.mApplicationCoapQueue);
+    // GetApplicationCoap().GetCachedResponses().GetInfo(aInfo.mApplicationCoapQueue);
+// #endif
+// }
 
-    aInfo.mTotalBuffers   = Get<MessagePool>().GetTotalBufferCount();
-    aInfo.mFreeBuffers    = Get<MessagePool>().GetFreeBufferCount();
-    aInfo.mMaxUsedBuffers = Get<MessagePool>().GetMaxUsedBufferCount();
-
-    Get<MeshForwarder>().GetSendQueue().GetInfo(aInfo.m6loSendQueue);
-    Get<MeshForwarder>().GetReassemblyQueue().GetInfo(aInfo.m6loReassemblyQueue);
-    Get<Ip6::Ip6>().GetSendQueue().GetInfo(aInfo.mIp6Queue);
-
-#if OPENTHREAD_FTD
-    Get<Ip6::Mpl>().GetBufferedMessageSet().GetInfo(aInfo.mMplQueue);
-#endif
-
-    Get<Mle::MleRouter>().GetMessageQueue().GetInfo(aInfo.mMleQueue);
-
-    Get<Tmf::Agent>().GetRequestMessages().GetInfo(aInfo.mCoapQueue);
-    Get<Tmf::Agent>().GetCachedResponses().GetInfo(aInfo.mCoapQueue);
-
-#if OPENTHREAD_CONFIG_DTLS_ENABLE
-    Get<Tmf::SecureAgent>().GetRequestMessages().GetInfo(aInfo.mCoapSecureQueue);
-    Get<Tmf::SecureAgent>().GetCachedResponses().GetInfo(aInfo.mCoapSecureQueue);
-#endif
-
-#if OPENTHREAD_CONFIG_COAP_API_ENABLE
-    GetApplicationCoap().GetRequestMessages().GetInfo(aInfo.mApplicationCoapQueue);
-    GetApplicationCoap().GetCachedResponses().GetInfo(aInfo.mApplicationCoapQueue);
-#endif
-}
-
-void Instance::ResetBufferInfo(void) { Get<MessagePool>().ResetMaxUsedBufferCount(); }
+// void Instance::ResetBufferInfo(void) { Get<MessagePool>().ResetMaxUsedBufferCount(); }
 
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 

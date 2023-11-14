@@ -801,7 +801,7 @@ public:
      * @retval kErrorParse   Could not read or parse the dataset from @p aMessage.
      *
      */
-    Error ReadFromMessage(const Message &aMessage, uint16_t aOffset, uint16_t aLength);
+    // Error ReadFromMessage(const Message &aMessage, uint16_t aOffset, uint16_t aLength);
 
     /**
      * Sets the Dataset using an existing Dataset.
@@ -852,7 +852,7 @@ public:
      * @retval kErrorNoBufs  Insufficient available buffers to append the message with MLE Dataset TLV.
      *
      */
-    Error AppendMleDatasetTlv(Type aType, Message &aMessage) const;
+    // Error AppendMleDatasetTlv(Type aType, Message &aMessage) const;
 
     /**
      * Applies the Active or Pending Dataset to the Thread interface.

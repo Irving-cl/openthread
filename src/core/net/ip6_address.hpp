@@ -330,7 +330,7 @@ public:
      * @retval kErrorParse         Failed to parse the IPv6 prefix from @p aString.
      *
      */
-    Error FromString(const char *aString);
+    // Error FromString(const char *aString);
 
     /**
      * Converts the prefix to a string.

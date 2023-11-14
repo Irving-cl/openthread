@@ -40,7 +40,7 @@
 #include "common/encoding.hpp"
 #include "common/locator_getters.hpp"
 #include "common/log.hpp"
-#include "instance/instance.hpp"
+//#include "instance/instance.hpp"
 #include "mac/mac_types.hpp"
 #include "meshcop/meshcop_tlvs.hpp"
 #include "meshcop/timestamp.hpp"
@@ -50,7 +50,7 @@ namespace ot {
 namespace MeshCoP {
 
 RegisterLogModule("Dataset");
-
+/*
 Error Dataset::Info::GenerateRandom(Instance &aInstance)
 {
     Error            error;
@@ -154,14 +154,14 @@ bool Dataset::Info::IsSubsetOf(const Info &aOther) const
 exit:
     return isSubset;
 }
-
+*/
 Dataset::Dataset(void)
     : mUpdateTime(0)
     , mLength(0)
 {
     memset(mTlvs, 0, sizeof(mTlvs));
 }
-
+/*
 void Dataset::Clear(void) { mLength = 0; }
 
 bool Dataset::IsValid(void) const
@@ -178,9 +178,9 @@ bool Dataset::IsValid(void) const
 exit:
     return rval;
 }
-
+*/
 const Tlv *Dataset::GetTlv(Tlv::Type aType) const { return As<Tlv>(Tlv::FindTlv(mTlvs, mLength, aType)); }
-
+/*
 void Dataset::ConvertTo(Info &aDatasetInfo) const
 {
     aDatasetInfo.Clear();
@@ -250,13 +250,13 @@ void Dataset::ConvertTo(Info &aDatasetInfo) const
         }
     }
 }
-
+*/
 void Dataset::ConvertTo(otOperationalDatasetTlvs &aDataset) const
 {
     memcpy(aDataset.mTlvs, mTlvs, mLength);
     aDataset.mLength = static_cast<uint8_t>(mLength);
 }
-
+/*
 void Dataset::Set(Type aType, const Dataset &aDataset)
 {
     memcpy(mTlvs, aDataset.mTlvs, aDataset.mLength);
@@ -276,7 +276,7 @@ void Dataset::SetFrom(const otOperationalDatasetTlvs &aDataset)
     mLength = aDataset.mLength;
     memcpy(mTlvs, aDataset.mTlvs, mLength);
 }
-
+*/
 Error Dataset::SetFrom(const Info &aDatasetInfo)
 {
     Error error = kErrorNone;
@@ -426,7 +426,7 @@ exit:
 }
 
 Error Dataset::SetTlv(const Tlv &aTlv) { return SetTlv(aTlv.GetType(), aTlv.GetValue(), aTlv.GetLength()); }
-
+/*
 Error Dataset::ReadFromMessage(const Message &aMessage, uint16_t aOffset, uint16_t aLength)
 {
     Error error = kErrorParse;
@@ -444,7 +444,7 @@ Error Dataset::ReadFromMessage(const Message &aMessage, uint16_t aOffset, uint16
 exit:
     return error;
 }
-
+*/
 void Dataset::RemoveTlv(Tlv::Type aType)
 {
     Tlv *tlv;
@@ -455,7 +455,7 @@ void Dataset::RemoveTlv(Tlv::Type aType)
 exit:
     return;
 }
-
+/*
 Error Dataset::AppendMleDatasetTlv(Type aType, Message &aMessage) const
 {
     Error          error = kErrorNone;
@@ -502,7 +502,7 @@ Error Dataset::AppendMleDatasetTlv(Type aType, Message &aMessage) const
 exit:
     return error;
 }
-
+*/
 void Dataset::RemoveTlv(Tlv *aTlv)
 {
     uint8_t *start  = reinterpret_cast<uint8_t *>(aTlv);
@@ -511,7 +511,7 @@ void Dataset::RemoveTlv(Tlv *aTlv)
     memmove(start, start + length, mLength - (static_cast<uint8_t>(start - mTlvs) + length));
     mLength -= length;
 }
-
+/*
 Error Dataset::ApplyConfiguration(Instance &aInstance, bool *aIsNetworkKeyUpdated) const
 {
     Mac::Mac   &mac        = aInstance.Get<Mac::Mac>();
@@ -596,7 +596,7 @@ Error Dataset::ApplyConfiguration(Instance &aInstance, bool *aIsNetworkKeyUpdate
 exit:
     return error;
 }
-
+*/
 void Dataset::ConvertToActive(void)
 {
     RemoveTlv(Tlv::kPendingTimestamp);

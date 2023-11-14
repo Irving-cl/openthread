@@ -102,19 +102,19 @@ void otInstanceGetUptimeAsString(otInstance *aInstance, char *aBuffer, uint16_t 
 #endif
 
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
-otError otSetStateChangedCallback(otInstance *aInstance, otStateChangedCallback aCallback, void *aContext)
-{
-    return AsCoreType(aInstance).Get<Notifier>().RegisterCallback(aCallback, aContext);
-}
+// otError otSetStateChangedCallback(otInstance *aInstance, otStateChangedCallback aCallback, void *aContext)
+// {
+//     return AsCoreType(aInstance).Get<Notifier>().RegisterCallback(aCallback, aContext);
+// }
 
-void otRemoveStateChangeCallback(otInstance *aInstance, otStateChangedCallback aCallback, void *aContext)
-{
-    AsCoreType(aInstance).Get<Notifier>().RemoveCallback(aCallback, aContext);
-}
+// void otRemoveStateChangeCallback(otInstance *aInstance, otStateChangedCallback aCallback, void *aContext)
+// {
+//     AsCoreType(aInstance).Get<Notifier>().RemoveCallback(aCallback, aContext);
+// }
 
 void otInstanceFactoryReset(otInstance *aInstance) { AsCoreType(aInstance).FactoryReset(); }
 
-otError otInstanceErasePersistentInfo(otInstance *aInstance) { return AsCoreType(aInstance).ErasePersistentInfo(); }
+// otError otInstanceErasePersistentInfo(otInstance *aInstance) { return AsCoreType(aInstance).ErasePersistentInfo(); }
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 
 #if OPENTHREAD_RADIO
@@ -176,7 +176,7 @@ const char *otGetVersionString(void)
     return sVersion;
 }
 
-const char *otGetRadioVersionString(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<Radio>().GetVersionString();
-}
+// const char *otGetRadioVersionString(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<Radio>().GetVersionString();
+// }

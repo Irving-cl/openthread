@@ -42,6 +42,7 @@
 
 using namespace ot;
 
+/*
 bool otDatasetIsCommissioned(otInstance *aInstance)
 {
     return AsCoreType(aInstance).Get<MeshCoP::ActiveDatasetManager>().IsCommissioned();
@@ -191,6 +192,23 @@ otError otDatasetUpdateTlvs(const otOperationalDataset *aDataset, otOperationalD
     AssertPointerIsNotNull(aDatasetTlvs);
 
     dataset.SetFrom(*aDatasetTlvs);
+    SuccessOrExit(error = dataset.SetFrom(AsCoreType(aDataset)));
+    dataset.ConvertTo(*aDatasetTlvs);
+
+exit:
+    return error;
+}
+
+*/
+
+// --------------------------------------------------------------------------------------------------------------
+otError otDatasetConvertToTlvs(const otOperationalDataset *aDataset, otOperationalDatasetTlvs *aDatasetTlvs)
+{
+    Error            error = kErrorNone;
+    MeshCoP::Dataset dataset;
+
+    AssertPointerIsNotNull(aDatasetTlvs);
+
     SuccessOrExit(error = dataset.SetFrom(AsCoreType(aDataset)));
     dataset.ConvertTo(*aDatasetTlvs);
 

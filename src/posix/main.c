@@ -58,6 +58,7 @@
 #include <openthread/logging.h>
 #include <openthread/tasklet.h>
 #include <openthread/thread.h>
+#include <openthread/platform/offload.h>
 #include <openthread/platform/radio.h>
 #if !OPENTHREAD_POSIX_CONFIG_DAEMON_ENABLE
 #include <openthread/cli.h>
@@ -297,15 +298,17 @@ static otInstance *InitInstance(PosixConfig *aConfig)
 
     instance = otSysInit(&aConfig->mPlatformConfig);
     VerifyOrDie(instance != NULL, OT_EXIT_FAILURE);
-    syslog(LOG_INFO, "Thread interface: %s", otSysGetThreadNetifName());
+    //syslog(LOG_INFO, "Thread interface: %s", otSysGetThreadNetifName());
 
     if (aConfig->mPrintRadioVersion)
     {
-        printf("%s\n", otPlatRadioGetVersionString(instance));
+        // printf("%s\n", otPlatRadioGetVersionString(instance));
+        printf("%s\n", otPlatCpGetVersionString(instance));
     }
     else
     {
-        syslog(LOG_INFO, "RCP version: %s", otPlatRadioGetVersionString(instance));
+        // syslog(LOG_INFO, "RCP version: %s", otPlatRadioGetVersionString(instance));
+        syslog(LOG_INFO, "RCP version: %s", otPlatCpGetVersionString(instance));
     }
 
     if (aConfig->mPlatformConfig.mDryRun)
@@ -336,7 +339,7 @@ static otError ProcessNetif(void *aContext, uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    otCliOutputFormat("%s:%u\r\n", otSysGetThreadNetifName(), otSysGetThreadNetifIndex());
+    // otCliOutputFormat("%s:%u\r\n", otSysGetThreadNetifName(), otSysGetThreadNetifIndex());
 
     return OT_ERROR_NONE;
 }

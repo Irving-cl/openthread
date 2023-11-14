@@ -45,454 +45,456 @@
 
 using namespace ot;
 
-uint32_t otThreadGetChildTimeout(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().GetTimeout();
-}
+uint16_t otThreadGetVersion(void) { return kThreadVersion; }
 
-void otThreadSetChildTimeout(otInstance *aInstance, uint32_t aTimeout)
-{
-    AsCoreType(aInstance).Get<Mle::MleRouter>().SetTimeout(aTimeout);
-}
+// uint32_t otThreadGetChildTimeout(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().GetTimeout();
+// }
 
-const otExtendedPanId *otThreadGetExtendedPanId(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<MeshCoP::ExtendedPanIdManager>().GetExtPanId();
-}
+// void otThreadSetChildTimeout(otInstance *aInstance, uint32_t aTimeout)
+// {
+//     AsCoreType(aInstance).Get<Mle::MleRouter>().SetTimeout(aTimeout);
+// }
 
-otError otThreadSetExtendedPanId(otInstance *aInstance, const otExtendedPanId *aExtendedPanId)
-{
-    Error                         error    = kErrorNone;
-    Instance                     &instance = AsCoreType(aInstance);
-    const MeshCoP::ExtendedPanId &extPanId = AsCoreType(aExtendedPanId);
+// const otExtendedPanId *otThreadGetExtendedPanId(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<MeshCoP::ExtendedPanIdManager>().GetExtPanId();
+// }
 
-    VerifyOrExit(instance.Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
+// otError otThreadSetExtendedPanId(otInstance *aInstance, const otExtendedPanId *aExtendedPanId)
+// {
+//     Error                         error    = kErrorNone;
+//     Instance                     &instance = AsCoreType(aInstance);
+//     const MeshCoP::ExtendedPanId &extPanId = AsCoreType(aExtendedPanId);
 
-    instance.Get<MeshCoP::ExtendedPanIdManager>().SetExtPanId(extPanId);
+//     VerifyOrExit(instance.Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
 
-    instance.Get<MeshCoP::ActiveDatasetManager>().Clear();
-    instance.Get<MeshCoP::PendingDatasetManager>().Clear();
+//     instance.Get<MeshCoP::ExtendedPanIdManager>().SetExtPanId(extPanId);
 
-exit:
-    return error;
-}
+//     instance.Get<MeshCoP::ActiveDatasetManager>().Clear();
+//     instance.Get<MeshCoP::PendingDatasetManager>().Clear();
 
-otError otThreadGetLeaderRloc(otInstance *aInstance, otIp6Address *aLeaderRloc)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderAddress(AsCoreType(aLeaderRloc));
-}
+// exit:
+//     return error;
+// }
 
-otLinkModeConfig otThreadGetLinkMode(otInstance *aInstance)
-{
-    otLinkModeConfig config;
+// otError otThreadGetLeaderRloc(otInstance *aInstance, otIp6Address *aLeaderRloc)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderAddress(AsCoreType(aLeaderRloc));
+// }
 
-    AsCoreType(aInstance).Get<Mle::MleRouter>().GetDeviceMode().Get(config);
+// otLinkModeConfig otThreadGetLinkMode(otInstance *aInstance)
+// {
+//     otLinkModeConfig config;
 
-    return config;
-}
+//     AsCoreType(aInstance).Get<Mle::MleRouter>().GetDeviceMode().Get(config);
 
-otError otThreadSetLinkMode(otInstance *aInstance, otLinkModeConfig aConfig)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().SetDeviceMode(Mle::DeviceMode(aConfig));
-}
+//     return config;
+// }
 
-void otThreadGetNetworkKey(otInstance *aInstance, otNetworkKey *aNetworkKey)
-{
-    AsCoreType(aInstance).Get<KeyManager>().GetNetworkKey(AsCoreType(aNetworkKey));
-}
+// otError otThreadSetLinkMode(otInstance *aInstance, otLinkModeConfig aConfig)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().SetDeviceMode(Mle::DeviceMode(aConfig));
+// }
 
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-otNetworkKeyRef otThreadGetNetworkKeyRef(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<KeyManager>().GetNetworkKeyRef();
-}
-#endif
+// void otThreadGetNetworkKey(otInstance *aInstance, otNetworkKey *aNetworkKey)
+// {
+//     AsCoreType(aInstance).Get<KeyManager>().GetNetworkKey(AsCoreType(aNetworkKey));
+// }
 
-otError otThreadSetNetworkKey(otInstance *aInstance, const otNetworkKey *aKey)
-{
-    Error     error    = kErrorNone;
-    Instance &instance = AsCoreType(aInstance);
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+// otNetworkKeyRef otThreadGetNetworkKeyRef(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<KeyManager>().GetNetworkKeyRef();
+// }
+// #endif
 
-    VerifyOrExit(instance.Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
+// otError otThreadSetNetworkKey(otInstance *aInstance, const otNetworkKey *aKey)
+// {
+//     Error     error    = kErrorNone;
+//     Instance &instance = AsCoreType(aInstance);
 
-    instance.Get<KeyManager>().SetNetworkKey(AsCoreType(aKey));
+//     VerifyOrExit(instance.Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
 
-    instance.Get<MeshCoP::ActiveDatasetManager>().Clear();
-    instance.Get<MeshCoP::PendingDatasetManager>().Clear();
+//     instance.Get<KeyManager>().SetNetworkKey(AsCoreType(aKey));
 
-exit:
-    return error;
-}
+//     instance.Get<MeshCoP::ActiveDatasetManager>().Clear();
+//     instance.Get<MeshCoP::PendingDatasetManager>().Clear();
 
-#if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-otError otThreadSetNetworkKeyRef(otInstance *aInstance, otNetworkKeyRef aKeyRef)
-{
-    Error     error    = kErrorNone;
-    Instance &instance = AsCoreType(aInstance);
+// exit:
+//     return error;
+// }
 
-    VerifyOrExit(aKeyRef != 0, error = kErrorInvalidArgs);
+// #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+// otError otThreadSetNetworkKeyRef(otInstance *aInstance, otNetworkKeyRef aKeyRef)
+// {
+//     Error     error    = kErrorNone;
+//     Instance &instance = AsCoreType(aInstance);
 
-    VerifyOrExit(instance.Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
+//     VerifyOrExit(aKeyRef != 0, error = kErrorInvalidArgs);
 
-    instance.Get<KeyManager>().SetNetworkKeyRef((aKeyRef));
-    instance.Get<MeshCoP::ActiveDatasetManager>().Clear();
-    instance.Get<MeshCoP::PendingDatasetManager>().Clear();
+//     VerifyOrExit(instance.Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
 
-exit:
-    return error;
-}
-#endif
+//     instance.Get<KeyManager>().SetNetworkKeyRef((aKeyRef));
+//     instance.Get<MeshCoP::ActiveDatasetManager>().Clear();
+//     instance.Get<MeshCoP::PendingDatasetManager>().Clear();
 
-const otIp6Address *otThreadGetRloc(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetMeshLocal16();
-}
+// exit:
+//     return error;
+// }
+// #endif
 
-const otIp6Address *otThreadGetMeshLocalEid(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetMeshLocal64();
-}
+// const otIp6Address *otThreadGetRloc(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetMeshLocal16();
+// }
 
-const otMeshLocalPrefix *otThreadGetMeshLocalPrefix(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetMeshLocalPrefix();
-}
+// const otIp6Address *otThreadGetMeshLocalEid(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetMeshLocal64();
+// }
 
-otError otThreadSetMeshLocalPrefix(otInstance *aInstance, const otMeshLocalPrefix *aMeshLocalPrefix)
-{
-    Error error = kErrorNone;
+// const otMeshLocalPrefix *otThreadGetMeshLocalPrefix(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetMeshLocalPrefix();
+// }
 
-    VerifyOrExit(AsCoreType(aInstance).Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
+// otError otThreadSetMeshLocalPrefix(otInstance *aInstance, const otMeshLocalPrefix *aMeshLocalPrefix)
+// {
+//     Error error = kErrorNone;
 
-    AsCoreType(aInstance).Get<Mle::MleRouter>().SetMeshLocalPrefix(AsCoreType(aMeshLocalPrefix));
-    AsCoreType(aInstance).Get<MeshCoP::ActiveDatasetManager>().Clear();
-    AsCoreType(aInstance).Get<MeshCoP::PendingDatasetManager>().Clear();
+//     VerifyOrExit(AsCoreType(aInstance).Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
 
-exit:
-    return error;
-}
+//     AsCoreType(aInstance).Get<Mle::MleRouter>().SetMeshLocalPrefix(AsCoreType(aMeshLocalPrefix));
+//     AsCoreType(aInstance).Get<MeshCoP::ActiveDatasetManager>().Clear();
+//     AsCoreType(aInstance).Get<MeshCoP::PendingDatasetManager>().Clear();
 
-const otIp6Address *otThreadGetLinkLocalIp6Address(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetLinkLocalAddress();
-}
+// exit:
+//     return error;
+// }
 
-const otIp6Address *otThreadGetLinkLocalAllThreadNodesMulticastAddress(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetLinkLocalAllThreadNodesAddress();
-}
+// const otIp6Address *otThreadGetLinkLocalIp6Address(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetLinkLocalAddress();
+// }
 
-const otIp6Address *otThreadGetRealmLocalAllThreadNodesMulticastAddress(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetRealmLocalAllThreadNodesAddress();
-}
+// const otIp6Address *otThreadGetLinkLocalAllThreadNodesMulticastAddress(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetLinkLocalAllThreadNodesAddress();
+// }
 
-otError otThreadGetServiceAloc(otInstance *aInstance, uint8_t aServiceId, otIp6Address *aServiceAloc)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().GetServiceAloc(aServiceId, AsCoreType(aServiceAloc));
-}
+// const otIp6Address *otThreadGetRealmLocalAllThreadNodesMulticastAddress(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetRealmLocalAllThreadNodesAddress();
+// }
 
-const char *otThreadGetNetworkName(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<MeshCoP::NetworkNameManager>().GetNetworkName().GetAsCString();
-}
+// otError otThreadGetServiceAloc(otInstance *aInstance, uint8_t aServiceId, otIp6Address *aServiceAloc)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().GetServiceAloc(aServiceId, AsCoreType(aServiceAloc));
+// }
 
-otError otThreadSetNetworkName(otInstance *aInstance, const char *aNetworkName)
-{
-    Error error = kErrorNone;
+// const char *otThreadGetNetworkName(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<MeshCoP::NetworkNameManager>().GetNetworkName().GetAsCString();
+// }
 
-    VerifyOrExit(AsCoreType(aInstance).Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
+// otError otThreadSetNetworkName(otInstance *aInstance, const char *aNetworkName)
+// {
+//     Error error = kErrorNone;
 
-#if !OPENTHREAD_CONFIG_ALLOW_EMPTY_NETWORK_NAME
-    // Thread interfaces support a zero length name internally for backwards compatibility, but new names
-    // must be at least one valid character long.
-    VerifyOrExit(nullptr != aNetworkName && aNetworkName[0] != '\0', error = kErrorInvalidArgs);
-#endif
+//     VerifyOrExit(AsCoreType(aInstance).Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
 
-    error = AsCoreType(aInstance).Get<MeshCoP::NetworkNameManager>().SetNetworkName(aNetworkName);
-    AsCoreType(aInstance).Get<MeshCoP::ActiveDatasetManager>().Clear();
-    AsCoreType(aInstance).Get<MeshCoP::PendingDatasetManager>().Clear();
+// #if !OPENTHREAD_CONFIG_ALLOW_EMPTY_NETWORK_NAME
+//     // Thread interfaces support a zero length name internally for backwards compatibility, but new names
+//     // must be at least one valid character long.
+//     VerifyOrExit(nullptr != aNetworkName && aNetworkName[0] != '\0', error = kErrorInvalidArgs);
+// #endif
 
-exit:
-    return error;
-}
+//     error = AsCoreType(aInstance).Get<MeshCoP::NetworkNameManager>().SetNetworkName(aNetworkName);
+//     AsCoreType(aInstance).Get<MeshCoP::ActiveDatasetManager>().Clear();
+//     AsCoreType(aInstance).Get<MeshCoP::PendingDatasetManager>().Clear();
 
-#if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
-const char *otThreadGetDomainName(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<MeshCoP::NetworkNameManager>().GetDomainName().GetAsCString();
-}
+// exit:
+//     return error;
+// }
 
-otError otThreadSetDomainName(otInstance *aInstance, const char *aDomainName)
-{
-    Error error = kErrorNone;
+// #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
+// const char *otThreadGetDomainName(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<MeshCoP::NetworkNameManager>().GetDomainName().GetAsCString();
+// }
 
-    VerifyOrExit(AsCoreType(aInstance).Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
+// otError otThreadSetDomainName(otInstance *aInstance, const char *aDomainName)
+// {
+//     Error error = kErrorNone;
 
-    error = AsCoreType(aInstance).Get<MeshCoP::NetworkNameManager>().SetDomainName(aDomainName);
+//     VerifyOrExit(AsCoreType(aInstance).Get<Mle::MleRouter>().IsDisabled(), error = kErrorInvalidState);
 
-exit:
-    return error;
-}
+//     error = AsCoreType(aInstance).Get<MeshCoP::NetworkNameManager>().SetDomainName(aDomainName);
 
-#if OPENTHREAD_CONFIG_DUA_ENABLE
-otError otThreadSetFixedDuaInterfaceIdentifier(otInstance *aInstance, const otIp6InterfaceIdentifier *aIid)
-{
-    Error error = kErrorNone;
+// exit:
+//     return error;
+// }
 
-    if (aIid)
-    {
-        error = AsCoreType(aInstance).Get<DuaManager>().SetFixedDuaInterfaceIdentifier(AsCoreType(aIid));
-    }
-    else
-    {
-        AsCoreType(aInstance).Get<DuaManager>().ClearFixedDuaInterfaceIdentifier();
-    }
+// #if OPENTHREAD_CONFIG_DUA_ENABLE
+// otError otThreadSetFixedDuaInterfaceIdentifier(otInstance *aInstance, const otIp6InterfaceIdentifier *aIid)
+// {
+//     Error error = kErrorNone;
 
-    return error;
-}
+//     if (aIid)
+//     {
+//         error = AsCoreType(aInstance).Get<DuaManager>().SetFixedDuaInterfaceIdentifier(AsCoreType(aIid));
+//     }
+//     else
+//     {
+//         AsCoreType(aInstance).Get<DuaManager>().ClearFixedDuaInterfaceIdentifier();
+//     }
 
-const otIp6InterfaceIdentifier *otThreadGetFixedDuaInterfaceIdentifier(otInstance *aInstance)
-{
-    Instance                       &instance = AsCoreType(aInstance);
-    const otIp6InterfaceIdentifier *iid      = nullptr;
+//     return error;
+// }
 
-    if (instance.Get<DuaManager>().IsFixedDuaInterfaceIdentifierSet())
-    {
-        iid = &instance.Get<DuaManager>().GetFixedDuaInterfaceIdentifier();
-    }
+// const otIp6InterfaceIdentifier *otThreadGetFixedDuaInterfaceIdentifier(otInstance *aInstance)
+// {
+//     Instance                       &instance = AsCoreType(aInstance);
+//     const otIp6InterfaceIdentifier *iid      = nullptr;
 
-    return iid;
-}
-#endif // OPENTHREAD_CONFIG_DUA_ENABLE
+//     if (instance.Get<DuaManager>().IsFixedDuaInterfaceIdentifierSet())
+//     {
+//         iid = &instance.Get<DuaManager>().GetFixedDuaInterfaceIdentifier();
+//     }
 
-#endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
+//     return iid;
+// }
+// #endif // OPENTHREAD_CONFIG_DUA_ENABLE
 
-uint32_t otThreadGetKeySequenceCounter(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<KeyManager>().GetCurrentKeySequence();
-}
+// #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 
-void otThreadSetKeySequenceCounter(otInstance *aInstance, uint32_t aKeySequenceCounter)
-{
-    AsCoreType(aInstance).Get<KeyManager>().SetCurrentKeySequence(aKeySequenceCounter);
-}
+// uint32_t otThreadGetKeySequenceCounter(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<KeyManager>().GetCurrentKeySequence();
+// }
 
-uint32_t otThreadGetKeySwitchGuardTime(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<KeyManager>().GetKeySwitchGuardTime();
-}
+// void otThreadSetKeySequenceCounter(otInstance *aInstance, uint32_t aKeySequenceCounter)
+// {
+//     AsCoreType(aInstance).Get<KeyManager>().SetCurrentKeySequence(aKeySequenceCounter);
+// }
 
-void otThreadSetKeySwitchGuardTime(otInstance *aInstance, uint32_t aKeySwitchGuardTime)
-{
-    AsCoreType(aInstance).Get<KeyManager>().SetKeySwitchGuardTime(aKeySwitchGuardTime);
-}
+// uint32_t otThreadGetKeySwitchGuardTime(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<KeyManager>().GetKeySwitchGuardTime();
+// }
 
-otError otThreadBecomeDetached(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().BecomeDetached();
-}
+// void otThreadSetKeySwitchGuardTime(otInstance *aInstance, uint32_t aKeySwitchGuardTime)
+// {
+//     AsCoreType(aInstance).Get<KeyManager>().SetKeySwitchGuardTime(aKeySwitchGuardTime);
+// }
 
-otError otThreadBecomeChild(otInstance *aInstance) { return AsCoreType(aInstance).Get<Mle::MleRouter>().BecomeChild(); }
+// otError otThreadBecomeDetached(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().BecomeDetached();
+// }
 
-otError otThreadGetNextNeighborInfo(otInstance *aInstance, otNeighborInfoIterator *aIterator, otNeighborInfo *aInfo)
-{
-    AssertPointerIsNotNull(aIterator);
+// otError otThreadBecomeChild(otInstance *aInstance) { return AsCoreType(aInstance).Get<Mle::MleRouter>().BecomeChild(); }
 
-    return AsCoreType(aInstance).Get<NeighborTable>().GetNextNeighborInfo(*aIterator, AsCoreType(aInfo));
-}
+// otError otThreadGetNextNeighborInfo(otInstance *aInstance, otNeighborInfoIterator *aIterator, otNeighborInfo *aInfo)
+// {
+//     AssertPointerIsNotNull(aIterator);
 
-otDeviceRole otThreadGetDeviceRole(otInstance *aInstance)
-{
-    return MapEnum(AsCoreType(aInstance).Get<Mle::MleRouter>().GetRole());
-}
+//     return AsCoreType(aInstance).Get<NeighborTable>().GetNextNeighborInfo(*aIterator, AsCoreType(aInfo));
+// }
+
+// otDeviceRole otThreadGetDeviceRole(otInstance *aInstance)
+// {
+//     return MapEnum(AsCoreType(aInstance).Get<Mle::MleRouter>().GetRole());
+// }
 
 const char *otThreadDeviceRoleToString(otDeviceRole aRole) { return Mle::RoleToString(MapEnum(aRole)); }
 
-otError otThreadGetLeaderData(otInstance *aInstance, otLeaderData *aLeaderData)
-{
-    Error error = kErrorNone;
+// otError otThreadGetLeaderData(otInstance *aInstance, otLeaderData *aLeaderData)
+// {
+//     Error error = kErrorNone;
 
-    AssertPointerIsNotNull(aLeaderData);
+//     AssertPointerIsNotNull(aLeaderData);
 
-    VerifyOrExit(AsCoreType(aInstance).Get<Mle::MleRouter>().IsAttached(), error = kErrorDetached);
-    *aLeaderData = AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderData();
+//     VerifyOrExit(AsCoreType(aInstance).Get<Mle::MleRouter>().IsAttached(), error = kErrorDetached);
+//     *aLeaderData = AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderData();
 
-exit:
-    return error;
-}
+// exit:
+//     return error;
+// }
 
-uint8_t otThreadGetLeaderRouterId(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderId();
-}
+// uint8_t otThreadGetLeaderRouterId(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderId();
+// }
 
-uint8_t otThreadGetLeaderWeight(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderData().GetWeighting();
-}
+// uint8_t otThreadGetLeaderWeight(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderData().GetWeighting();
+// }
 
-uint32_t otThreadGetPartitionId(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderData().GetPartitionId();
-}
+// uint32_t otThreadGetPartitionId(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().GetLeaderData().GetPartitionId();
+// }
 
-uint16_t otThreadGetRloc16(otInstance *aInstance) { return AsCoreType(aInstance).Get<Mle::MleRouter>().GetRloc16(); }
+// uint16_t otThreadGetRloc16(otInstance *aInstance) { return AsCoreType(aInstance).Get<Mle::MleRouter>().GetRloc16(); }
 
-otError otThreadGetParentInfo(otInstance *aInstance, otRouterInfo *aParentInfo)
-{
-    return AsCoreType(aInstance).Get<Mle::Mle>().GetParentInfo(AsCoreType(aParentInfo));
-}
+// otError otThreadGetParentInfo(otInstance *aInstance, otRouterInfo *aParentInfo)
+// {
+//     return AsCoreType(aInstance).Get<Mle::Mle>().GetParentInfo(AsCoreType(aParentInfo));
+// }
 
-otError otThreadGetParentAverageRssi(otInstance *aInstance, int8_t *aParentRssi)
-{
-    Error error = kErrorNone;
+// otError otThreadGetParentAverageRssi(otInstance *aInstance, int8_t *aParentRssi)
+// {
+//     Error error = kErrorNone;
 
-    AssertPointerIsNotNull(aParentRssi);
+//     AssertPointerIsNotNull(aParentRssi);
 
-    *aParentRssi = AsCoreType(aInstance).Get<Mle::MleRouter>().GetParent().GetLinkInfo().GetAverageRss();
+//     *aParentRssi = AsCoreType(aInstance).Get<Mle::MleRouter>().GetParent().GetLinkInfo().GetAverageRss();
 
-    VerifyOrExit(*aParentRssi != Radio::kInvalidRssi, error = kErrorFailed);
+//     VerifyOrExit(*aParentRssi != Radio::kInvalidRssi, error = kErrorFailed);
 
-exit:
-    return error;
-}
+// exit:
+//     return error;
+// }
 
-otError otThreadGetParentLastRssi(otInstance *aInstance, int8_t *aLastRssi)
-{
-    Error error = kErrorNone;
+// otError otThreadGetParentLastRssi(otInstance *aInstance, int8_t *aLastRssi)
+// {
+//     Error error = kErrorNone;
 
-    AssertPointerIsNotNull(aLastRssi);
+//     AssertPointerIsNotNull(aLastRssi);
 
-    *aLastRssi = AsCoreType(aInstance).Get<Mle::MleRouter>().GetParent().GetLinkInfo().GetLastRss();
+//     *aLastRssi = AsCoreType(aInstance).Get<Mle::MleRouter>().GetParent().GetLinkInfo().GetLastRss();
 
-    VerifyOrExit(*aLastRssi != Radio::kInvalidRssi, error = kErrorFailed);
+//     VerifyOrExit(*aLastRssi != Radio::kInvalidRssi, error = kErrorFailed);
 
-exit:
-    return error;
-}
+// exit:
+//     return error;
+// }
 
-otError otThreadSearchForBetterParent(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<Mle::Mle>().SearchForBetterParent();
-}
+// otError otThreadSearchForBetterParent(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<Mle::Mle>().SearchForBetterParent();
+// }
 
-otError otThreadSetEnabled(otInstance *aInstance, bool aEnabled)
-{
-    Error error = kErrorNone;
+// otError otThreadSetEnabled(otInstance *aInstance, bool aEnabled)
+// {
+//     Error error = kErrorNone;
 
-    if (aEnabled)
-    {
-        error = AsCoreType(aInstance).Get<Mle::MleRouter>().Start();
-    }
-    else
-    {
-        AsCoreType(aInstance).Get<Mle::MleRouter>().Stop();
-    }
+//     if (aEnabled)
+//     {
+//         error = AsCoreType(aInstance).Get<Mle::MleRouter>().Start();
+//     }
+//     else
+//     {
+//         AsCoreType(aInstance).Get<Mle::MleRouter>().Stop();
+//     }
 
-    return error;
-}
+//     return error;
+// }
 
-uint16_t otThreadGetVersion(void) { return kThreadVersion; }
+// uint16_t otThreadGetVersion(void) { return kThreadVersion; }
 
-bool otThreadIsSingleton(otInstance *aInstance) { return AsCoreType(aInstance).Get<Mle::MleRouter>().IsSingleton(); }
+// bool otThreadIsSingleton(otInstance *aInstance) { return AsCoreType(aInstance).Get<Mle::MleRouter>().IsSingleton(); }
 
-otError otThreadDiscover(otInstance              *aInstance,
-                         uint32_t                 aScanChannels,
-                         uint16_t                 aPanId,
-                         bool                     aJoiner,
-                         bool                     aEnableEui64Filtering,
-                         otHandleActiveScanResult aCallback,
-                         void                    *aCallbackContext)
-{
-    return AsCoreType(aInstance).Get<Mle::DiscoverScanner>().Discover(
-        Mac::ChannelMask(aScanChannels), aPanId, aJoiner, aEnableEui64Filtering,
-        /* aFilterIndexes (use hash of factory EUI64) */ nullptr, aCallback, aCallbackContext);
-}
+// otError otThreadDiscover(otInstance              *aInstance,
+//                          uint32_t                 aScanChannels,
+//                          uint16_t                 aPanId,
+//                          bool                     aJoiner,
+//                          bool                     aEnableEui64Filtering,
+//                          otHandleActiveScanResult aCallback,
+//                          void                    *aCallbackContext)
+// {
+//     return AsCoreType(aInstance).Get<Mle::DiscoverScanner>().Discover(
+//         Mac::ChannelMask(aScanChannels), aPanId, aJoiner, aEnableEui64Filtering,
+//         /* aFilterIndexes (use hash of factory EUI64) */ nullptr, aCallback, aCallbackContext);
+// }
 
-otError otThreadSetJoinerAdvertisement(otInstance    *aInstance,
-                                       uint32_t       aOui,
-                                       const uint8_t *aAdvData,
-                                       uint8_t        aAdvDataLength)
-{
-    return AsCoreType(aInstance).Get<Mle::DiscoverScanner>().SetJoinerAdvertisement(aOui, aAdvData, aAdvDataLength);
-}
+// otError otThreadSetJoinerAdvertisement(otInstance    *aInstance,
+//                                        uint32_t       aOui,
+//                                        const uint8_t *aAdvData,
+//                                        uint8_t        aAdvDataLength)
+// {
+//     return AsCoreType(aInstance).Get<Mle::DiscoverScanner>().SetJoinerAdvertisement(aOui, aAdvData, aAdvDataLength);
+// }
 
-bool otThreadIsDiscoverInProgress(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<Mle::DiscoverScanner>().IsInProgress();
-}
+// bool otThreadIsDiscoverInProgress(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<Mle::DiscoverScanner>().IsInProgress();
+// }
 
-const otIpCounters *otThreadGetIp6Counters(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<MeshForwarder>().GetCounters();
-}
+// const otIpCounters *otThreadGetIp6Counters(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<MeshForwarder>().GetCounters();
+// }
 
-void otThreadResetIp6Counters(otInstance *aInstance) { AsCoreType(aInstance).Get<MeshForwarder>().ResetCounters(); }
+// void otThreadResetIp6Counters(otInstance *aInstance) { AsCoreType(aInstance).Get<MeshForwarder>().ResetCounters(); }
 
-#if OPENTHREAD_CONFIG_TX_QUEUE_STATISTICS_ENABLE
-const uint32_t *otThreadGetTimeInQueueHistogram(otInstance *aInstance, uint16_t *aNumBins, uint32_t *aBinInterval)
-{
-    AssertPointerIsNotNull(aNumBins);
-    AssertPointerIsNotNull(aBinInterval);
+// #if OPENTHREAD_CONFIG_TX_QUEUE_STATISTICS_ENABLE
+// const uint32_t *otThreadGetTimeInQueueHistogram(otInstance *aInstance, uint16_t *aNumBins, uint32_t *aBinInterval)
+// {
+//     AssertPointerIsNotNull(aNumBins);
+//     AssertPointerIsNotNull(aBinInterval);
 
-    return AsCoreType(aInstance).Get<MeshForwarder>().GetTimeInQueueHistogram(*aNumBins, *aBinInterval);
-}
+//     return AsCoreType(aInstance).Get<MeshForwarder>().GetTimeInQueueHistogram(*aNumBins, *aBinInterval);
+// }
 
-uint32_t otThreadGetMaxTimeInQueue(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<MeshForwarder>().GetMaxTimeInQueue();
-}
+// uint32_t otThreadGetMaxTimeInQueue(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<MeshForwarder>().GetMaxTimeInQueue();
+// }
 
-void otThreadResetTimeInQueueStat(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<MeshForwarder>().ResetTimeInQueueStat();
-}
-#endif
+// void otThreadResetTimeInQueueStat(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<MeshForwarder>().ResetTimeInQueueStat();
+// }
+// #endif
 
-const otMleCounters *otThreadGetMleCounters(otInstance *aInstance)
-{
-    return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetCounters();
-}
+// const otMleCounters *otThreadGetMleCounters(otInstance *aInstance)
+// {
+//     return &AsCoreType(aInstance).Get<Mle::MleRouter>().GetCounters();
+// }
 
-void otThreadResetMleCounters(otInstance *aInstance) { AsCoreType(aInstance).Get<Mle::MleRouter>().ResetCounters(); }
+// void otThreadResetMleCounters(otInstance *aInstance) { AsCoreType(aInstance).Get<Mle::MleRouter>().ResetCounters(); }
 
-#if OPENTHREAD_CONFIG_MLE_PARENT_RESPONSE_CALLBACK_API_ENABLE
-void otThreadRegisterParentResponseCallback(otInstance                    *aInstance,
-                                            otThreadParentResponseCallback aCallback,
-                                            void                          *aContext)
-{
-    AsCoreType(aInstance).Get<Mle::MleRouter>().RegisterParentResponseStatsCallback(aCallback, aContext);
-}
-#endif
+// #if OPENTHREAD_CONFIG_MLE_PARENT_RESPONSE_CALLBACK_API_ENABLE
+// void otThreadRegisterParentResponseCallback(otInstance                    *aInstance,
+//                                             otThreadParentResponseCallback aCallback,
+//                                             void                          *aContext)
+// {
+//     AsCoreType(aInstance).Get<Mle::MleRouter>().RegisterParentResponseStatsCallback(aCallback, aContext);
+// }
+// #endif
 
-#if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_ENABLE
-otError otThreadLocateAnycastDestination(otInstance                    *aInstance,
-                                         const otIp6Address            *aAnycastAddress,
-                                         otThreadAnycastLocatorCallback aCallback,
-                                         void                          *aContext)
-{
-    return AsCoreType(aInstance).Get<AnycastLocator>().Locate(AsCoreType(aAnycastAddress), aCallback, aContext);
-}
+// #if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_ENABLE
+// otError otThreadLocateAnycastDestination(otInstance                    *aInstance,
+//                                          const otIp6Address            *aAnycastAddress,
+//                                          otThreadAnycastLocatorCallback aCallback,
+//                                          void                          *aContext)
+// {
+//     return AsCoreType(aInstance).Get<AnycastLocator>().Locate(AsCoreType(aAnycastAddress), aCallback, aContext);
+// }
 
-bool otThreadIsAnycastLocateInProgress(otInstance *aInstance)
-{
-    return AsCoreType(aInstance).Get<AnycastLocator>().IsInProgress();
-}
-#endif
+// bool otThreadIsAnycastLocateInProgress(otInstance *aInstance)
+// {
+//     return AsCoreType(aInstance).Get<AnycastLocator>().IsInProgress();
+// }
+// #endif
 
-otError otThreadDetachGracefully(otInstance *aInstance, otDetachGracefullyCallback aCallback, void *aContext)
-{
-    return AsCoreType(aInstance).Get<Mle::MleRouter>().DetachGracefully(aCallback, aContext);
-}
+// otError otThreadDetachGracefully(otInstance *aInstance, otDetachGracefullyCallback aCallback, void *aContext)
+// {
+//     return AsCoreType(aInstance).Get<Mle::MleRouter>().DetachGracefully(aCallback, aContext);
+// }
 
 #endif // OPENTHREAD_FTD || OPENTHREAD_MTD
 
-#if OPENTHREAD_CONFIG_UPTIME_ENABLE
-void otConvertDurationInSecondsToString(uint32_t aDuration, char *aBuffer, uint16_t aSize)
-{
-    StringWriter writer(aBuffer, aSize);
+// #if OPENTHREAD_CONFIG_UPTIME_ENABLE
+// void otConvertDurationInSecondsToString(uint32_t aDuration, char *aBuffer, uint16_t aSize)
+// {
+//     StringWriter writer(aBuffer, aSize);
 
-    Uptime::UptimeToString(Uptime::SecToMsec(aDuration), writer, /* aIncludeMsec */ false);
-}
-#endif
+//     Uptime::UptimeToString(Uptime::SecToMsec(aDuration), writer, /* aIncludeMsec */ false);
+// }
+// #endif

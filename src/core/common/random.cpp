@@ -73,7 +73,7 @@ Manager::~Manager(void)
     VerifyOrExit(sInitCount == 0);
 
 #if !OPENTHREAD_RADIO
-    otPlatCryptoRandomDeinit();
+    // otPlatCryptoRandomDeinit();
 #endif
 
 exit:

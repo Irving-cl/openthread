@@ -67,6 +67,7 @@
 #include "cli/cli_joiner.hpp"
 #include "cli/cli_mac_filter.hpp"
 #include "cli/cli_network_data.hpp"
+#include "cli/cli_offload.hpp"
 #include "cli/cli_output.hpp"
 #include "cli/cli_srp_client.hpp"
 #include "cli/cli_srp_server.hpp"
@@ -116,6 +117,7 @@ class Interpreter : public OutputImplementer, public Output
     friend class NetworkData;
     friend class SrpClient;
     friend class SrpServer;
+    friend class CliOffload;
 #endif
     friend void otCliPlatLogv(otLogLevel, otLogRegion, const char *, va_list);
     friend void otCliAppendResult(otError aError);
@@ -570,71 +572,72 @@ private:
 
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
-    bool mSntpQueryingInProgress;
+    // bool mSntpQueryingInProgress;
 #endif
 
-    Dataset     mDataset;
-    NetworkData mNetworkData;
-    UdpExample  mUdp;
+    // Dataset     mDataset;
+    // NetworkData mNetworkData;
+    // UdpExample  mUdp;
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
-    MacFilter mMacFilter;
+    // MacFilter mMacFilter;
 #endif
 
 #if OPENTHREAD_CLI_DNS_ENABLE
-    Dns mDns;
+    // Dns mDns;
 #endif
 
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
-    Bbr mBbr;
+    // Bbr mBbr;
 #endif
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-    Br mBr;
+    // Br mBr;
 #endif
 
 #if OPENTHREAD_CONFIG_TCP_ENABLE && OPENTHREAD_CONFIG_CLI_TCP_ENABLE
-    TcpExample mTcp;
+    // TcpExample mTcp;
 #endif
 
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
-    Coap mCoap;
+    // Coap mCoap;
 #endif
 
 #if OPENTHREAD_CONFIG_COAP_SECURE_API_ENABLE
-    CoapSecure mCoapSecure;
+    // CoapSecure mCoapSecure;
 #endif
 
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
-    Commissioner mCommissioner;
+    // Commissioner mCommissioner;
 #endif
 
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
-    Joiner mJoiner;
+    // Joiner mJoiner;
 #endif
 
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
-    SrpClient mSrpClient;
+    // SrpClient mSrpClient;
 #endif
 
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-    SrpServer mSrpServer;
+    // SrpServer mSrpServer;
 #endif
 
 #if OPENTHREAD_CONFIG_HISTORY_TRACKER_ENABLE
-    History mHistory;
+    // History mHistory;
 #endif
+    CliOffload mOffload;
 #endif // OPENTHREAD_FTD || OPENTHREAD_MTD
 
 #if OPENTHREAD_CONFIG_PING_SENDER_ENABLE
-    bool mPingIsAsync : 1;
+    // bool mPingIsAsync : 1;
 #endif
 #if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_ENABLE
-    bool mLocateInProgress : 1;
+    // bool mLocateInProgress : 1;
 #endif
 
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
-    bool mLinkMetricsQueryInProgress : 1;
+    // bool mLinkMetricsQueryInProgress : 1;
 #endif
 };
 

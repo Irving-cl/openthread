@@ -173,30 +173,30 @@ bool Prefix::IsValidNat64PrefixLength(uint8_t aLength)
            (aLength == 96);
 }
 
-Error Prefix::FromString(const char *aString)
-{
-    constexpr char kSlashChar = '/';
-    constexpr char kNullChar  = '\0';
+// Error Prefix::FromString(const char *aString)
+// {
+//     constexpr char kSlashChar = '/';
+//     constexpr char kNullChar  = '\0';
 
-    Error       error = kErrorParse;
-    const char *cur;
+//     Error       error = kErrorParse;
+//     const char *cur;
 
-    VerifyOrExit(aString != nullptr);
+//     VerifyOrExit(aString != nullptr);
 
-    cur = StringFind(aString, kSlashChar);
-    VerifyOrExit(cur != nullptr);
+//     cur = StringFind(aString, kSlashChar);
+//     VerifyOrExit(cur != nullptr);
 
-    SuccessOrExit(AsCoreType(&mPrefix).ParseFrom(aString, kSlashChar));
+//     SuccessOrExit(AsCoreType(&mPrefix).ParseFrom(aString, kSlashChar));
 
-    cur++;
-    SuccessOrExit(StringParseUint8(cur, mLength, kMaxLength));
-    VerifyOrExit(*cur == kNullChar);
+//     cur++;
+//     SuccessOrExit(StringParseUint8(cur, mLength, kMaxLength));
+//     VerifyOrExit(*cur == kNullChar);
 
-    error = kErrorNone;
+//     error = kErrorNone;
 
-exit:
-    return error;
-}
+// exit:
+//     return error;
+// }
 
 Prefix::InfoString Prefix::ToString(void) const
 {
@@ -232,7 +232,7 @@ void Prefix::ToString(StringWriter &aWriter) const
 
 //---------------------------------------------------------------------------------------------------------------------
 // InterfaceIdentifier methods
-
+/*
 bool InterfaceIdentifier::IsUnspecified(void) const { return (mFields.m32[0] == 0) && (mFields.m32[1] == 0); }
 
 bool InterfaceIdentifier::IsReserved(void) const
@@ -652,7 +652,7 @@ Error Address::ParseFrom(const char *aString, char aTerminatorChar)
 exit:
     return error;
 }
-
+*/
 Address::InfoString Address::ToString(void) const
 {
     InfoString string;
@@ -688,7 +688,7 @@ void Address::AppendHexWords(StringWriter &aWriter, uint8_t aLength) const
         aWriter.Append("%x", HostSwap16(mFields.m16[index]));
     }
 }
-
+/*
 const Address &Address::GetLinkLocalAllNodesMulticast(void)
 {
     return AsCoreType(&Netif::kLinkLocalAllNodesMulticastAddress.mAddress);
@@ -713,6 +713,6 @@ const Address &Address::GetRealmLocalAllMplForwarders(void)
 {
     return AsCoreType(&Netif::kRealmLocalAllMplForwardersMulticastAddress.mAddress);
 }
-
+*/
 } // namespace Ip6
 } // namespace ot
