@@ -488,6 +488,8 @@ void platformBacktraceInit(void);
 
 void platformCpInit(const char *aUrl);
 
+void platformCpDeinit(void);
+
 void platformCpProcess(otInstance *aInstance, const otSysMainloopContext *aContex);
 
 void platformCpUpdateFdSet(otSysMainloopContext *aContext);

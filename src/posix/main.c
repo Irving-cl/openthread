@@ -304,6 +304,7 @@ static otInstance *InitInstance(PosixConfig *aConfig)
     {
         // printf("%s\n", otPlatRadioGetVersionString(instance));
         printf("%s\n", otPlatCpGetVersionString(instance));
+        syslog(LOG_INFO, "RCP version: %s", otPlatCpGetVersionString(instance));
     }
     else
     {

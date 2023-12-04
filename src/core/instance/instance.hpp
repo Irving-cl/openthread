@@ -642,6 +642,7 @@ private:
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     //BorderRouter::RoutingManager mRoutingManager;
+    BorderRouter::RoutingManagerOffload mRoutingManager;
 #endif
 
 #if OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE

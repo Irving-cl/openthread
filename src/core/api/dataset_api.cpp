@@ -148,13 +148,6 @@ otError otDatasetGeneratePskc(const char            *aPassPhrase,
 }
 #endif
 
-otError otNetworkNameFromString(otNetworkName *aNetworkName, const char *aNameString)
-{
-    otError error = AsCoreType(aNetworkName).Set(aNameString);
-
-    return (error == OT_ERROR_ALREADY) ? OT_ERROR_NONE : error;
-}
-
 otError otDatasetParseTlvs(const otOperationalDatasetTlvs *aDatasetTlvs, otOperationalDataset *aDataset)
 {
     Error            error = kErrorNone;
@@ -202,6 +195,29 @@ exit:
 */
 
 // --------------------------------------------------------------------------------------------------------------
+
+otError otNetworkNameFromString(otNetworkName *aNetworkName, const char *aNameString)
+{
+    otError error = AsCoreType(aNetworkName).Set(aNameString);
+
+    return (error == OT_ERROR_ALREADY) ? OT_ERROR_NONE : error;
+}
+
+otError otDatasetParseTlvs(const otOperationalDatasetTlvs *aDatasetTlvs, otOperationalDataset *aDataset)
+{
+    Error            error = kErrorNone;
+    MeshCoP::Dataset dataset;
+
+    AssertPointerIsNotNull(aDatasetTlvs);
+
+    dataset.SetFrom(*aDatasetTlvs);
+    VerifyOrExit(dataset.IsValid(), error = kErrorInvalidArgs);
+    dataset.ConvertTo(AsCoreType(aDataset));
+
+exit:
+    return error;
+}
+
 otError otDatasetConvertToTlvs(const otOperationalDataset *aDataset, otOperationalDatasetTlvs *aDatasetTlvs)
 {
     Error            error = kErrorNone;

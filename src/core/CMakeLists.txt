@@ -39,6 +39,7 @@ set(COMMON_SOURCES
     api/offload_api.cpp
     api/tasklet_api.cpp
     api/thread_api.cpp
+    border_router/router_manager_offload.cpp
     common/binary_search.cpp
     common/error.cpp
     common/heap.cpp

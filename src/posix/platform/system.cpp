@@ -263,6 +263,7 @@ void platformDeinit(void)
     virtualTimeDeinit();
 #endif
     // platformRadioDeinit();
+    platformCpDeinit();
 
     // For Dry-Run option, only the radio is initialized.
     VerifyOrExit(!gDryRun);
@@ -271,7 +272,7 @@ void platformDeinit(void)
     // ot::Posix::Udp::Get().Deinit();
 #endif
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
-    // platformNetifDeinit();
+    platformNetifDeinit();
 #endif
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
     // platformTrelDeinit();

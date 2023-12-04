@@ -34,6 +34,8 @@
 #include <openthread/ip6.h>
 #include <openthread/link.h>
 #include <openthread/thread.h>
+#include <openthread/thread_ftd.h>
+#include <lib/spinel/radio_spinel_metrics.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +57,40 @@ otDeviceRole otPlatCpGetDeviceRole(otInstance *aInstance);
 otError otPlatCpDatasetInitNew(otInstance *aInstance, otOperationalDataset *aDataset);
 
 otError otPlatCpThreadStartStop(otInstance *aInstance, bool aStart);
+
+uint8_t otPlatCpThreadGetRouterSelectionJitter(otInstance *aInstance);
+
+void otPlatCpThreadSetRouterSelectionJitter(otInstance *aInstance, uint8_t aRouterJitter);
+
+otError otPlatCpThreadGetNetworkKey(otNetworkKey *aNetworkKey);
+
+otError otPlatCpFactoryReset(otInstance *aInstance);
+
+otError otPlatCpGetCoexMetrics(otInstance *aInstance, otRadioCoexMetrics *aCoexMetrics);
+
+const otRadioSpinelMetrics *otPlatCpGetRadioSpinelMetrics(void);
+
+const otRcpInterfaceMetrics *otPlatCpGetNcpInterfaceMetrics(void);
+
+otError otPlatIp6SetEnabled(bool aEnabled);
+
+otError otPlatCpGetIeeeEui64(uint8_t *aIeeeEui64);
+
+otError otPlatCpSetStateChangedCallback(otStateChangedCallback aCallback, void *aContext);
+
+otError otPlatCpGetNeighborTable(otNeighborInfo *aNeighborList, uint8_t &aCount);
+
+otError otPlatCpGetChildTable(otChildInfo *aChildList, uint8_t &aCount);
+
+otError otPlatCpDatasetGetActiveTlvs(otInstance *aInstance, otOperationalDatasetTlvs *aDataset);
+
+otError otPlatCpDatasetGetPending(otInstance *aInstance, otOperationalDataset *aDataset);
+
+otError otPlatCpDatasetGetPendingTlvs(otInstance *aInstance, otOperationalDatasetTlvs *aDataset);
+
+otError otPlatCpDatasetSetActive(otOperationalDataset *aDataset);
+
+otError otPlatCpDatasetSetPending(otOperationalDataset *aDataset);
 
 #ifdef __cplusplus
 } // extern "C"

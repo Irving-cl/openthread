@@ -153,7 +153,7 @@ target_link_libraries(openthread-posix
     PUBLIC
         openthread-platform
     PRIVATE
-        #openthread-cli-ftd
+        openthread-cli-ftd
         openthread-ftd
         openthread-hdlc
         openthread-radio-spinel

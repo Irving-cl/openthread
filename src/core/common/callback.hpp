@@ -41,7 +41,6 @@
 #include "common/type_traits.hpp"
 
 namespace ot {
-
 /**
  * Specifies the context argument position in a callback function pointer.
  *

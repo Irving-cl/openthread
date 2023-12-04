@@ -49,6 +49,7 @@ public:
     otError Process(Arg aArgs[]);
 
 private:
+
     using Command = CommandEntry<CliOffload>;
     using Components = otOperationalDatasetComponents;
 
@@ -66,6 +67,8 @@ private:
         void (CliOffload::*mOutput)(const otOperationalDataset &aDataset);
     };
 
+    otOperationalDataset     sDataset;
+
     template <CommandId kCommandId> otError Process(Arg aArgs[]);
 
     static void HandleActiveScanResult(otActiveScanResult *aResult, void *aContext);
@@ -74,7 +77,8 @@ private:
     void OutputResult(otError aError);
 
     const ComponentMapper *LookupMapper(const char *aName) const;
-    otError Print(otOperationalDataset &aDataset);
+    otError PrintAll(otOperationalDataset &aDataset);
+    void Print(otOperationalDataset &aDataset);
 
     void OutputActiveTimestamp(const otOperationalDataset &aDataset);
     void OutputChannel(const otOperationalDataset &aDataset);

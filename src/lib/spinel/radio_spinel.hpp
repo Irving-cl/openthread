@@ -34,6 +34,9 @@
 #ifndef RADIO_SPINEL_HPP_
 #define RADIO_SPINEL_HPP_
 
+#include <openthread/netdata.h>
+#include <openthread/thread.h>
+#include <openthread/thread_ftd.h>
 #include <openthread/platform/radio.h>
 #include <openthread/platform/offload.h>
 
@@ -45,6 +48,7 @@
 #include "lib/spinel/spinel_interface.hpp"
 #include "lib/spinel/ncp_spinel_parser.hpp"
 #include "ncp/ncp_config.h"
+#include "core/common/callback.hpp"
 
 namespace ot {
 namespace Spinel {
@@ -315,6 +319,8 @@ public:
 
     otError GetDeviceRole(otDeviceRole &aRole);
 
+    otDeviceRole GetDeviceRoleCached(void);
+
     /**
      * Returns a reference to the transmit buffer.
      *
@@ -425,6 +431,8 @@ public:
      *
      */
     otError EnergyScan(uint8_t aScanChannel, uint16_t aScanDuration);
+
+    otError EnergyScan(uint32_t aScanChannels, uint16_t aScanDuration, otHandleEnergyScanResult aCallback, void *aCallbackContext);
 
     otError ActiveScan(uint8_t aScanChannel, uint16_t aScanDuration);
 
@@ -909,9 +917,126 @@ public:
      */
     static otError SpinelStatusToOtError(spinel_status_t aStatus);
 
+    /**
+     * Dataset APIs
+     */
     otError DatasetInitNew(otOperationalDataset *aDataset);
 
+    otError DatasetGetActive(otOperationalDataset *aDataset);
+
+    otError DatasetGetActiveTlvs(otOperationalDatasetTlvs *aDataset);
+
+    otError DatasetSetActive(otOperationalDataset *aDataset);
+
+    otError DatasetSetActiveTlvs(otOperationalDatasetTlvs *aDataset);
+
+    otError DatasetGetPending(otOperationalDataset *aDataset);
+
+    otError DatasetSetPending(otOperationalDataset *aDataset);
+
+    otError DatasetGetPendingTlvs(otOperationalDatasetTlvs *aDataset);
+
+    otError DatasetSendMgmtPendingSet(const otOperationalDataset *aDataset,
+                                    const uint8_t              *aTlvs,
+                                    uint8_t                     aLength,
+                                    otDatasetMgmtSetCallback    aCallback,
+                                    void                       *aContext);
+                                    
+    /**
+      * Link APIs
+      */
+    otError LinkGetPanId(uint16_t &aPanId);
+
+    otError LinkGetExtendedAddress(otExtAddress *aExtAddress);
+
+    otError LinkGetChannel(uint8_t &aChannel);
+
+    /**
+     * Radio APIs
+     */
+    otError RadioGetInstantRssi(int8_t &aRssi);
+
+    otError RadioGetTxPower(int8_t &aTxPower);
+
+    /**
+     * Thread APIs 
+     */
     otError ThreadStartStop(bool aStart);
+
+    otError ThreadStart(void);
+
+    otError ThreadStop(void);
+
+    otError ThreadGetExtendedPanId(otExtendedPanId *aExtendedPanId);
+
+    void ThreadGetExtendedPanIdCached(otExtendedPanId *aExtendedPanId);
+
+    otError ThreadGetNetworkName(otNetworkName *aNetworkName);
+
+    void ThreadGetNetworkNameCached(otNetworkName *aNetworkName);
+
+    otError ThreadGetPartitionId(uint32_t &aPartitionId);
+
+    otError ThreadDetachGracefully(otDetachGracefullyCallback aCallback, void *aContext);
+
+    otError ThreadGetRouterSelectionJitter(uint8_t &aRouterJitter);
+
+    otError ThreadSetRouterSelectionJitter(uint8_t aRouterJitter);
+
+    otError ThreadGetNeighborTable(otNeighborInfo *aNeighborList, uint8_t &aCount);
+
+    otError ThreadGetChildTable(otChildInfo *aChildList, uint8_t &aCount);
+
+    otError ThreadSetLinkMode(otLinkModeConfig &aConfig);
+
+    otError ThreadGetLinkMode(otLinkModeConfig &aConfig);
+
+    otError ThreadGetNetworkData(uint8_t *aData, uint8_t &aLen);
+
+    otError ThreadGetStableNetworkData(uint8_t *aData, uint8_t &aLen);
+
+    otError ThreadGetLocalLeaderWeight(uint8_t &aWeight);
+
+    otError ThreadGetLeaderData(otLeaderData &aLeaderData);
+
+    otError ThreadGetNetworkKey(otNetworkKey *aNetworkKey);
+
+    /**
+     *  IP6 APIs
+     */
+    otError Ip6SetEnabled(bool aEnabled);
+
+    /**
+     * Application APIs
+     */
+    otError JoinerStart(const char      *aPskd,
+                        const char      *aProvisioningUrl,
+                        const char      *aVendorName,
+                        const char      *aVendorModel,
+                        const char      *aVendorSwVersion,
+                        const char      *aVendorData,
+                        otJoinerCallback aCallback,
+                        void            *aContext);
+
+    /*
+     * Misc APIs
+     */
+    void FactoryResetNcp(void);
+
+    otError RegisterCallback(otStateChangedCallback aCallback, void *aContext);
+
+    void RemoveCallback(otStateChangedCallback aCallback, void *aContext);
+
+    /*
+     * Border Router APIs
+     */
+    otError BorderRouterAddRoute(otExternalRouteConfig &aRoute);
+
+    otError BorderRouterRegister(void);
+
+    otError BorderRouterRemoveRoute(otIp6Prefix &aIp6Prefix);
+
+    otError BorderRouterGetExternalRoutes(otExternalRouteConfig *aRouteList, uint8_t &aRouteCount);
 
 private:
     enum
@@ -1050,6 +1175,8 @@ private:
     uint32_t Snprintf(char *aDest, uint32_t aSize, const char *aFormat, ...);
     void     LogSpinelFrame(const uint8_t *aFrame, uint16_t aLength, bool aTx);
 
+    otDeviceRole ConvertDeviceRole(spinel_net_role_t aSpinelRole);
+
     otInstance *mInstance;
 
     SpinelInterface::RxFrameBuffer mRxFrameBuffer;
@@ -1140,6 +1267,22 @@ private:
 
     uint8_t mIpDatagramRecv[Ip6::kMaxDatagramLength];
     uint16_t mIpDatagramRecvLength;
+
+    ot::Callback<otJoinerCallback> mJoinerCallback;
+
+    ot::Callback<otStateChangedCallback> mStateChangedCallback;
+
+    ot::Callback<otHandleEnergyScanResult> mEnergyScanCallback;
+
+    ot::Callback<otDatasetMgmtSetCallback> mDatasetMgmtSetCallback;
+
+    ot::Callback<otDetachGracefullyCallback> mDetachGracefullyCallback;
+
+    spinel_scan_state_t mScanState;
+
+    otDeviceRole mDeviceRole;
+    otNetworkName mNetworkName;
+    otExtendedPanId mExtendedPanId;
 };
 
 } // namespace Spinel

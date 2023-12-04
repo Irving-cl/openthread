@@ -230,6 +230,7 @@ Instance::Instance(void)
 #endif
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     //, mRoutingManager(*this)
+    , mRoutingManagerOffload(*this)
 #endif
 #if OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE
     //, mNat64Translator(*this)
@@ -270,6 +271,7 @@ Utils::Heap &Instance::GetHeap(void)
 Instance &Instance::InitSingle(void)
 {
     Instance *instance = &Get();
+    otLogInfoPlat("!!!!!InitSingle, IsInitialized:%u", instance->mIsInitialized);
 
     VerifyOrExit(!instance->mIsInitialized);
 
@@ -350,7 +352,7 @@ void Instance::Finalize(void)
 {
     VerifyOrExit(mIsInitialized);
 
-    // mIsInitialized = false;
+    mIsInitialized = false;
 
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
     // IgnoreError(otThreadSetEnabled(this, false));

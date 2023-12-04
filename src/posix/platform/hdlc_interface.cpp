@@ -250,6 +250,7 @@ otError HdlcInterface::Write(const uint8_t *aFrame, uint16_t aLength)
         }
         else if (rval < 0)
         {
+            otLogWarnPlat("Errno:%s", strerror(errno));
             VerifyOrDie((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == EINTR), OT_EXIT_ERROR_ERRNO);
         }
 

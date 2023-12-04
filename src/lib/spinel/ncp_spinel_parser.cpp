@@ -66,6 +66,18 @@ otError ParseOperationalDataset(uint8_t *aBuf, uint8_t aLen, otOperationalDatase
 
         switch (static_cast<spinel_prop_key_t>(propKey))
         {
+        case SPINEL_PROP_DATASET_ACTIVE_TIMESTAMP:
+        {
+            SuccessOrExit((error = decoder.ReadUint64(aOpDataset->mActiveTimestamp.mSeconds)));
+            aOpDataset->mComponents.mIsActiveTimestampPresent = true;
+            break;
+        }
+        case SPINEL_PROP_DATASET_PENDING_TIMESTAMP:
+        {
+            SuccessOrExit((error = decoder.ReadUint64(aOpDataset->mPendingTimestamp.mSeconds)));
+            aOpDataset->mComponents.mIsPendingTimestampPresent = true;
+            break;
+        }
         case SPINEL_PROP_NET_NETWORK_KEY:
         {
             const uint8_t *key;

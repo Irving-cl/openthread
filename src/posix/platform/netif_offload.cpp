@@ -392,6 +392,41 @@ void platformNetifInit(otPlatformConfig *aPlatformConfig)
 #endif
 }
 
+void platformNetifDeinit(void)
+{
+    if (sTunFd != -1)
+    {
+        close(sTunFd);
+        sTunFd = -1;
+
+#if defined(__NetBSD__) || defined(__FreeBSD__)
+        destroyTunnel();
+#endif
+    }
+
+    if (sIpFd != -1)
+    {
+        close(sIpFd);
+        sIpFd = -1;
+    }
+
+    if (sNetlinkFd != -1)
+    {
+        close(sNetlinkFd);
+        sNetlinkFd = -1;
+    }
+
+#if OPENTHREAD_POSIX_USE_MLD_MONITOR
+    if (sMLDMonitorFd != -1)
+    {
+        close(sMLDMonitorFd);
+        sMLDMonitorFd = -1;
+    }
+#endif
+
+    gNetifIndex = 0;
+}
+
 static void clearAllAddresses(void)
 {
 

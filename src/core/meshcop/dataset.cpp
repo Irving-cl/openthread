@@ -161,7 +161,7 @@ Dataset::Dataset(void)
 {
     memset(mTlvs, 0, sizeof(mTlvs));
 }
-/*
+
 void Dataset::Clear(void) { mLength = 0; }
 
 bool Dataset::IsValid(void) const
@@ -178,9 +178,9 @@ bool Dataset::IsValid(void) const
 exit:
     return rval;
 }
-*/
+
 const Tlv *Dataset::GetTlv(Tlv::Type aType) const { return As<Tlv>(Tlv::FindTlv(mTlvs, mLength, aType)); }
-/*
+
 void Dataset::ConvertTo(Info &aDatasetInfo) const
 {
     aDatasetInfo.Clear();
@@ -250,7 +250,7 @@ void Dataset::ConvertTo(Info &aDatasetInfo) const
         }
     }
 }
-*/
+
 void Dataset::ConvertTo(otOperationalDatasetTlvs &aDataset) const
 {
     memcpy(aDataset.mTlvs, mTlvs, mLength);
@@ -270,13 +270,14 @@ void Dataset::Set(Type aType, const Dataset &aDataset)
 
     mUpdateTime = aDataset.GetUpdateTime();
 }
+*/
 
 void Dataset::SetFrom(const otOperationalDatasetTlvs &aDataset)
 {
     mLength = aDataset.mLength;
     memcpy(mTlvs, aDataset.mTlvs, mLength);
 }
-*/
+
 Error Dataset::SetFrom(const Info &aDatasetInfo)
 {
     Error error = kErrorNone;

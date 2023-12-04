@@ -33,6 +33,7 @@
 
 #include <openthread/offload.h>
 #include <openthread/thread.h>
+#include <openthread/platform/offload.h>
 
 #include "cli/cli.hpp"
 #include "common/binary_search.hpp"
@@ -44,7 +45,7 @@ namespace Cli {
 CliOffload::CliOffload(otInstance *aInstance, OutputImplementer &aOutputImplementer)
     : Output(aInstance, aOutputImplementer)
 {
-
+    memset(&sDataset, 0, sizeof(sDataset));
 }
 
 template <> otError CliOffload::Process<Cmd("scan")>(Arg aArgs[])
@@ -68,6 +69,8 @@ template <> otError CliOffload::Process<Cmd("state")>(Arg aArgs[])
     otError error = OT_ERROR_NONE;
     OT_UNUSED_VARIABLE(aArgs);
 
+    otLogCritPlat("cli command dataset active");
+
     OutputLine("%s", otThreadDeviceRoleToString(otOffloadThreadGetDeviceRole(GetInstancePtr())));
 
     return error;
@@ -85,6 +88,10 @@ template <> otError CliOffload::Process<Cmd("thread")>(Arg aArgs[])
     {
         error = otOffloadThreadStartStop(GetInstancePtr(), false);
     }
+    else if (aArgs[0] == "version")
+    {
+        OutputLine("%u", otThreadGetVersion());
+    }
     else
     {
         error = OT_ERROR_INVALID_COMMAND;
@@ -97,14 +104,14 @@ template <> otError CliOffload::Process<Cmd("dataset")>(Arg aArgs[])
 {
     otError error = OT_ERROR_INVALID_ARGS;
 
+    otOperationalDatasetTlvs datasetTlvs;
+
     if (aArgs[0] == "init")
     {
         if (aArgs[1] == "new")
         {
-            otOperationalDataset dataset;
-
-            error = otOffloadDatasetInitNew(GetInstancePtr(), &dataset);
-            Print(dataset);
+            error = otOffloadDatasetInitNew(GetInstancePtr(), &sDataset);
+            PrintAll(sDataset);
         }
         else
         {
@@ -113,8 +120,93 @@ template <> otError CliOffload::Process<Cmd("dataset")>(Arg aArgs[])
     }
     else if (aArgs[0] == "active")
     {
-
+        SuccessOrExit(error = otPlatCpDatasetGetActiveTlvs(GetInstancePtr(), &datasetTlvs));
+        SuccessOrExit(error = otDatasetParseTlvs(&datasetTlvs, &sDataset));
+        Print(sDataset);
     }
+    else if (aArgs[0] == "pending")
+    {
+        SuccessOrExit(error = otPlatCpDatasetGetPending(GetInstancePtr(), &sDataset));
+        Print(sDataset);
+    }
+    else if (aArgs[0] == "commit")
+    {
+        if (aArgs[1] == "active")
+        {
+            error = otPlatCpDatasetSetActive(&sDataset);
+        }
+        else if (aArgs[1] == "pending")
+        {
+            error = otPlatCpDatasetSetPending(&sDataset);
+        }
+    }
+
+exit:
+    return error;
+}
+
+template <> otError CliOffload::Process<Cmd("factoryreset")>(Arg aArgs[])
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aArgs[0].IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+
+    error = otPlatCpFactoryReset(GetInstancePtr());
+
+exit:
+    return error;
+}
+
+template <> otError CliOffload::Process<Cmd("ncp")>(Arg aArgs[])
+{
+    otError error = OT_ERROR_INVALID_ARGS;
+
+    if (aArgs[0] == "version")
+    {
+        OutputLine("%s", otPlatCpGetVersionString(GetInstancePtr()));
+        error = OT_ERROR_NONE;
+    }
+
+    return error;
+}
+
+template <> otError CliOffload::Process<Cmd("ifconfig")>(Arg aArgs[])
+{
+    otError error = OT_ERROR_NONE;
+
+    if (aArgs[0].IsEmpty())
+    {
+    }
+    else if (aArgs[0] == "up")
+    {
+        SuccessOrExit(error = otPlatIp6SetEnabled(true));
+    }
+    else if (aArgs[0] == "down")
+    {
+        SuccessOrExit(error = otPlatIp6SetEnabled(false));
+    }
+    else
+    {
+        ExitNow(error = OT_ERROR_INVALID_ARGS);
+    }
+
+exit:
+    return error;
+}
+
+template <> otError CliOffload::Process<Cmd("routerselectionjitter")>(Arg aArgs[])
+{
+    return Interpreter::GetInterpreter().ProcessGetSet(aArgs, otPlatCpThreadGetRouterSelectionJitter, otPlatCpThreadSetRouterSelectionJitter);
+}
+
+template <> otError CliOffload::Process<Cmd("networkkey")>(Arg aArgs[])
+{
+    otError error = OT_ERROR_NONE;
+    otNetworkKey key;
+    (void)aArgs;
+
+    SuccessOrExit(error = otPlatCpThreadGetNetworkKey(&key));
+    OutputBytesLine(key.m8);
 
 exit:
     return error;
@@ -128,7 +220,9 @@ otError CliOffload::Process(Arg aArgs[])
     }
 
     static constexpr Command kCommands[] = {
-        CmdEntry("dataset"), CmdEntry("scan"), CmdEntry("state"), CmdEntry("thread"),
+        CmdEntry("dataset"), CmdEntry("factoryreset"), CmdEntry("ifconfig"), CmdEntry("ncp"),
+        CmdEntry("networkkey"), CmdEntry("routerselectionjitter"), CmdEntry("scan"), CmdEntry("state"),
+        CmdEntry("thread"),
     };
 
     static_assert(BinarySearch::IsSorted(kCommands), "kCommands is not sorted");
@@ -265,7 +359,20 @@ const CliOffload::ComponentMapper *CliOffload::LookupMapper(const char *aName) c
     return BinarySearch::Find(aName, kMappers);
 }
 
-otError CliOffload::Print(otOperationalDataset &aDataset)
+otError CliOffload::PrintAll(otOperationalDataset &aDataset)
+{ 
+    otError              error = OT_ERROR_NONE;
+
+    Print(aDataset);
+
+    otOperationalDatasetTlvs datasetTlvs;
+    error = otDatasetConvertToTlvs(&aDataset, &datasetTlvs);
+    OutputBytesLine(datasetTlvs.mTlvs, datasetTlvs.mLength);
+
+    return error;
+}
+
+void CliOffload::Print(otOperationalDataset &aDataset)
 { 
     struct ComponentTitle
     {
@@ -288,24 +395,17 @@ otError CliOffload::Print(otOperationalDataset &aDataset)
         {"Security Policy", "securitypolicy"},
     };
 
-    otError              error = OT_ERROR_NONE;
 
     for (const ComponentTitle &title : kTitles)
     {
         const ComponentMapper *mapper = LookupMapper(title.mName);
-
+        otLogInfoPlat("%s: %d", title.mTitle, aDataset.mComponents.*mapper->mIsPresentPtr);
         if (aDataset.mComponents.*mapper->mIsPresentPtr)
         {
             OutputFormat("%s: ", title.mTitle);
             (this->*mapper->mOutput)(aDataset);
         }
     }
-
-    otOperationalDatasetTlvs datasetTlvs;
-    error = otDatasetConvertToTlvs(&aDataset, &datasetTlvs);
-    OutputBytesLine(datasetTlvs.mTlvs, datasetTlvs.mLength);
-
-    return error;
 }
 
 //---------------------------------------------------------------------------------------------------------------------

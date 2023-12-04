@@ -125,7 +125,7 @@ void Notifier::EmitEvents(void)
     LogEvents(events);
 
     // Emit events to core internal modules
-
+/*
     Get<Mle::Mle>().HandleNotifierEvents(events);
     Get<EnergyScanServer>().HandleNotifierEvents(events);
 #if OPENTHREAD_FTD
@@ -189,7 +189,7 @@ void Notifier::EmitEvents(void)
 #if OPENTHREAD_CONFIG_LINK_METRICS_MANAGER_ENABLE
     Get<Utils::LinkMetricsManager>().HandleNotifierEvents(events);
 #endif
-
+*/
     for (ExternalCallback &callback : mExternalCallbacks)
     {
         callback.InvokeIfSet(events.GetAsFlags());

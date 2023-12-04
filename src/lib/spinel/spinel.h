@@ -575,6 +575,15 @@ enum
     SPINEL_STATUS_RESET_WATCHDOG = SPINEL_STATUS_RESET__BEGIN + 8,
     SPINEL_STATUS_RESET__END     = 128,
 
+    SPINEL_STATUS_DATASET_SEND_MGMT__BEGIN  = 128,
+    SPINEL_STATUS_DATASET_SEND_MGMT_SUCCESS = SPINEL_STATUS_DATASET_SEND_MGMT__BEGIN + 0,
+    SPINEL_STATUS_DATASET_SEND_MGMT_FAILURE = SPINEL_STATUS_DATASET_SEND_MGMT__BEGIN + 1,
+    SPINEL_STATUS_DATASET_SEND_MGMT__END    = 144,
+
+    SPINEL_STATUS_THREAD__BEGIN  = 144,                                                                                                                                                                                                                                                
+    SPINEL_STATUS_THREAD_DETACH_GRACEFULLY_DONE = SPINEL_STATUS_THREAD__BEGIN + 0,                                                                                                                                                                                                     
+    SPINEL_STATUS_THREAD__END  = 160,
+
     SPINEL_STATUS_VENDOR__BEGIN = 15360,
     SPINEL_STATUS_VENDOR__END   = 16384,
 
@@ -593,6 +602,7 @@ typedef enum
     SPINEL_NET_ROLE_CHILD    = 1,
     SPINEL_NET_ROLE_ROUTER   = 2,
     SPINEL_NET_ROLE_LEADER   = 3,
+    SPINEL_NET_ROLE_DISABLED = 4,
 } spinel_net_role_t;
 
 typedef enum
@@ -2350,6 +2360,8 @@ enum
      *
      */
     SPINEL_PROP_NET_PSKC = SPINEL_PROP_NET__BEGIN + 11,
+
+    SPINEL_PROP_NET_LEAVE_GRACEFULLY = SPINEL_PROP_NET__BEGIN + 12,
 
     SPINEL_PROP_NET__END = 0x50,
 

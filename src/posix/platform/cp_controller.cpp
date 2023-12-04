@@ -32,7 +32,10 @@
 #include "common/callback.hpp"
 #include "common/error.hpp"
 #include "common/new.hpp"
+#include "common/logging.hpp"
 #include "posix/platform/cp_controller.hpp"
+#include "posix/platform/cp_spinel.hpp"
+#include "openthread/platform/offload.h"
 
 static ot::Posix::CpController sCpController;
 namespace ot {
@@ -43,6 +46,11 @@ namespace {
 extern "C" void platformCpInit(const char *aUrl) { sCpController.Init(aUrl); }
 } // namespace
 
+
+Spinel::RadioSpinel &GetSpinel(void)
+{
+    return sCpController.GetRadioSpinel();
+}
 
 CpController::CpController(void)
     : mRadioUrl(nullptr)
@@ -161,6 +169,22 @@ otError otPlatCpThreadStartStop(otInstance *aInstance, bool aStart)
     return GetRadioSpinel().ThreadStartStop(aStart);
 }
 
+uint8_t otPlatCpThreadGetRouterSelectionJitter(otInstance *aInstance)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    uint8_t jitter = 0;
+
+    GetRadioSpinel().ThreadGetRouterSelectionJitter(jitter);
+
+    return jitter;
+}
+
+void otPlatCpThreadSetRouterSelectionJitter(otInstance *aInstance, uint8_t aRouterJitter)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    GetRadioSpinel().ThreadSetRouterSelectionJitter(aRouterJitter);
+}
+
 otError platformNetifOffloadSendIp6(uint8_t *aBuf, uint16_t aLen)
 {
     otError error = OT_ERROR_NONE;
@@ -168,4 +192,101 @@ otError platformNetifOffloadSendIp6(uint8_t *aBuf, uint16_t aLen)
     error = GetRadioSpinel().Ip6Send(aBuf, aLen);
 
     return error;
+}
+
+otError otPlatCpFactoryReset(otInstance *aInstance)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    otError error = OT_ERROR_NONE;
+    GetRadioSpinel().FactoryResetNcp();     
+
+    return error;
+}
+
+otError otPlatCpGetCoexMetrics(otInstance *aInstance, otRadioCoexMetrics *aCoexMetrics)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aCoexMetrics != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    error = GetRadioSpinel().GetCoexMetrics(*aCoexMetrics);
+
+exit:
+    return error;
+}
+
+const otRadioSpinelMetrics *otPlatCpGetRadioSpinelMetrics(void)
+{
+    return GetRadioSpinel().GetRadioSpinelMetrics();
+}
+
+const otRcpInterfaceMetrics *otPlatCpGetNcpInterfaceMetrics(void)
+{
+    return sCpController.GetSpinelInterface().GetRcpInterfaceMetrics();
+}
+
+otError otPlatIp6SetEnabled(bool aEnabled)
+{
+    return GetRadioSpinel().Ip6SetEnabled(aEnabled);
+}
+
+void platformCpDeinit(void)
+{
+    GetRadioSpinel().Deinit();
+}
+
+otError otPlatCpGetIeeeEui64(uint8_t *aIeeeEui64)
+{
+    return GetRadioSpinel().GetIeeeEui64(aIeeeEui64);
+}
+
+otError otPlatCpSetStateChangedCallback(otStateChangedCallback aCallback, void *aContext)
+{
+    return GetRadioSpinel().RegisterCallback(aCallback, aContext);
+}
+
+otError otPlatCpGetNeighborTable(otNeighborInfo *aNeighborList, uint8_t &aCount)
+{
+    return GetRadioSpinel().ThreadGetNeighborTable(aNeighborList, aCount);
+}
+
+otError otPlatCpGetChildTable(otChildInfo *aChildList, uint8_t &aCount)
+{
+    return GetRadioSpinel().ThreadGetChildTable(aChildList, aCount);
+}
+
+otError otPlatCpDatasetGetActiveTlvs(otInstance *aInstance, otOperationalDatasetTlvs *aDataset)
+{
+    (void)aInstance;
+    return GetRadioSpinel().DatasetGetActiveTlvs(aDataset);
+}
+
+otError otPlatCpDatasetGetPending(otInstance *aInstance, otOperationalDataset *aDataset)
+{
+    (void)aInstance;
+    return GetRadioSpinel().DatasetGetPending(aDataset);
+}    
+
+otError otPlatCpDatasetGetPendingTlvs(otInstance *aInstance, otOperationalDatasetTlvs *aDataset)
+{
+    (void)aInstance;
+    return GetRadioSpinel().DatasetGetPendingTlvs(aDataset);
+}
+
+otError otPlatCpThreadGetNetworkKey(otNetworkKey *aNetworkKey)
+{
+    return GetRadioSpinel().ThreadGetNetworkKey(aNetworkKey);
+}
+
+otError otPlatCpDatasetSetActive(otOperationalDataset *aDataset)
+{
+    return GetRadioSpinel().DatasetSetActive(aDataset);
+}
+
+otError otPlatCpDatasetSetPending(otOperationalDataset *aDataset)
+{
+    return GetRadioSpinel().DatasetSetPending(aDataset);
 }

@@ -51,7 +51,7 @@ uint8_t NameData::CopyTo(char *aBuffer, uint8_t aMaxSize) const
 
     return destData.GetLength();
 }
-/*
+
 NameData NetworkName::GetAsData(void) const
 {
     return NameData(m8, static_cast<uint8_t>(StringLength(m8, kMaxSize + 1)));
@@ -106,6 +106,7 @@ exit:
 
 bool NetworkName::operator==(const NetworkName &aOther) const { return GetAsData() == aOther.GetAsData(); }
 
+/*
 NetworkNameManager::NetworkNameManager(Instance &aInstance)
     : InstanceLocator(aInstance)
 {
@@ -162,11 +163,6 @@ Error NetworkNameManager::SetDomainName(const NameData &aNameData)
 }
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 */
-
-NameData NetworkName::GetAsData(void) const
-{
-    return NameData(m8, static_cast<uint8_t>(StringLength(m8, kMaxSize + 1)));
-}
 
 } // namespace MeshCoP
 } // namespace ot

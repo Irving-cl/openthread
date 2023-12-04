@@ -71,6 +71,7 @@ target_sources(openthread-radio-spinel
     radio_spinel.cpp
     ncp_spinel_parser.cpp
     spinel_decoder.cpp
+    spinel.c
 )
 target_sources(openthread-spinel-ncp PRIVATE ${COMMON_SOURCES})
 target_sources(openthread-spinel-rcp PRIVATE ${COMMON_SOURCES})

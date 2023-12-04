@@ -1504,6 +1504,7 @@ const char *spinel_net_role_to_cstr(uint8_t net_role)
         {SPINEL_NET_ROLE_CHILD, "NET_ROLE_CHILD"},
         {SPINEL_NET_ROLE_ROUTER, "NET_ROLE_ROUTER"},
         {SPINEL_NET_ROLE_LEADER, "NET_ROLE_LEADER"},
+        {SPINEL_NET_ROLE_DISABLED, "NET_ROLE_DISABLED"},
         {0, NULL},
     };
 
@@ -1563,6 +1564,8 @@ const char *spinel_status_to_cstr(spinel_status_t status)
         {SPINEL_STATUS_RESET_OTHER, "RESET_OTHER"},
         {SPINEL_STATUS_RESET_UNKNOWN, "RESET_UNKNOWN"},
         {SPINEL_STATUS_RESET_WATCHDOG, "RESET_WATCHDOG"},
+        {SPINEL_STATUS_DATASET_SEND_MGMT_SUCCESS, "DATASET_SEND_MGMT_SUCCESS"},
+        {SPINEL_STATUS_DATASET_SEND_MGMT_FAILURE, "DATASET_SEND_MGMT_FAILURE"},
         {0, NULL},
     };
 

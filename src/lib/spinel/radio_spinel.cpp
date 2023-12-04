@@ -47,6 +47,7 @@
 #include "common/encoding.hpp"
 #include "common/error.hpp"
 #include "common/new.hpp"
+#include "common/notifier.hpp"
 #include "lib/platform/exit_code.h"
 #include "lib/spinel/spinel_decoder.hpp"
 #include "mac/mac_frame.hpp"
@@ -102,9 +103,13 @@ RadioSpinel::RadioSpinel(void)
     , mTxRadioEndUs(UINT64_MAX)
     , mRadioTimeRecalcStart(UINT64_MAX)
     , mRadioTimeOffset(UINT64_MAX)
+    , mScanState(SPINEL_SCAN_STATE_IDLE)
+    , mDeviceRole(OT_DEVICE_ROLE_DISABLED)
 {
     mVersion[0] = '\0';
     memset(&mRadioSpinelMetrics, 0, sizeof(mRadioSpinelMetrics));
+    memset(mNetworkName.m8, 0, sizeof(mNetworkName.m8));
+    memset(mExtendedPanId.m8, 0, sizeof(mExtendedPanId.m8));
 }
 
 void RadioSpinel::Init(SpinelInterface &aSpinelInterface, bool aResetRadio, bool aSkipRcpCompatibilityCheck)
@@ -116,7 +121,7 @@ void RadioSpinel::Init(SpinelInterface &aSpinelInterface, bool aResetRadio, bool
 #if OPENTHREAD_SPINEL_CONFIG_RCP_RESTORATION_MAX_COUNT > 0
     mResetRadioOnStartup = aResetRadio;
 #endif
-
+    otLogInfoPlat("RadioSpinel Init");
     mSpinelInterface = &aSpinelInterface;
     SuccessOrDie(mSpinelInterface->Init(HandleReceivedFrame, this, mRxFrameBuffer));
 
@@ -497,6 +502,7 @@ void RadioSpinel::HandleResponse(const uint8_t *aBuffer, uint16_t aLength)
     otError           error  = OT_ERROR_NONE;
 
     rval = spinel_datatype_unpack(aBuffer, aLength, "CiiD", &header, &cmd, &key, &data, &len);
+    otLogInfoPlat("!!!HandleResponse, rval:%u, cmd:%u ", rval, cmd);
     VerifyOrExit(rval > 0 && cmd >= SPINEL_CMD_PROP_VALUE_IS && cmd <= SPINEL_CMD_PROP_VALUE_REMOVED,
                  error = OT_ERROR_PARSE);
 
@@ -531,12 +537,14 @@ void RadioSpinel::HandleWaitingResponse(uint32_t          aCommand,
                                         const uint8_t    *aBuffer,
                                         uint16_t          aLength)
 {
+    LogInfo("HandleWaitingResponse");
     if (aKey == SPINEL_PROP_LAST_STATUS)
     {
         spinel_status_t status;
         spinel_ssize_t  unpacked = spinel_datatype_unpack(aBuffer, aLength, "i", &status);
 
         VerifyOrExit(unpacked > 0, mError = OT_ERROR_PARSE);
+        LogInfo("Last Status:%s", spinel_status_to_cstr(status));
         mError = SpinelStatusToOtError(status);
     }
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
@@ -567,7 +575,10 @@ void RadioSpinel::HandleWaitingResponse(uint32_t          aCommand,
             {
                 spinel_ssize_t unpacked =
                     spinel_datatype_vunpack_in_place(aBuffer, aLength, mPropertyFormat, mPropertyArgs);
-                VerifyOrExit(unpacked > 0, mError = OT_ERROR_PARSE);
+
+                LogInfo("unpacked:%u, Length:%u,  PropertyFormat:%s", unpacked, aLength, mPropertyFormat);
+                // Make 0 as a valid value
+                VerifyOrExit(unpacked >= 0, mError = OT_ERROR_PARSE);
                 mError = OT_ERROR_NONE;
             }
         }
@@ -610,7 +621,7 @@ void RadioSpinel::HandleValueIs(spinel_prop_key_t aKey, const uint8_t *aBuffer, 
         unpacked = spinel_datatype_unpack(aBuffer, aLength, "i", &status);
         VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
 
-        if (status >= SPINEL_STATUS_RESET__BEGIN && status <= SPINEL_STATUS_RESET__END)
+        if (status >= SPINEL_STATUS_RESET__BEGIN && status < SPINEL_STATUS_RESET__END)
         {
             if (IsEnabled())
             {
@@ -621,6 +632,58 @@ void RadioSpinel::HandleValueIs(spinel_prop_key_t aKey, const uint8_t *aBuffer, 
             LogInfo("RCP reset: %s", spinel_status_to_cstr(status));
             mIsReady = true;
         }
+        else if (status >= SPINEL_STATUS_JOIN__BEGIN && status < SPINEL_STATUS_JOIN__END)
+        {
+            LogInfo("Join Status:%s", spinel_status_to_cstr(status));
+
+            otError joinError = OT_ERROR_NONE;
+
+            switch (status)
+            {
+            case SPINEL_STATUS_JOIN_SUCCESS:
+                joinError = OT_ERROR_NONE;
+                break;
+            case SPINEL_STATUS_JOIN_SECURITY:
+                joinError = OT_ERROR_SECURITY;
+                break;
+            case SPINEL_STATUS_JOIN_NO_PEERS:
+                joinError = OT_ERROR_NOT_FOUND;
+                break;
+            case SPINEL_STATUS_JOIN_RSP_TIMEOUT:
+                joinError = OT_ERROR_RESPONSE_TIMEOUT;
+                break;
+            default:
+                joinError = OT_ERROR_FAILED;
+                break;
+            }
+
+            mJoinerCallback.InvokeIfSet(joinError);
+        }
+        else if (status >= SPINEL_STATUS_DATASET_SEND_MGMT__BEGIN && status < SPINEL_STATUS_DATASET_SEND_MGMT__END)
+        {
+            LogInfo("Dataset Send Mgmt Status:%s", spinel_status_to_cstr(status));
+
+            otError datasetMgmtError = OT_ERROR_NONE;
+
+            switch (status)
+            {
+            case SPINEL_STATUS_DATASET_SEND_MGMT_SUCCESS:
+                datasetMgmtError = OT_ERROR_NONE;
+                break;
+            case SPINEL_STATUS_DATASET_SEND_MGMT_FAILURE:
+                datasetMgmtError = OT_ERROR_FAILED;
+                break;
+            }
+
+            LogInfo("Is Set:%u", mDatasetMgmtSetCallback.IsSet());
+            mDatasetMgmtSetCallback.InvokeIfSet(datasetMgmtError);
+        }
+        else if (status >= SPINEL_STATUS_THREAD__BEGIN && status < SPINEL_STATUS_THREAD__END)
+        {
+            LogInfo("Thread Leave network gracefully");
+
+            mDetachGracefullyCallback.InvokeIfSet();
+        }
         else
         {
             LogInfo("RCP last status: %s", spinel_status_to_cstr(status));
@@ -630,16 +693,16 @@ void RadioSpinel::HandleValueIs(spinel_prop_key_t aKey, const uint8_t *aBuffer, 
     {
         uint8_t scanChannel;
         int8_t  maxRssi;
+        otEnergyScanResult result;
 
         unpacked = spinel_datatype_unpack(aBuffer, aLength, "Cc", &scanChannel, &maxRssi);
 
         VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
 
-#if OPENTHREAD_SPINEL_CONFIG_RCP_RESTORATION_MAX_COUNT > 0
-        mEnergyScanning = false;
-#endif
+        result.mChannel = scanChannel;
+        result.mMaxRssi = maxRssi;
 
-        //otPlatRadioEnergyScanDone(mInstance, maxRssi);
+        mEnergyScanCallback.InvokeIfSet(&result);
     }
     else if (aKey == SPINEL_PROP_STREAM_DEBUG)
     {
@@ -698,9 +761,21 @@ void RadioSpinel::HandleValueIs(spinel_prop_key_t aKey, const uint8_t *aBuffer, 
         unpacked = spinel_datatype_unpack(aBuffer, aLength, "C", &scanState);
 
         VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        LogNote("ScanState:%u, spinel scan state:%u", mScanState, scanState);
         VerifyOrExit(scanState == SPINEL_SCAN_STATE_IDLE, error = OT_ERROR_FAILED);
 
-        otPlatCpActiveScanDone(mInstance, nullptr);
+        if (mScanState == SPINEL_SCAN_STATE_BEACON)
+        {
+            otPlatCpActiveScanDone(mInstance, nullptr);
+        }
+        else if (mScanState == SPINEL_SCAN_STATE_ENERGY)
+        {
+            mEnergyScanCallback.InvokeIfSet(nullptr);
+        }
+
+        mScanState = static_cast<spinel_scan_state_t>(scanState);
+
     }
     else if (aKey == SPINEL_PROP_IPV6_ADDRESS_TABLE)
     {
@@ -719,6 +794,20 @@ void RadioSpinel::HandleValueIs(spinel_prop_key_t aKey, const uint8_t *aBuffer, 
 
         VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
         platformNetifOffloadReceiveIp6(mIpDatagramRecv, mIpDatagramRecvLength);
+    }
+    else if (aKey == SPINEL_PROP_NET_ROLE)
+    {
+        spinel_net_role_t spinelRole;
+        ot::Events events;
+
+        unpacked = spinel_datatype_unpack(aBuffer, aLength, SPINEL_DATATYPE_UINT_PACKED_S, &spinelRole);
+        VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        otLogInfoPlat("Role Changed: %s", spinel_net_role_to_cstr(spinelRole));
+
+        mDeviceRole = ConvertDeviceRole(spinelRole);
+        events.Add(ot::Event::kEventThreadRoleChanged);
+        mStateChangedCallback.InvokeIfSet(events.GetAsFlags());
     }
 
 exit:
@@ -761,6 +850,21 @@ void RadioSpinel::HandleValueInserted(spinel_prop_key_t aKey, const uint8_t *aBu
 
         memcpy(&result.mExtAddress.m8[0], extAddress, sizeof(result.mExtAddress.m8));
         otPlatCpActiveScanDone(mInstance, &result);
+    }
+    else if (aKey == SPINEL_PROP_MAC_ENERGY_SCAN_RESULT)
+    {
+        uint8_t scanChannel;
+        int8_t  maxRssi;
+        otEnergyScanResult result;
+
+        unpacked = spinel_datatype_unpack(aBuffer, aLength, "Cc", &scanChannel, &maxRssi);
+
+        VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        result.mChannel = scanChannel;
+        result.mMaxRssi = maxRssi;
+
+        mEnergyScanCallback.InvokeIfSet(&result);
     }
     else
     {
@@ -1276,6 +1380,34 @@ int8_t RadioSpinel::GetRssi(void)
     return rssi;
 }
 
+otDeviceRole RadioSpinel::ConvertDeviceRole(spinel_net_role_t aSpinelRole)
+{
+    otDeviceRole role = OT_DEVICE_ROLE_DISABLED;
+
+    switch (aSpinelRole)
+    {
+    case SPINEL_NET_ROLE_DISABLED:
+        role = OT_DEVICE_ROLE_DISABLED;
+        break;
+    case SPINEL_NET_ROLE_DETACHED:
+        role = OT_DEVICE_ROLE_DETACHED;
+        break;
+    case SPINEL_NET_ROLE_CHILD:
+        role = OT_DEVICE_ROLE_CHILD;
+        break;
+    case SPINEL_NET_ROLE_ROUTER:
+        role = OT_DEVICE_ROLE_ROUTER;
+        break;
+    case SPINEL_NET_ROLE_LEADER:
+        role = OT_DEVICE_ROLE_LEADER;
+        break;
+    default:
+        break;
+    }
+
+    return role;
+}
+
 otError RadioSpinel::GetDeviceRole(otDeviceRole &aRole)
 {
     otError error = OT_ERROR_NONE;
@@ -1283,24 +1415,16 @@ otError RadioSpinel::GetDeviceRole(otDeviceRole &aRole)
 
     SuccessOrExit(Get(SPINEL_PROP_NET_ROLE, SPINEL_DATATYPE_UINT_PACKED_S, &spinelRole));
 
-    switch (spinelRole) 
-    {
-    case SPINEL_NET_ROLE_DETACHED:
-        aRole = OT_DEVICE_ROLE_DETACHED;
-        break;
-    case SPINEL_NET_ROLE_CHILD:
-        aRole = OT_DEVICE_ROLE_CHILD;
-        break;
-    case SPINEL_NET_ROLE_ROUTER:
-        aRole = OT_DEVICE_ROLE_ROUTER;
-        break;
-    case SPINEL_NET_ROLE_LEADER:
-        aRole = OT_DEVICE_ROLE_LEADER;
-        break;
-    }
+    mDeviceRole = ConvertDeviceRole(spinelRole);
+    aRole = mDeviceRole;
 
 exit:
     return error;
+}
+
+otDeviceRole RadioSpinel::GetDeviceRoleCached(void)
+{ 
+    return mDeviceRole;
 }
 
 #if OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
@@ -1438,6 +1562,27 @@ exit:
     return error;
 }
 
+otError RadioSpinel::EnergyScan(uint32_t                  aScanChannels,
+                                uint16_t                 aScanDuration,
+                                otHandleEnergyScanResult aCallback,
+                                void                    *aCallbackContext)
+{
+    otError error;
+
+    mEnergyScanCallback.Set(aCallback, aCallbackContext);
+
+    (void)aScanChannels;
+    (void)aScanDuration;
+    // SuccessOrExit(error = Set(SPINEL_PROP_MAC_SCAN_MASK, SPINEL_DATATYPE_DATA_S, &aScanChannels, sizeof(uint32_t)));
+    // SuccessOrExit(error = Set(SPINEL_PROP_MAC_SCAN_PERIOD, SPINEL_DATATYPE_UINT16_S, aScanDuration));
+
+    mScanState = SPINEL_SCAN_STATE_ENERGY;
+    SuccessOrExit(error = Set(SPINEL_PROP_MAC_SCAN_STATE, SPINEL_DATATYPE_UINT8_S, SPINEL_SCAN_STATE_ENERGY));
+
+exit:
+    return error;
+}
+
 otError RadioSpinel::ActiveScan(uint8_t aScanChannel, uint16_t aScanDuration)
 {
     otError error;
@@ -1447,6 +1592,7 @@ otError RadioSpinel::ActiveScan(uint8_t aScanChannel, uint16_t aScanDuration)
     // SuccessOrExit(error = Set(SPINEL_PROP_MAC_SCAN_MASK, SPINEL_DATATYPE_DATA_S, aScanChannel, sizeof(uint8_t)));
     // SuccessOrExit(error = Set(SPINEL_PROP_MAC_SCAN_PERIOD, SPINEL_DATATYPE_UINT16_S, aScanDuration));
     SuccessOrExit(error = Set(SPINEL_PROP_MAC_SCAN_STATE, SPINEL_DATATYPE_UINT8_S, SPINEL_SCAN_STATE_BEACON));
+    mScanState = SPINEL_SCAN_STATE_BEACON;
 
 exit:
     return error;
@@ -1659,6 +1805,7 @@ otError RadioSpinel::SendCommand(uint32_t          aCommand,
     packed = spinel_datatype_pack(buffer, sizeof(buffer), "Cii", SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0 | tid,
                                   aCommand, aKey);
 
+    LogInfo("SendCommand, step1, aCommand:%u, aKey:%u", aCommand, aKey);
     VerifyOrExit(packed > 0 && static_cast<size_t>(packed) <= sizeof(buffer), error = OT_ERROR_NO_BUFS);
 
     offset = static_cast<uint16_t>(packed);
@@ -1667,6 +1814,7 @@ otError RadioSpinel::SendCommand(uint32_t          aCommand,
     if (aFormat)
     {
         packed = spinel_datatype_vpack(buffer + offset, sizeof(buffer) - offset, aFormat, args);
+        LogInfo("Send Command, packed:%u, offset:%u", packed, offset);
         VerifyOrExit(packed > 0 && static_cast<size_t>(packed + offset) <= sizeof(buffer), error = OT_ERROR_NO_BUFS);
 
         offset += static_cast<uint16_t>(packed);
@@ -3165,14 +3313,913 @@ exit:
     return error;
 }
 
+otError RadioSpinel::DatasetGetActive(otOperationalDataset *aDataset)
+{ 
+    otError error = OT_ERROR_NONE;
+
+    sLen = sizeof(sBuffer);
+    error = Get(SPINEL_PROP_THREAD_ACTIVE_DATASET,
+                     SPINEL_DATATYPE_DATA_S, sBuffer, &sLen);
+
+    SuccessOrExit(error);
+    otLogCritPlat("GetActive, len:%u", sLen);
+    VerifyOrExit(sLen > 0, error = OT_ERROR_NOT_FOUND);
+
+    error = ParseOperationalDataset(sBuffer, sLen, aDataset);
+    VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::DatasetGetActiveTlvs(otOperationalDatasetTlvs *aDataset)
+{ 
+    otError error = OT_ERROR_NONE; 
+    otOperationalDataset dataset;
+    VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    SuccessOrExit(error = DatasetGetActive(&dataset));
+    error = otDatasetConvertToTlvs(&dataset, aDataset);
+
+exit:
+    return error;
+}
+
+void GetFlagsFromSecurityPolicy(const otSecurityPolicy *aSecurityPolicy, uint8_t *aFlags, uint8_t aFlagsLength)
+{
+    static constexpr uint8_t kObtainNetworkKeyMask           = 1 << 7;
+    static constexpr uint8_t kNativeCommissioningMask        = 1 << 6;
+    static constexpr uint8_t kRoutersMask                    = 1 << 5;
+    static constexpr uint8_t kExternalCommissioningMask      = 1 << 4;
+    static constexpr uint8_t kCommercialCommissioningMask    = 1 << 2;
+    static constexpr uint8_t kAutonomousEnrollmentMask       = 1 << 1;
+    static constexpr uint8_t kNetworkKeyProvisioningMask     = 1 << 0;
+    static constexpr uint8_t kTobleLinkMask                  = 1 << 7;
+    static constexpr uint8_t kNonCcmRoutersMask              = 1 << 6;
+    static constexpr uint8_t kReservedMask                   = 0x38;
+
+    VerifyOrExit(aFlagsLength > 1);
+
+    memset(aFlags, 0, aFlagsLength);
+
+    if (aSecurityPolicy->mObtainNetworkKeyEnabled)
+    {
+        aFlags[0] |= kObtainNetworkKeyMask;
+    }
+
+    if (aSecurityPolicy->mNativeCommissioningEnabled)
+    {
+        aFlags[0] |= kNativeCommissioningMask;
+    }
+
+    if (aSecurityPolicy->mRoutersEnabled)
+    {
+        aFlags[0] |= kRoutersMask;
+    }
+
+    if (aSecurityPolicy->mExternalCommissioningEnabled)
+    {
+        aFlags[0] |= kExternalCommissioningMask;
+    }
+
+    if (!aSecurityPolicy->mCommercialCommissioningEnabled)
+    {
+        aFlags[0] |= kCommercialCommissioningMask;
+    }
+
+    if (!aSecurityPolicy->mAutonomousEnrollmentEnabled)
+    {
+        aFlags[0] |= kAutonomousEnrollmentMask;
+    }
+
+    if (!aSecurityPolicy->mNetworkKeyProvisioningEnabled)
+    {
+        aFlags[0] |= kNetworkKeyProvisioningMask;
+    }
+
+    VerifyOrExit(aFlagsLength > sizeof(aFlags[0]));
+
+    if (aSecurityPolicy->mTobleLinkEnabled)
+    {
+        aFlags[1] |= kTobleLinkMask;
+    }
+
+    if (!aSecurityPolicy->mNonCcmRoutersEnabled)
+    {
+        aFlags[1] |= kNonCcmRoutersMask;
+    }
+
+    aFlags[1] |= kReservedMask;
+    aFlags[1] |= aSecurityPolicy->mVersionThresholdForRouting;
+
+exit:
+    return;
+}
+
+otError RadioSpinel::DatasetSetActive(otOperationalDataset *aDataset)
+{ 
+    otError error = OT_ERROR_NONE;
+    VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    otIp6Address addr;
+    uint8_t flags[2];
+    GetFlagsFromSecurityPolicy(&aDataset->mSecurityPolicy, flags, sizeof(flags));
+    memcpy(addr.mFields.m8, aDataset->mMeshLocalPrefix.m8, 8);
+    memset(addr.mFields.m8 + 8, 0, 8);
+
+    error = Set(SPINEL_PROP_THREAD_ACTIVE_DATASET,
+                    SPINEL_DATATYPE_STRUCT_S( // Active Timestamp
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT64_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Pending Timestamp
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT64_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Network Key
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_DATA_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Network Name
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UTF8_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Extened PAN ID
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_DATA_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Mesh Local Prefix
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_IPv6ADDR_S
+                        SPINEL_DATATYPE_UINT8_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Delay
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT32_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // PAN ID
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT16_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Channel
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT8_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Pskc
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_DATA_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Security Policy
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT16_S
+                        SPINEL_DATATYPE_UINT8_S
+                        SPINEL_DATATYPE_UINT8_S
+                        )
+                    ,
+                    SPINEL_PROP_DATASET_ACTIVE_TIMESTAMP,
+                    aDataset->mActiveTimestamp.mSeconds,
+                    SPINEL_PROP_DATASET_PENDING_TIMESTAMP,
+                    aDataset->mPendingTimestamp.mSeconds,
+                    SPINEL_PROP_NET_NETWORK_KEY,
+                    aDataset->mNetworkKey.m8,
+                    sizeof(aDataset->mNetworkKey.m8),
+                    SPINEL_PROP_NET_NETWORK_NAME,
+                    aDataset->mNetworkName.m8,
+                    SPINEL_PROP_NET_XPANID,
+                    aDataset->mExtendedPanId.m8,
+                    sizeof(aDataset->mExtendedPanId.m8),
+                    SPINEL_PROP_IPV6_ML_PREFIX,
+                    &addr,
+                    OT_IP6_PREFIX_BITSIZE,
+                    SPINEL_PROP_DATASET_DELAY_TIMER,
+                    aDataset->mDelay,
+                    SPINEL_PROP_MAC_15_4_PANID,
+                    aDataset->mPanId,
+                    SPINEL_PROP_PHY_CHAN,
+                    aDataset->mChannel,
+                    SPINEL_PROP_NET_PSKC,
+                    aDataset->mPskc.m8,
+                    sizeof(aDataset->mPskc.m8),
+                    SPINEL_PROP_DATASET_SECURITY_POLICY,
+                    aDataset->mSecurityPolicy.mRotationTime,
+                    flags[0],
+                    flags[1]
+                    );
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::DatasetSetActiveTlvs(otOperationalDatasetTlvs *aDataset)
+{ 
+    otError error = OT_ERROR_NONE;
+    VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    otOperationalDataset dataset;
+    otDatasetParseTlvs(aDataset, &dataset);
+
+    error = DatasetSetActive(&dataset);
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::DatasetGetPending(otOperationalDataset *aDataset)
+{
+    otError error = OT_ERROR_NONE;
+
+    sLen = sizeof(sBuffer);
+    error = Get(SPINEL_PROP_THREAD_PENDING_DATASET,
+                     SPINEL_DATATYPE_DATA_S, sBuffer, &sLen);
+
+    SuccessOrExit(error);
+    VerifyOrExit(sLen > 0, error = OT_ERROR_NOT_FOUND);
+
+    error = ParseOperationalDataset(sBuffer, sLen, aDataset);
+    VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+exit:
+    return error;
+
+}
+
+otError RadioSpinel::DatasetSetPending(otOperationalDataset *aDataset) 
+{ 
+    otError error = OT_ERROR_NONE;
+    VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    otIp6Address addr;
+    uint8_t flags[2];
+    GetFlagsFromSecurityPolicy(&aDataset->mSecurityPolicy, flags, sizeof(flags));
+    memcpy(addr.mFields.m8, aDataset->mMeshLocalPrefix.m8, 8);
+    memset(addr.mFields.m8 + 8, 0, 8);
+
+    error = Set(SPINEL_PROP_THREAD_PENDING_DATASET,
+                    SPINEL_DATATYPE_STRUCT_S( // Active Timestamp
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT64_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Pending Timestamp
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT64_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Network Key
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_DATA_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Network Name
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UTF8_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Extened PAN ID
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_DATA_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Mesh Local Prefix
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_IPv6ADDR_S
+                        SPINEL_DATATYPE_UINT8_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Delay
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT32_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // PAN ID
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT16_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Channel
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT8_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Pskc
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_DATA_S
+                        )
+                    SPINEL_DATATYPE_STRUCT_S( // Security Policy
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_UINT16_S
+                        SPINEL_DATATYPE_UINT8_S
+                        SPINEL_DATATYPE_UINT8_S
+                        )
+                    ,
+                    SPINEL_PROP_DATASET_ACTIVE_TIMESTAMP,
+                    aDataset->mActiveTimestamp.mSeconds,
+                    SPINEL_PROP_DATASET_PENDING_TIMESTAMP,
+                    aDataset->mPendingTimestamp.mSeconds,
+                    SPINEL_PROP_NET_NETWORK_KEY,
+                    aDataset->mNetworkKey.m8,
+                    sizeof(aDataset->mNetworkKey.m8),
+                    SPINEL_PROP_NET_NETWORK_NAME,
+                    aDataset->mNetworkName.m8,
+                    SPINEL_PROP_NET_XPANID,
+                    aDataset->mExtendedPanId.m8,
+                    sizeof(aDataset->mExtendedPanId.m8),
+                    SPINEL_PROP_IPV6_ML_PREFIX,
+                    &addr,
+                    OT_IP6_PREFIX_BITSIZE,
+                    SPINEL_PROP_DATASET_DELAY_TIMER,
+                    aDataset->mDelay,
+                    SPINEL_PROP_MAC_15_4_PANID,
+                    aDataset->mPanId,
+                    SPINEL_PROP_PHY_CHAN,
+                    aDataset->mChannel,
+                    SPINEL_PROP_NET_PSKC,
+                    aDataset->mPskc.m8,
+                    sizeof(aDataset->mPskc.m8),
+                    SPINEL_PROP_DATASET_SECURITY_POLICY,
+                    aDataset->mSecurityPolicy.mRotationTime,
+                    flags[0],
+                    flags[1]
+                    );
+exit:
+    return error;
+}
+
+otError RadioSpinel::DatasetGetPendingTlvs(otOperationalDatasetTlvs *aDataset)
+{
+    otError error = OT_ERROR_NONE; 
+    otOperationalDataset dataset;
+    VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    SuccessOrExit(error = DatasetGetPending(&dataset));
+    error = otDatasetConvertToTlvs(&dataset, aDataset);
+
+exit:
+    otLogInfoPlat("GetPendingTlvs, error:%s", otThreadErrorToString(error));
+    return error;
+}
+
+otError RadioSpinel::DatasetSendMgmtPendingSet(const otOperationalDataset *aDataset,
+                                const uint8_t              *aTlvs,
+                                uint8_t                     aLength,
+                                otDatasetMgmtSetCallback    aCallback,
+                                void                       *aContext)
+{
+    otError error = OT_ERROR_NONE;
+    otIp6Address addr;
+    uint8_t flags[2];
+    VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(aTlvs != nullptr, error = OT_ERROR_INVALID_ARGS);
+    mDatasetMgmtSetCallback.Set(aCallback, aContext);
+
+    GetFlagsFromSecurityPolicy(&aDataset->mSecurityPolicy, flags, sizeof(flags));
+    memcpy(addr.mFields.m8, aDataset->mMeshLocalPrefix.m8, 8);
+    memset(addr.mFields.m8 + 8, 0, 8);
+
+    error = Set(SPINEL_PROP_THREAD_MGMT_SET_PENDING_DATASET,
+                    SPINEL_DATATYPE_STRUCT_S( // Dataset Raw TLVs
+                        SPINEL_DATATYPE_UINT_PACKED_S
+                        SPINEL_DATATYPE_DATA_S
+                    )
+                    ,
+                    SPINEL_PROP_DATASET_RAW_TLVS,
+                    aTlvs,
+                    aLength
+                    );
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::LinkGetExtendedAddress(otExtAddress *aExtAddress)
+{ 
+    otError error = OT_ERROR_NONE;
+    VerifyOrExit(aExtAddress != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    // TODO: SPINEL_PROP_MAC_15_4_LADDR
+exit:
+    return error;
+}
+
+otError RadioSpinel::LinkGetChannel(uint8_t &aChannel)
+{
+    otError error = Get(SPINEL_PROP_PHY_CHAN, SPINEL_DATATYPE_UINT8_S, &aChannel);
+    otLogInfoPlat("aChannel:%u", aChannel);
+    return error;
+}
+
+otError RadioSpinel::RadioGetInstantRssi(int8_t &aRssi)
+{ 
+    return Get(SPINEL_PROP_PHY_RSSI, SPINEL_DATATYPE_INT8_S, &aRssi);
+}
+
+otError RadioSpinel::RadioGetTxPower(int8_t &aTxPower)
+{
+    return Get(SPINEL_PROP_PHY_TX_POWER, SPINEL_DATATYPE_INT8_S, &aTxPower);
+}
+
+otError RadioSpinel::LinkGetPanId(uint16_t &aPanId)
+{
+    otError error = OT_ERROR_NONE;
+    (void)aPanId;
+
+    // TODO: SPINEL_PROP_MAC_15_4_PANID
+    return error;
+}
+
 otError RadioSpinel::ThreadStartStop(bool aStart)
 { 
     otError error = OT_ERROR_NONE;
 
-    SuccessOrExit(error = Set(SPINEL_PROP_NET_IF_UP, SPINEL_DATATYPE_BOOL_S, aStart));
     SuccessOrExit(error = Set(SPINEL_PROP_NET_STACK_UP, SPINEL_DATATYPE_BOOL_S, aStart));
 
 exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadStart(void)
+{ 
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = Set(SPINEL_PROP_NET_STACK_UP, SPINEL_DATATYPE_BOOL_S, true));
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadStop(void)
+{ 
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = Set(SPINEL_PROP_NET_STACK_UP, SPINEL_DATATYPE_BOOL_S, false));
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadGetExtendedPanId(otExtendedPanId *aExtendedPanId)
+{ 
+    otError error = OT_ERROR_NONE;
+    spinel_size_t length;
+    VerifyOrExit(aExtendedPanId != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    error = Get(SPINEL_PROP_NET_XPANID, SPINEL_DATATYPE_DATA_S, aExtendedPanId->m8, &length);
+    VerifyOrExit(length == sizeof(mExtendedPanId.m8), error = OT_ERROR_INVALID_STATE);
+
+exit:
+    if (error == OT_ERROR_NONE)
+    {
+        memset(mExtendedPanId.m8, 0, sizeof(mExtendedPanId.m8));
+        memcpy(mExtendedPanId.m8, aExtendedPanId->m8, sizeof(mExtendedPanId.m8));
+    }
+    return error;
+}
+
+void RadioSpinel::ThreadGetExtendedPanIdCached(otExtendedPanId *aExtendedPanId)
+{
+    VerifyOrExit(aExtendedPanId != nullptr);
+    memset(aExtendedPanId->m8, 0, sizeof(aExtendedPanId->m8));
+    memcpy(aExtendedPanId->m8, mExtendedPanId.m8, sizeof(mExtendedPanId.m8));
+
+exit:
+    return;
+}
+
+otError RadioSpinel::ThreadGetNetworkName(otNetworkName *aNetworkName)
+{
+    otError error = OT_ERROR_NONE;
+    VerifyOrExit(aNetworkName != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    error = Get(SPINEL_PROP_NET_NETWORK_NAME, SPINEL_DATATYPE_UTF8_S, aNetworkName->m8, sizeof(aNetworkName->m8));
+
+exit:
+    if (error == OT_ERROR_NONE)
+    {
+        memset(mNetworkName.m8, 0, sizeof(mNetworkName.m8));
+        memcpy(mNetworkName.m8, aNetworkName->m8, sizeof(mNetworkName.m8));
+    }
+    return error;
+}
+
+void RadioSpinel::ThreadGetNetworkNameCached(otNetworkName *aNetworkName)
+{
+    VerifyOrExit(aNetworkName != nullptr);
+    memset(aNetworkName->m8, 0, sizeof(aNetworkName->m8));
+    memcpy(aNetworkName->m8, mNetworkName.m8, sizeof(mNetworkName.m8));
+
+exit:
+    return;
+}
+
+otError RadioSpinel::ThreadGetPartitionId(uint32_t &aPartitionId)
+{ 
+    return Get(SPINEL_PROP_NET_PARTITION_ID, SPINEL_DATATYPE_UINT32_S, &aPartitionId);
+}
+
+otError RadioSpinel::ThreadDetachGracefully(otDetachGracefullyCallback aCallback, void *aContext)
+{ 
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aContext != nullptr);
+
+    mDetachGracefullyCallback.Set(aCallback, aContext);
+    error = Set(SPINEL_PROP_NET_LEAVE_GRACEFULLY, SPINEL_DATATYPE_BOOL_S, true);
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadGetRouterSelectionJitter(uint8_t &aRouterJitter)
+{
+    return Get(SPINEL_PROP_THREAD_ROUTER_SELECTION_JITTER, SPINEL_DATATYPE_UINT8_S, &aRouterJitter);
+}
+
+otError RadioSpinel::ThreadSetRouterSelectionJitter(uint8_t aRouterJitter)
+{
+    return Set(SPINEL_PROP_THREAD_ROUTER_SELECTION_JITTER, SPINEL_DATATYPE_UINT8_S, aRouterJitter);
+}
+
+otError RadioSpinel::ThreadGetNeighborTable(otNeighborInfo *aNeighborList, uint8_t &aCount)
+{ 
+    otError error = OT_ERROR_NONE;
+    uint8_t neighborTableBuffer[sizeof(otNeighborInfo) * 160];
+    uint8_t *bufferPtr = neighborTableBuffer;
+    spinel_size_t length = sizeof(neighborTableBuffer);
+    uint8_t neighborIndex = 0;
+
+    SuccessOrDie(Get(SPINEL_PROP_THREAD_NEIGHBOR_TABLE, SPINEL_DATATYPE_DATA_S, 
+        neighborTableBuffer, &length));
+
+    while (length > 0)
+    {
+        VerifyOrExit(neighborIndex < aCount, error = OT_ERROR_NO_BUFS);
+
+        spinel_ssize_t unpacked;
+        otNeighborInfo *neighbor = &aNeighborList[neighborIndex];
+        uint8_t modeFlags;
+        bool isChild;
+
+        unpacked = spinel_datatype_unpack(bufferPtr, length,
+            SPINEL_DATATYPE_STRUCT_S(
+                SPINEL_DATATYPE_EUI64_S    // EUI64 Address
+                SPINEL_DATATYPE_UINT16_S   // Rloc16
+                SPINEL_DATATYPE_UINT32_S   // Age
+                SPINEL_DATATYPE_UINT8_S    // Link Quality In
+                SPINEL_DATATYPE_INT8_S     // Average RSS
+                SPINEL_DATATYPE_UINT8_S    // Mode (flags)
+                SPINEL_DATATYPE_BOOL_S     // Is Child
+                SPINEL_DATATYPE_UINT32_S   // Link Frame Counter
+                SPINEL_DATATYPE_UINT32_S   // MLE Frame Counter
+                SPINEL_DATATYPE_INT8_S     // Most recent RSS
+            ), 
+            &neighbor->mExtAddress,
+            &neighbor->mRloc16, 
+            &neighbor->mAge,
+            &neighbor->mLinkQualityIn,
+            &neighbor->mAverageRssi,
+            &modeFlags,
+            &isChild,
+            &neighbor->mLinkFrameCounter,
+            &neighbor->mMleFrameCounter,
+            &neighbor->mLastRssi
+            );
+        
+        VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        neighbor->mIsChild = isChild;
+        neighbor->mRxOnWhenIdle = (modeFlags & SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE) ? true : false;
+        neighbor->mFullThreadDevice = (modeFlags & SPINEL_THREAD_MODE_FULL_THREAD_DEV) ? true : false;
+        neighbor->mFullNetworkData = (modeFlags & SPINEL_THREAD_MODE_FULL_NETWORK_DATA) ? true : false;
+
+        bufferPtr += unpacked;
+        length -= unpacked;
+        neighborIndex++;
+    }
+
+    aCount = neighborIndex;
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadGetChildTable(otChildInfo *aChildList, uint8_t &aCount)
+{ 
+    otError error = OT_ERROR_NONE;
+    uint8_t childTableBuffer[sizeof(otChildInfo) * 160];
+    uint8_t *bufferPtr = childTableBuffer;
+    spinel_size_t length = sizeof(childTableBuffer);
+    uint8_t childIndex = 0;
+
+    SuccessOrDie(Get(SPINEL_PROP_THREAD_CHILD_TABLE, SPINEL_DATATYPE_DATA_S, 
+        childTableBuffer, &length));
+
+    while (length > 0)
+    {
+        VerifyOrExit(childIndex < aCount, error = OT_ERROR_NO_BUFS);
+
+        spinel_ssize_t unpacked;
+        otChildInfo *child = &aChildList[childIndex];
+        uint8_t modeFlags;
+
+        unpacked = spinel_datatype_unpack(bufferPtr, length,
+            SPINEL_DATATYPE_STRUCT_S(
+                SPINEL_DATATYPE_EUI64_S    // EUI64 Address
+                SPINEL_DATATYPE_UINT16_S   // Rloc16
+                SPINEL_DATATYPE_UINT32_S   // Timeout
+                SPINEL_DATATYPE_UINT32_S   // Age
+                SPINEL_DATATYPE_UINT8_S    // Network Data Version
+                SPINEL_DATATYPE_UINT8_S    // Link Quality In
+                SPINEL_DATATYPE_INT8_S     // Average RSS
+                SPINEL_DATATYPE_UINT8_S    // Mode (flags)
+                SPINEL_DATATYPE_INT8_S     // Most recent RSS
+            ), 
+            &child->mExtAddress,
+            &child->mRloc16, 
+            &child->mTimeout,
+            &child->mAge,
+            &child->mNetworkDataVersion,
+            &child->mLinkQualityIn,
+            &child->mAverageRssi,
+            &modeFlags,
+            &child->mLastRssi
+            );
+        
+        VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        child->mRxOnWhenIdle = (modeFlags & SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE) ? true : false;
+        child->mFullThreadDevice = (modeFlags & SPINEL_THREAD_MODE_FULL_THREAD_DEV) ? true : false;
+        child->mFullNetworkData = (modeFlags & SPINEL_THREAD_MODE_FULL_NETWORK_DATA) ? true : false;
+
+        bufferPtr += unpacked;
+        length -= unpacked;
+        childIndex++;
+    }
+
+    aCount = childIndex;
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadSetLinkMode(otLinkModeConfig &aConfig)
+{ 
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = Set(SPINEL_PROP_THREAD_MODE, SPINEL_DATATYPE_UINT8_S, aConfig));
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadGetLinkMode(otLinkModeConfig &aConfig)
+{ 
+    otError error = OT_ERROR_NONE;
+    uint8_t numericCode = 0;
+
+    SuccessOrExit(error = Get(SPINEL_PROP_THREAD_MODE, SPINEL_DATATYPE_UINT8_S, &numericCode));
+
+    aConfig.mRxOnWhenIdle = ((numericCode & SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE) == SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE);
+    aConfig.mDeviceType = ((numericCode & SPINEL_THREAD_MODE_FULL_THREAD_DEV) == SPINEL_THREAD_MODE_FULL_THREAD_DEV);
+    aConfig.mNetworkData = ((numericCode & SPINEL_THREAD_MODE_FULL_NETWORK_DATA) == SPINEL_THREAD_MODE_FULL_NETWORK_DATA);
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadGetNetworkData(uint8_t *aData, uint8_t &aLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aData != nullptr, error = OT_ERROR_INVALID_ARGS);
+    error = Get(SPINEL_PROP_THREAD_NETWORK_DATA, SPINEL_DATATYPE_DATA_S, aData, &aLen);
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadGetStableNetworkData(uint8_t *aData, uint8_t &aLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aData != nullptr, error = OT_ERROR_INVALID_ARGS);
+    error = Get(SPINEL_PROP_THREAD_STABLE_NETWORK_DATA, SPINEL_DATATYPE_DATA_S, aData, &aLen);
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::ThreadGetLocalLeaderWeight(uint8_t &aWeight)
+{
+    return Get(SPINEL_PROP_THREAD_LOCAL_LEADER_WEIGHT, SPINEL_DATATYPE_UINT8_S, &aWeight);
+}
+
+otError RadioSpinel::ThreadGetLeaderData(otLeaderData &aLeaderData)
+{ 
+    // TODO: Add spinel prop to get leader data
+    (void)aLeaderData;
+    return OT_ERROR_NONE;
+}
+
+otError RadioSpinel::ThreadGetNetworkKey(otNetworkKey *aNetworkKey)
+{
+    spinel_size_t len = sizeof(otNetworkKey);
+
+    return Get(SPINEL_PROP_NET_NETWORK_KEY, SPINEL_DATATYPE_DATA_S, aNetworkKey->m8, &len);
+}
+
+otError RadioSpinel::Ip6SetEnabled(bool aEnabled)
+ { 
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = Set(SPINEL_PROP_NET_IF_UP, SPINEL_DATATYPE_BOOL_S, aEnabled));
+
+exit:
+    return error;
+}
+
+otError RadioSpinel::JoinerStart(const char      *aPskd,
+                                 const char      *aProvisioningUrl,
+                                 const char      *aVendorName,
+                                 const char      *aVendorModel,
+                                 const char      *aVendorSwVersion,
+                                 const char      *aVendorData,
+                                 otJoinerCallback aCallback,
+                                 void            *aContext)
+{
+    // SPINEL_PROP_MESHCOP_JOINER_COMMISSIONING
+    otError error = OT_ERROR_NONE;
+
+    mJoinerCallback.Set(aCallback, aContext);
+    SuccessOrExit(error = Set(SPINEL_PROP_MESHCOP_JOINER_COMMISSIONING, 
+        SPINEL_DATATYPE_BOOL_S 
+        SPINEL_DATATYPE_UTF8_S 
+        SPINEL_DATATYPE_UTF8_S 
+        SPINEL_DATATYPE_UTF8_S 
+        SPINEL_DATATYPE_UTF8_S
+        SPINEL_DATATYPE_UTF8_S
+        SPINEL_DATATYPE_UTF8_S,
+        true, // action, Joiner Start
+        aPskd,
+        aProvisioningUrl,
+        aVendorName,
+        aVendorModel,
+        aVendorSwVersion,
+        aVendorData
+        )
+    );
+
+exit:
+    return error;
+}
+
+void RadioSpinel::FactoryResetNcp(void)
+{ 
+    bool resetDone = false;
+
+    mIsReady    = false;
+    mWaitingKey = SPINEL_PROP_LAST_STATUS;
+
+    if ((SendReset(SPINEL_RESET_PLATFORM) == OT_ERROR_NONE) && (WaitResponse(false) == OT_ERROR_NONE))
+    {
+        LogInfo("Software reset NCP successfully");
+        ExitNow(resetDone = true);
+    }
+
+exit:
+    if (!resetDone)
+    {
+        LogCrit("Failed to reset NCP!");
+        DieNow(OT_EXIT_FAILURE);
+    }
+}
+
+otError RadioSpinel::RegisterCallback(otStateChangedCallback aCallback, void *aContext)
+{ 
+    otError error = OT_ERROR_NONE;
+    mStateChangedCallback.Set(aCallback, aContext);
+
+    return error;
+}
+
+void RadioSpinel::RemoveCallback(otStateChangedCallback aCallback, void *aContext) 
+{
+    OT_UNUSED_VARIABLE(aCallback);
+    OT_UNUSED_VARIABLE(aContext);
+
+    mStateChangedCallback.Clear();
+}
+
+
+static uint8_t ExternalRouteConfigToFlagByte(const otExternalRouteConfig &aConfig)                                                                                                                                                                                                        
+{                                                                                                                                                                                                                                                                                         
+    uint8_t flags = 0;                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                          
+    switch (aConfig.mPreference)                                                                                                                                                                                                                                                          
+    {                                                                                                                                                                                                                                                                                     
+    case OT_ROUTE_PREFERENCE_LOW:                                                                                                                                                                                                                                                         
+        flags |= SPINEL_ROUTE_PREFERENCE_LOW;                                                                                                                                                                                                                                             
+        break;                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                          
+    case OT_ROUTE_PREFERENCE_HIGH:                                                                                                                                                                                                                                                        
+        flags |= SPINEL_ROUTE_PREFERENCE_HIGH;                                                                                                                                                                                                                                            
+        break;                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                          
+    case OT_ROUTE_PREFERENCE_MED:                                                                                                                                                                                                                                                         
+    default:                                                                                                                                                                                                                                                                              
+        flags |= SPINEL_ROUTE_PREFERENCE_MEDIUM;                                                                                                                                                                                                                                          
+        break;                                                                                                                                                                                                                                                                            
+    }                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                          
+    if (aConfig.mNat64)                                                                                                                                                                                                                                                                   
+    {                                                                                                                                                                                                                                                                                     
+        flags |= SPINEL_ROUTE_FLAG_NAT64;                                                                                                                                                                                                                                                 
+    }                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                          
+    return flags;                                                                                                                                                                                                                                                                         
+}
+
+otError RadioSpinel::BorderRouterAddRoute(otExternalRouteConfig &aRoute)
+{ 
+    otError error = OT_ERROR_NONE;
+
+    uint8_t flag = ExternalRouteConfigToFlagByte(aRoute);
+
+    error = Insert(SPINEL_PROP_THREAD_OFF_MESH_ROUTES, 
+                   SPINEL_DATATYPE_IPv6ADDR_S
+                   SPINEL_DATATYPE_UINT8_S
+                   SPINEL_DATATYPE_BOOL_S
+                   SPINEL_DATATYPE_UINT8_S,
+                   &aRoute.mPrefix.mPrefix,
+                   aRoute.mPrefix.mLength,
+                   aRoute.mStable,
+                   flag
+                   );
+
+    return error;
+}
+
+otError RadioSpinel::BorderRouterRegister(void)
+{ 
+    return Set(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE, SPINEL_DATATYPE_BOOL_S, true);
+}
+
+otError RadioSpinel::BorderRouterRemoveRoute(otIp6Prefix &aIp6Prefix)
+{
+    return Remove(SPINEL_PROP_THREAD_OFF_MESH_ROUTES,
+                  SPINEL_DATATYPE_IPv6ADDR_S
+                  SPINEL_DATATYPE_UINT8_S,
+                  &aIp6Prefix.mPrefix,
+                  aIp6Prefix.mLength);
+}
+
+otError RadioSpinel::BorderRouterGetExternalRoutes(otExternalRouteConfig *aRouteList, uint8_t &aRouteCount)
+{
+    otError error = OT_ERROR_NONE;
+    uint8_t routesListBuffer[sizeof(otExternalRouteConfig) * 20];
+    uint8_t *bufferPtr = routesListBuffer;
+    spinel_size_t length = sizeof(routesListBuffer);
+    uint8_t index = 0;
+
+    SuccessOrExit(error = Get(SPINEL_PROP_THREAD_OFF_MESH_ROUTES, SPINEL_DATATYPE_DATA_S, routesListBuffer, &length));
+
+    while (length > 0)
+    {
+        VerifyOrExit(index < aRouteCount, error = OT_ERROR_NO_BUFS);
+
+        spinel_ssize_t unpacked;
+        otExternalRouteConfig *route = &aRouteList[index];
+        otIp6Address *addr;
+        uint8_t flag;
+        bool isLocal;
+        bool isStable;
+        bool nextHopIsThisDevice;
+
+        unpacked = spinel_datatype_unpack(bufferPtr, length,
+            SPINEL_DATATYPE_STRUCT_S(
+                SPINEL_DATATYPE_IPv6ADDR_S
+                SPINEL_DATATYPE_UINT8_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_UINT8_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_UINT16_S
+            ),
+            &addr,
+            &route->mPrefix.mLength,
+            &isStable,
+            &flag,
+            &isLocal,
+            &nextHopIsThisDevice,
+            &route->mRloc16
+        );
+
+        VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        memcpy(&route->mPrefix.mPrefix, addr, sizeof(otIp6Address));
+        route->mStable = isStable;
+        route->mNextHopIsThisDevice = nextHopIsThisDevice;
+        // TODO: Fill route fields
+        route->mPreference = 0;
+
+        bufferPtr += unpacked;
+        length -= unpacked;
+        index++;
+    }
+
+    aRouteCount = index;
+
+exit:
+    LogWarn("GetExternalRoutes, error:%s, aRouteCount:%u", otThreadErrorToString(error), aRouteCount);
     return error;
 }
 
