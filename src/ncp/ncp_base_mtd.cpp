@@ -536,6 +536,9 @@ template <> otError NcpBase::HandlePropertyGet<SPINEL_PROP_NET_ROLE>(void)
     switch (otThreadGetDeviceRole(mInstance))
     {
     case OT_DEVICE_ROLE_DISABLED:
+        role = SPINEL_NET_ROLE_DISABLED;
+        break;
+
     case OT_DEVICE_ROLE_DETACHED:
         role = SPINEL_NET_ROLE_DETACHED;
         break;
@@ -1671,8 +1674,8 @@ template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_THREAD_MGMT_SET_PENDI
     uint8_t              extraTlvsLength;
 
     SuccessOrExit(error = DecodeOperationalDataset(dataset, &extraTlvs, &extraTlvsLength));
-    error = otDatasetSendMgmtPendingSet(mInstance, &dataset, extraTlvs, extraTlvsLength, /* aCallback */ nullptr,
-                                        /* aContext */ nullptr);
+    error = otDatasetSendMgmtPendingSet(mInstance, &dataset, extraTlvs, extraTlvsLength, /* aCallback */ &MgmtSetResponseHandler,
+                                        /* aContext */ this);
 
 exit:
     return error;
@@ -1924,6 +1927,7 @@ template <> otError NcpBase::HandlePropertyGet<SPINEL_PROP_IPV6_ADDRESS_TABLE>(v
         SuccessOrExit(error = mEncoder.WriteUint8(address->mPrefixLength));
         SuccessOrExit(error = mEncoder.WriteUint32(address->mPreferred ? 0xffffffff : 0));
         SuccessOrExit(error = mEncoder.WriteUint32(address->mValid ? 0xffffffff : 0));
+        //SuccessOrExit(error = mEncoder.WriteUint16(address->mScopeOverride));
 
         SuccessOrExit(error = mEncoder.CloseStruct());
     }
@@ -4662,6 +4666,52 @@ void NcpBase::ProcessThreadChangedFlags(void)
 
 exit:
     return;
+}
+
+void NcpBase::MgmtSetResponseHandler(otError aResult, void *aContext)
+{
+    static_cast<NcpBase *>(aContext)->MgmtSetResponseHandler(aResult);
+}
+
+void NcpBase::MgmtSetResponseHandler(otError aResult)
+{
+    spinel_status_t status = SPINEL_STATUS_DATASET_SEND_MGMT_SUCCESS;
+    if (aResult != OT_ERROR_NONE)
+    {
+        status = SPINEL_STATUS_DATASET_SEND_MGMT_FAILURE;
+    }
+
+    otLogInfoPlat("MgmtSetResponseHandler, error:%s", otThreadErrorToString(aResult));
+    mChangedPropsSet.AddLastStatus(status);
+    mUpdateChangedPropsTask.Post();
+}
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_NET_LEAVE_GRACEFULLY>(void)
+{
+    otError  error = OT_ERROR_NONE;
+    bool leave;
+
+    SuccessOrExit(error = mDecoder.ReadBool(leave));
+
+    error = otThreadDetachGracefully(mInstance, ThreadDetachGracefullyHandler, this);
+
+exit:
+    return error;
+}
+
+void NcpBase::ThreadDetachGracefullyHandler(void *aContext)
+{
+    static_cast<NcpBase *>(aContext)->ThreadDetachGracefullyHandler();
+}
+
+void NcpBase::ThreadDetachGracefullyHandler(void)
+{
+    spinel_status_t status = SPINEL_STATUS_THREAD_DETACH_GRACEFULLY_DONE;
+
+    otLogInfoPlat("Detach gracefully!");
+    otInstanceErasePersistentInfo(mInstance);
+    mChangedPropsSet.AddLastStatus(status);
+    mUpdateChangedPropsTask.Post();
 }
 
 } // namespace Ncp

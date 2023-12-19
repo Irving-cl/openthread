@@ -654,6 +654,7 @@ template <> otError NcpBase::HandlePropertyGet<SPINEL_PROP_THREAD_NEW_DATASET>(v
     otOperationalDataset dataset;
 
     error = otDatasetCreateNewNetwork(mInstance, &dataset);
+    error = otDatasetSetActive(mInstance, &dataset);
 
     if (error == OT_ERROR_NONE)
     {
@@ -1402,6 +1403,177 @@ exit:
     return error;
 }
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_THREAD_PUBLISH_EXTERNAL_ROUTES>(void)
+{
+    otError  error = OT_ERROR_NONE;
+    otIp6Prefix ip6Prefix;
+    otExternalRouteConfig externalRouteConfig;
+    uint8_t  flags = 0;
+    bool     stable = false;
+
+    memset(&ip6Prefix, 0, sizeof(otIp6Prefix));
+    memset(&externalRouteConfig, 0, sizeof(otExternalRouteConfig));
+
+    SuccessOrExit(error = mDecoder.ReadIp6Address(ip6Prefix.mPrefix));
+    SuccessOrExit(error = mDecoder.ReadUint8(externalRouteConfig.mPrefix.mLength));
+    SuccessOrExit(error = mDecoder.ReadIp6Address(externalRouteConfig.mPrefix.mPrefix));
+    SuccessOrExit(error = mDecoder.ReadUint8(externalRouteConfig.mPrefix.mLength));
+    SuccessOrExit(error = mDecoder.ReadBool(stable));
+    SuccessOrExit(error = mDecoder.ReadUint8(flags));
+
+    externalRouteConfig.mStable = stable;
+    externalRouteConfig.mPreference = ((flags & SPINEL_ROUTE_FLAG_PREFERENCE_MASK) >> SPINEL_ROUTE_FLAG_PREFERENCE_OFFSET);
+    externalRouteConfig.mAdvPio = ((flags & SPINEL_ROUTE_FLAG_ADV_PIO) != 0);
+    externalRouteConfig.mNextHopIsThisDevice = ((flags & SPINEL_ROUTE_FLAG_NEXTHOP_IS_THIS_DEVICE) != 0);
+    externalRouteConfig.mNat64 = ((flags & SPINEL_ROUTE_FLAG_NAT64) != 0);
+
+    error = otNetDataReplacePublishedExternalRoute(mInstance, &ip6Prefix, &externalRouteConfig);
+
+exit:
+    return error;
+}
+
+template <> otError NcpBase::HandlePropertyInsert<SPINEL_PROP_THREAD_PUBLISH_EXTERNAL_ROUTES>(void)
+{
+    otError  error = OT_ERROR_NONE;
+    otExternalRouteConfig externalRouteConfig;
+    uint8_t  flags = 0;
+    bool     stable = false;
+
+    memset(&externalRouteConfig, 0, sizeof(otExternalRouteConfig));
+
+    SuccessOrExit(error = mDecoder.ReadIp6Address(externalRouteConfig.mPrefix.mPrefix));
+    SuccessOrExit(error = mDecoder.ReadUint8(externalRouteConfig.mPrefix.mLength));
+    SuccessOrExit(error = mDecoder.ReadBool(stable));
+    SuccessOrExit(error = mDecoder.ReadUint8(flags));
+
+    externalRouteConfig.mStable = stable;
+    externalRouteConfig.mPreference = ((flags & SPINEL_ROUTE_FLAG_PREFERENCE_MASK) >> SPINEL_ROUTE_FLAG_PREFERENCE_OFFSET);
+    externalRouteConfig.mAdvPio = ((flags & SPINEL_ROUTE_FLAG_ADV_PIO) != 0);
+    externalRouteConfig.mNextHopIsThisDevice = ((flags & SPINEL_ROUTE_FLAG_NEXTHOP_IS_THIS_DEVICE) != 0);
+    externalRouteConfig.mNat64 = ((flags & SPINEL_ROUTE_FLAG_NAT64) != 0);
+
+    error = otNetDataPublishExternalRoute(mInstance, &externalRouteConfig);
+
+exit:
+    return error;
+}
+
+template <> otError NcpBase::HandlePropertyRemove<SPINEL_PROP_THREAD_NETDATA_PREFIX>(void)
+{
+    otError  error = OT_ERROR_NONE;
+    otIp6Prefix ip6Prefix;
+
+    memset(&ip6Prefix, 0, sizeof(otIp6Prefix));
+
+    SuccessOrExit(error = mDecoder.ReadIp6Address(ip6Prefix.mPrefix));
+    SuccessOrExit(error = mDecoder.ReadUint8(ip6Prefix.mLength));
+
+    error = otNetDataUnpublishPrefix(mInstance, &ip6Prefix);
+
+exit:
+    return error;
+}
+
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+void NcpBase::HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
+                                           const otSrpServerHost     *aHost,
+                                           uint32_t                   aTimeout,
+                                           void                      *aContext)
+{
+    static_cast<NcpBase *>(aContext)->HandleSrpServerServiceUpdate(aId, aHost, aTimeout);
+}
+
+void NcpBase::HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
+                                           const otSrpServerHost     *aHost,
+                                           uint32_t                   aTimeout)
+{
+    otError             error    = OT_ERROR_NONE;
+    unsigned int        command  = SPINEL_CMD_PROP_VALUE_INSERTED;
+    spinel_prop_key_t   property = SPINEL_PROP_SRP_SERVER_HOST;
+    uint8_t             hostAddrNum;
+    const otIp6Address *hostAddresses;
+    const otSrpServerService *service = nullptr;
+    otSrpServerLeaseInfo hostLeaseInfo;
+
+    (void)aTimeout;
+
+    otLogInfoPlat("!!! HandleSrpServerServiceUpdate: %u", aId);
+    otSrpServerHostGetLeaseInfo(aHost, &hostLeaseInfo);
+    hostAddresses = otSrpServerHostGetAddresses(aHost, &hostAddrNum);
+
+    SuccessOrExit(error = mEncoder.BeginFrame(SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0, command, property));
+
+    SuccessOrExit(error = mEncoder.WriteUint32(aId));
+    SuccessOrExit(error = mEncoder.WriteUtf8(otSrpServerHostGetFullName(aHost)));
+    SuccessOrExit(error = mEncoder.WriteUint32(hostLeaseInfo.mLease));
+    SuccessOrExit(error = mEncoder.WriteUint8(hostAddrNum));
+    for (uint8_t i = 0; i < hostAddrNum; i++)
+    {
+        SuccessOrExit(error = mEncoder.WriteIp6Address(hostAddresses[i]));
+    }
+
+    while ((service = otSrpServerHostGetNextService(aHost, service)) != nullptr)
+    {
+        bool isDeleted = otSrpServerServiceIsDeleted(service);
+        uint16_t dataLen;
+        const uint8_t *txtData = otSrpServerServiceGetTxtData(service, &dataLen);
+
+        SuccessOrExit(error = mEncoder.OpenStruct());
+        SuccessOrExit(error = mEncoder.WriteUtf8(otSrpServerServiceGetInstanceName(service)));
+        SuccessOrExit(error = mEncoder.WriteBool(isDeleted));
+
+        if (!isDeleted)
+        {
+            uint8_t subTypeCount = otSrpServerServiceGetNumberOfSubTypes(service);
+
+            SuccessOrExit(error = mEncoder.WriteUint16(otSrpServerServiceGetPort(service)));
+            SuccessOrExit(error = mEncoder.WriteDataWithLen(txtData, dataLen));
+            SuccessOrExit(error = mEncoder.WriteUint8(subTypeCount));
+            for (uint8_t i = 0; i < subTypeCount; i++)
+            {
+                SuccessOrExit(error = mEncoder.WriteUtf8(otSrpServerServiceGetSubTypeServiceNameAt(service, i)));
+            }
+        }
+
+        SuccessOrExit(error = mEncoder.CloseStruct());
+    }
+
+    SuccessOrExit(error = mEncoder.EndFrame());
+
+exit:
+    return;
+}
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_SRP_SERVER_ENABLED>(void)
+{
+    bool enable;
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = mDecoder.ReadBool(enable));
+
+    otSrpServerSetEnabled(mInstance, enable);
+
+exit:
+    return error;
+}
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_SRP_SERVER_UPDATE_ID>(void)
+{
+    otSrpServerServiceUpdateId id;
+    uint8_t serviceUpdateError;
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = mDecoder.ReadUint32(id));
+    SuccessOrExit(error = mDecoder.ReadUint8(serviceUpdateError));
+
+    otSrpServerHandleServiceUpdateResult(mInstance, id, static_cast<otError>(serviceUpdateError));
+
+exit:
+    return error;
+}
+#endif // OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
 
 } // namespace Ncp
 } // namespace ot

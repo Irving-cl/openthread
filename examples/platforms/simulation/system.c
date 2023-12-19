@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <openthread/logging.h>
 #include <openthread/tasklet.h>
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/radio.h>
@@ -60,6 +61,7 @@ static void handleSignal(int aSignal)
 {
     OT_UNUSED_VARIABLE(aSignal);
 
+    otLogWarnPlat("handle signal, %d", aSignal);
     gTerminate = true;
 }
 
@@ -249,6 +251,7 @@ void otSysProcessDrivers(otInstance *aInstance)
 
     if (gTerminate)
     {
+        otLogInfoPlat("gTerminate Exit!!!");
         exit(0);
     }
 }

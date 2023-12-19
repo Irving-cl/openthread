@@ -62,6 +62,7 @@ otError otBorderRouterAddOnMeshPrefix(otInstance *aInstance, const otBorderRoute
 #endif
     {
         error = AsCoreType(aInstance).Get<NetworkData::Local>().AddOnMeshPrefix(AsCoreType(aConfig));
+        AsCoreType(aInstance).Get<NetworkData::Notifier>().HandleServerDataUpdated();
     }
 
     return error;

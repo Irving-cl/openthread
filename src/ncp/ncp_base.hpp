@@ -615,6 +615,14 @@ protected:
 
 #endif // OPENTHREAD_ENABLE_NCP_VENDOR_HOOK
 
+    static void MgmtSetResponseHandler(otError aResult, void *aContext);
+
+    void MgmtSetResponseHandler(otError aResult);
+
+    static void ThreadDetachGracefullyHandler(void *aContext);
+
+    void ThreadDetachGracefullyHandler(void);
+
 protected:
     static NcpBase        *sNcpInstance;
     static spinel_status_t ThreadErrorToSpinelStatus(otError aError);
@@ -719,6 +727,16 @@ protected:
 
     bool mSrpClientCallbackEnabled;
 #endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
+
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+    static void HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
+                                             const otSrpServerHost     *aHost,
+                                             uint32_t                   aTimeout,
+                                             void                      *aContext);
+    void        HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
+                                             const otSrpServerHost     *aHost,
+                                             uint32_t                   aTimeout);
+#endif // OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
 
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 

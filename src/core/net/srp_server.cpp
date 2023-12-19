@@ -1906,6 +1906,8 @@ Error Server::Service::SetTxtDataFromMessage(const Message &aMessage, uint16_t a
     Error error;
 
     SuccessOrExit(error = mTxtData.SetFrom(aMessage, aOffset, aLength));
+    LogInfo("SetTxtDataFromMessage, txtDataLength:%u", mTxtData.GetLength());
+    DumpInfo("TxtData", mTxtData.GetBytes(), mTxtData.GetLength());
     VerifyOrExit(Dns::TxtRecord::VerifyTxtData(mTxtData.GetBytes(), mTxtData.GetLength(), /* aAllowEmpty */ false),
                  error = kErrorParse);
 
@@ -1915,6 +1917,7 @@ exit:
         mTxtData.Free();
     }
 
+    LogInfo("SetTxtDataFromMessage, error:%s", ErrorToString(error));
     return error;
 }
 

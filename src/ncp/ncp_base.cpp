@@ -284,7 +284,7 @@ NcpBase::NcpBase(Instance *aInstance)
 #endif
     , mResponseQueueHead(0)
     , mResponseQueueTail(0)
-    , mAllowLocalNetworkDataChange(false)
+    , mAllowLocalNetworkDataChange(true) // NCP-WORKAROUND
     , mRequireJoinExistingNetwork(false)
     , mPcapEnabled(false)
     , mDisableStreamWrite(false)
@@ -352,6 +352,9 @@ NcpBase::NcpBase(Instance *aInstance)
 #endif // OPENTHREAD_FTD
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     otSrpClientSetCallback(mInstance, HandleSrpClientCallback, this);
+#endif
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+    otSrpServerSetServiceUpdateHandler(mInstance, HandleSrpServerServiceUpdate, this);
 #endif
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
     mChangedPropsSet.AddLastStatus(SPINEL_STATUS_RESET_UNKNOWN);
@@ -1297,7 +1300,15 @@ otError NcpBase::CommandHandler_RESET(uint8_t aHeader)
     }
 #endif
     else
-#endif
+#else // OPENTHREAD_RADIO
+    if (reset_type == SPINEL_RESET_PLATFORM)
+    {
+        // Factoryreset for NCP
+        otLogWarnPlat("Perform NCP FDR");
+        otInstanceFactoryReset(mInstance);
+    }
+    else
+#endif // OPENTHREAD_RADIO
     {
         // Signal a platform reset. If implemented, this function
         // shouldn't return.
