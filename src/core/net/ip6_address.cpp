@@ -232,7 +232,7 @@ void Prefix::ToString(StringWriter &aWriter) const
 
 //---------------------------------------------------------------------------------------------------------------------
 // InterfaceIdentifier methods
-/*
+
 bool InterfaceIdentifier::IsUnspecified(void) const { return (mFields.m32[0] == 0) && (mFields.m32[1] == 0); }
 
 bool InterfaceIdentifier::IsReserved(void) const
@@ -652,7 +652,7 @@ Error Address::ParseFrom(const char *aString, char aTerminatorChar)
 exit:
     return error;
 }
-*/
+
 Address::InfoString Address::ToString(void) const
 {
     InfoString string;
@@ -688,7 +688,7 @@ void Address::AppendHexWords(StringWriter &aWriter, uint8_t aLength) const
         aWriter.Append("%x", HostSwap16(mFields.m16[index]));
     }
 }
-/*
+
 const Address &Address::GetLinkLocalAllNodesMulticast(void)
 {
     return AsCoreType(&Netif::kLinkLocalAllNodesMulticastAddress.mAddress);
@@ -713,6 +713,6 @@ const Address &Address::GetRealmLocalAllMplForwarders(void)
 {
     return AsCoreType(&Netif::kRealmLocalAllMplForwardersMulticastAddress.mAddress);
 }
-*/
+
 } // namespace Ip6
 } // namespace ot

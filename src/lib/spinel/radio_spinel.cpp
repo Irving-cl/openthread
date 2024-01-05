@@ -808,6 +808,7 @@ void RadioSpinel::HandleValueIs(spinel_prop_key_t aKey, const uint8_t *aBuffer, 
         mDeviceRole = ConvertDeviceRole(spinelRole);
         events.Add(ot::Event::kEventThreadRoleChanged);
         mStateChangedCallback.InvokeIfSet(events.GetAsFlags());
+        otPlatCpSignalEvent(mInstance, ot::Event::kEventThreadRoleChanged);
     }
 
 exit:
@@ -831,8 +832,8 @@ void RadioSpinel::HandleValueInserted(spinel_prop_key_t aKey, const uint8_t *aBu
         const char *networkName;
 
         result.mDiscover = false;
-        unpacked = spinel_datatype_unpack(aBuffer, aLength, "Cct(ESSC)t(iCUdd)", 
-                   &result.mChannel, 
+        unpacked = spinel_datatype_unpack(aBuffer, aLength, "Cct(ESSC)t(iCUdd)",
+                   &result.mChannel,
                    &result.mRssi,
                    &extAddress,
                    nullptr,
@@ -1423,7 +1424,7 @@ exit:
 }
 
 otDeviceRole RadioSpinel::GetDeviceRoleCached(void)
-{ 
+{
     return mDeviceRole;
 }
 
@@ -1805,7 +1806,6 @@ otError RadioSpinel::SendCommand(uint32_t          aCommand,
     packed = spinel_datatype_pack(buffer, sizeof(buffer), "Cii", SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0 | tid,
                                   aCommand, aKey);
 
-    LogInfo("SendCommand, step1, aCommand:%u, aKey:%u", aCommand, aKey);
     VerifyOrExit(packed > 0 && static_cast<size_t>(packed) <= sizeof(buffer), error = OT_ERROR_NO_BUFS);
 
     offset = static_cast<uint16_t>(packed);
@@ -1814,7 +1814,6 @@ otError RadioSpinel::SendCommand(uint32_t          aCommand,
     if (aFormat)
     {
         packed = spinel_datatype_vpack(buffer + offset, sizeof(buffer) - offset, aFormat, args);
-        LogInfo("Send Command, packed:%u, offset:%u", packed, offset);
         VerifyOrExit(packed > 0 && static_cast<size_t>(packed + offset) <= sizeof(buffer), error = OT_ERROR_NO_BUFS);
 
         offset += static_cast<uint16_t>(packed);
@@ -2022,7 +2021,7 @@ exit:
     return error;
 }
 
-otError RadioSpinel::Ip6Send(uint8_t *aBuffer, uint16_t aLen) 
+otError RadioSpinel::Ip6Send(uint8_t *aBuffer, uint16_t aLen)
 {
     otError error = OT_ERROR_NONE;
 
@@ -3314,7 +3313,7 @@ exit:
 }
 
 otError RadioSpinel::DatasetGetActive(otOperationalDataset *aDataset)
-{ 
+{
     otError error = OT_ERROR_NONE;
 
     sLen = sizeof(sBuffer);
@@ -3333,8 +3332,8 @@ exit:
 }
 
 otError RadioSpinel::DatasetGetActiveTlvs(otOperationalDatasetTlvs *aDataset)
-{ 
-    otError error = OT_ERROR_NONE; 
+{
+    otError error = OT_ERROR_NONE;
     otOperationalDataset dataset;
     VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
 
@@ -3417,7 +3416,7 @@ exit:
 }
 
 otError RadioSpinel::DatasetSetActive(otOperationalDataset *aDataset)
-{ 
+{
     otError error = OT_ERROR_NONE;
     VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
 
@@ -3511,7 +3510,7 @@ exit:
 }
 
 otError RadioSpinel::DatasetSetActiveTlvs(otOperationalDatasetTlvs *aDataset)
-{ 
+{
     otError error = OT_ERROR_NONE;
     VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
 
@@ -3543,8 +3542,8 @@ exit:
 
 }
 
-otError RadioSpinel::DatasetSetPending(otOperationalDataset *aDataset) 
-{ 
+otError RadioSpinel::DatasetSetPending(otOperationalDataset *aDataset)
+{
     otError error = OT_ERROR_NONE;
     VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
 
@@ -3638,7 +3637,7 @@ exit:
 
 otError RadioSpinel::DatasetGetPendingTlvs(otOperationalDatasetTlvs *aDataset)
 {
-    otError error = OT_ERROR_NONE; 
+    otError error = OT_ERROR_NONE;
     otOperationalDataset dataset;
     VerifyOrExit(aDataset != nullptr, error = OT_ERROR_INVALID_ARGS);
 
@@ -3683,7 +3682,7 @@ exit:
 }
 
 otError RadioSpinel::LinkGetExtendedAddress(otExtAddress *aExtAddress)
-{ 
+{
     otError error = OT_ERROR_NONE;
     VerifyOrExit(aExtAddress != nullptr, error = OT_ERROR_INVALID_ARGS);
 
@@ -3700,7 +3699,7 @@ otError RadioSpinel::LinkGetChannel(uint8_t &aChannel)
 }
 
 otError RadioSpinel::RadioGetInstantRssi(int8_t &aRssi)
-{ 
+{
     return Get(SPINEL_PROP_PHY_RSSI, SPINEL_DATATYPE_INT8_S, &aRssi);
 }
 
@@ -3719,7 +3718,7 @@ otError RadioSpinel::LinkGetPanId(uint16_t &aPanId)
 }
 
 otError RadioSpinel::ThreadStartStop(bool aStart)
-{ 
+{
     otError error = OT_ERROR_NONE;
 
     SuccessOrExit(error = Set(SPINEL_PROP_NET_STACK_UP, SPINEL_DATATYPE_BOOL_S, aStart));
@@ -3729,7 +3728,7 @@ exit:
 }
 
 otError RadioSpinel::ThreadStart(void)
-{ 
+{
     otError error = OT_ERROR_NONE;
 
     SuccessOrExit(error = Set(SPINEL_PROP_NET_STACK_UP, SPINEL_DATATYPE_BOOL_S, true));
@@ -3739,7 +3738,7 @@ exit:
 }
 
 otError RadioSpinel::ThreadStop(void)
-{ 
+{
     otError error = OT_ERROR_NONE;
 
     SuccessOrExit(error = Set(SPINEL_PROP_NET_STACK_UP, SPINEL_DATATYPE_BOOL_S, false));
@@ -3749,7 +3748,7 @@ exit:
 }
 
 otError RadioSpinel::ThreadGetExtendedPanId(otExtendedPanId *aExtendedPanId)
-{ 
+{
     otError error = OT_ERROR_NONE;
     spinel_size_t length;
     VerifyOrExit(aExtendedPanId != nullptr, error = OT_ERROR_INVALID_ARGS);
@@ -3803,12 +3802,12 @@ exit:
 }
 
 otError RadioSpinel::ThreadGetPartitionId(uint32_t &aPartitionId)
-{ 
+{
     return Get(SPINEL_PROP_NET_PARTITION_ID, SPINEL_DATATYPE_UINT32_S, &aPartitionId);
 }
 
 otError RadioSpinel::ThreadDetachGracefully(otDetachGracefullyCallback aCallback, void *aContext)
-{ 
+{
     otError error = OT_ERROR_NONE;
 
     VerifyOrExit(aContext != nullptr);
@@ -3831,14 +3830,14 @@ otError RadioSpinel::ThreadSetRouterSelectionJitter(uint8_t aRouterJitter)
 }
 
 otError RadioSpinel::ThreadGetNeighborTable(otNeighborInfo *aNeighborList, uint8_t &aCount)
-{ 
+{
     otError error = OT_ERROR_NONE;
     uint8_t neighborTableBuffer[sizeof(otNeighborInfo) * 160];
     uint8_t *bufferPtr = neighborTableBuffer;
     spinel_size_t length = sizeof(neighborTableBuffer);
     uint8_t neighborIndex = 0;
 
-    SuccessOrDie(Get(SPINEL_PROP_THREAD_NEIGHBOR_TABLE, SPINEL_DATATYPE_DATA_S, 
+    SuccessOrDie(Get(SPINEL_PROP_THREAD_NEIGHBOR_TABLE, SPINEL_DATATYPE_DATA_S,
         neighborTableBuffer, &length));
 
     while (length > 0)
@@ -3862,9 +3861,9 @@ otError RadioSpinel::ThreadGetNeighborTable(otNeighborInfo *aNeighborList, uint8
                 SPINEL_DATATYPE_UINT32_S   // Link Frame Counter
                 SPINEL_DATATYPE_UINT32_S   // MLE Frame Counter
                 SPINEL_DATATYPE_INT8_S     // Most recent RSS
-            ), 
+            ),
             &neighbor->mExtAddress,
-            &neighbor->mRloc16, 
+            &neighbor->mRloc16,
             &neighbor->mAge,
             &neighbor->mLinkQualityIn,
             &neighbor->mAverageRssi,
@@ -3874,16 +3873,17 @@ otError RadioSpinel::ThreadGetNeighborTable(otNeighborInfo *aNeighborList, uint8
             &neighbor->mMleFrameCounter,
             &neighbor->mLastRssi
             );
-        
+
         VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        bufferPtr += unpacked;
+        length -= unpacked;
 
         neighbor->mIsChild = isChild;
         neighbor->mRxOnWhenIdle = (modeFlags & SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE) ? true : false;
         neighbor->mFullThreadDevice = (modeFlags & SPINEL_THREAD_MODE_FULL_THREAD_DEV) ? true : false;
         neighbor->mFullNetworkData = (modeFlags & SPINEL_THREAD_MODE_FULL_NETWORK_DATA) ? true : false;
 
-        bufferPtr += unpacked;
-        length -= unpacked;
         neighborIndex++;
     }
 
@@ -3894,14 +3894,14 @@ exit:
 }
 
 otError RadioSpinel::ThreadGetChildTable(otChildInfo *aChildList, uint8_t &aCount)
-{ 
+{
     otError error = OT_ERROR_NONE;
     uint8_t childTableBuffer[sizeof(otChildInfo) * 160];
     uint8_t *bufferPtr = childTableBuffer;
     spinel_size_t length = sizeof(childTableBuffer);
     uint8_t childIndex = 0;
 
-    SuccessOrDie(Get(SPINEL_PROP_THREAD_CHILD_TABLE, SPINEL_DATATYPE_DATA_S, 
+    SuccessOrDie(Get(SPINEL_PROP_THREAD_CHILD_TABLE, SPINEL_DATATYPE_DATA_S,
         childTableBuffer, &length));
 
     while (length > 0)
@@ -3923,9 +3923,9 @@ otError RadioSpinel::ThreadGetChildTable(otChildInfo *aChildList, uint8_t &aCoun
                 SPINEL_DATATYPE_INT8_S     // Average RSS
                 SPINEL_DATATYPE_UINT8_S    // Mode (flags)
                 SPINEL_DATATYPE_INT8_S     // Most recent RSS
-            ), 
+            ),
             &child->mExtAddress,
-            &child->mRloc16, 
+            &child->mRloc16,
             &child->mTimeout,
             &child->mAge,
             &child->mNetworkDataVersion,
@@ -3934,15 +3934,16 @@ otError RadioSpinel::ThreadGetChildTable(otChildInfo *aChildList, uint8_t &aCoun
             &modeFlags,
             &child->mLastRssi
             );
-        
+
         VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        bufferPtr += unpacked;
+        length -= unpacked;
 
         child->mRxOnWhenIdle = (modeFlags & SPINEL_THREAD_MODE_RX_ON_WHEN_IDLE) ? true : false;
         child->mFullThreadDevice = (modeFlags & SPINEL_THREAD_MODE_FULL_THREAD_DEV) ? true : false;
         child->mFullNetworkData = (modeFlags & SPINEL_THREAD_MODE_FULL_NETWORK_DATA) ? true : false;
 
-        bufferPtr += unpacked;
-        length -= unpacked;
         childIndex++;
     }
 
@@ -3952,7 +3953,7 @@ exit:
 }
 
 otError RadioSpinel::ThreadSetLinkMode(otLinkModeConfig &aConfig)
-{ 
+{
     otError error = OT_ERROR_NONE;
 
     SuccessOrExit(error = Set(SPINEL_PROP_THREAD_MODE, SPINEL_DATATYPE_UINT8_S, aConfig));
@@ -3962,7 +3963,7 @@ exit:
 }
 
 otError RadioSpinel::ThreadGetLinkMode(otLinkModeConfig &aConfig)
-{ 
+{
     otError error = OT_ERROR_NONE;
     uint8_t numericCode = 0;
 
@@ -4004,7 +4005,7 @@ otError RadioSpinel::ThreadGetLocalLeaderWeight(uint8_t &aWeight)
 }
 
 otError RadioSpinel::ThreadGetLeaderData(otLeaderData &aLeaderData)
-{ 
+{
     // TODO: Add spinel prop to get leader data
     (void)aLeaderData;
     return OT_ERROR_NONE;
@@ -4018,7 +4019,7 @@ otError RadioSpinel::ThreadGetNetworkKey(otNetworkKey *aNetworkKey)
 }
 
 otError RadioSpinel::Ip6SetEnabled(bool aEnabled)
- { 
+ {
     otError error = OT_ERROR_NONE;
 
     SuccessOrExit(error = Set(SPINEL_PROP_NET_IF_UP, SPINEL_DATATYPE_BOOL_S, aEnabled));
@@ -4040,11 +4041,11 @@ otError RadioSpinel::JoinerStart(const char      *aPskd,
     otError error = OT_ERROR_NONE;
 
     mJoinerCallback.Set(aCallback, aContext);
-    SuccessOrExit(error = Set(SPINEL_PROP_MESHCOP_JOINER_COMMISSIONING, 
-        SPINEL_DATATYPE_BOOL_S 
-        SPINEL_DATATYPE_UTF8_S 
-        SPINEL_DATATYPE_UTF8_S 
-        SPINEL_DATATYPE_UTF8_S 
+    SuccessOrExit(error = Set(SPINEL_PROP_MESHCOP_JOINER_COMMISSIONING,
+        SPINEL_DATATYPE_BOOL_S
+        SPINEL_DATATYPE_UTF8_S
+        SPINEL_DATATYPE_UTF8_S
+        SPINEL_DATATYPE_UTF8_S
         SPINEL_DATATYPE_UTF8_S
         SPINEL_DATATYPE_UTF8_S
         SPINEL_DATATYPE_UTF8_S,
@@ -4063,7 +4064,7 @@ exit:
 }
 
 void RadioSpinel::FactoryResetNcp(void)
-{ 
+{
     bool resetDone = false;
 
     mIsReady    = false;
@@ -4084,14 +4085,14 @@ exit:
 }
 
 otError RadioSpinel::RegisterCallback(otStateChangedCallback aCallback, void *aContext)
-{ 
+{
     otError error = OT_ERROR_NONE;
     mStateChangedCallback.Set(aCallback, aContext);
 
     return error;
 }
 
-void RadioSpinel::RemoveCallback(otStateChangedCallback aCallback, void *aContext) 
+void RadioSpinel::RemoveCallback(otStateChangedCallback aCallback, void *aContext)
 {
     OT_UNUSED_VARIABLE(aCallback);
     OT_UNUSED_VARIABLE(aContext);
@@ -4099,42 +4100,71 @@ void RadioSpinel::RemoveCallback(otStateChangedCallback aCallback, void *aContex
     mStateChangedCallback.Clear();
 }
 
+static uint8_t ExternalRouteConfigToFlagByte(const otExternalRouteConfig &aConfig)
+{
+    uint8_t flags = 0;
 
-static uint8_t ExternalRouteConfigToFlagByte(const otExternalRouteConfig &aConfig)                                                                                                                                                                                                        
-{                                                                                                                                                                                                                                                                                         
-    uint8_t flags = 0;                                                                                                                                                                                                                                                                    
-                                                                                                                                                                                                                                                                                          
-    switch (aConfig.mPreference)                                                                                                                                                                                                                                                          
-    {                                                                                                                                                                                                                                                                                     
-    case OT_ROUTE_PREFERENCE_LOW:                                                                                                                                                                                                                                                         
-        flags |= SPINEL_ROUTE_PREFERENCE_LOW;                                                                                                                                                                                                                                             
-        break;                                                                                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                                                          
-    case OT_ROUTE_PREFERENCE_HIGH:                                                                                                                                                                                                                                                        
-        flags |= SPINEL_ROUTE_PREFERENCE_HIGH;                                                                                                                                                                                                                                            
-        break;                                                                                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                                                          
-    case OT_ROUTE_PREFERENCE_MED:                                                                                                                                                                                                                                                         
-    default:                                                                                                                                                                                                                                                                              
-        flags |= SPINEL_ROUTE_PREFERENCE_MEDIUM;                                                                                                                                                                                                                                          
-        break;                                                                                                                                                                                                                                                                            
-    }                                                                                                                                                                                                                                                                                     
-                                                                                                                                                                                                                                                                                          
-    if (aConfig.mNat64)                                                                                                                                                                                                                                                                   
-    {                                                                                                                                                                                                                                                                                     
-        flags |= SPINEL_ROUTE_FLAG_NAT64;                                                                                                                                                                                                                                                 
-    }                                                                                                                                                                                                                                                                                     
-                                                                                                                                                                                                                                                                                          
-    return flags;                                                                                                                                                                                                                                                                         
+    switch (aConfig.mPreference)
+    {
+    case OT_ROUTE_PREFERENCE_LOW:
+        flags |= SPINEL_ROUTE_PREFERENCE_LOW;
+        break;
+
+    case OT_ROUTE_PREFERENCE_HIGH:
+        flags |= SPINEL_ROUTE_PREFERENCE_HIGH;
+        break;
+
+    case OT_ROUTE_PREFERENCE_MED:
+    default:
+        flags |= SPINEL_ROUTE_PREFERENCE_MEDIUM;
+        break;
+    }
+
+    if (aConfig.mAdvPio)
+    {
+        flags |= SPINEL_ROUTE_FLAG_ADV_PIO;
+    }
+
+    if (aConfig.mNextHopIsThisDevice)
+    {
+        flags |= SPINEL_ROUTE_FLAG_NEXTHOP_IS_THIS_DEVICE;
+    }
+
+    if (aConfig.mNat64)
+    {
+        flags |= SPINEL_ROUTE_FLAG_NAT64;
+    }
+
+    return flags;
+}
+
+static void SetExternalRouteConfigFromFlagByte(otExternalRouteConfig &aConfig, uint8_t aFlags)
+{
+    if ((aFlags & SPINEL_ROUTE_FLAG_ADV_PIO) != 0)
+    {
+        aConfig.mAdvPio = true;
+    }
+
+    if ((aFlags & SPINEL_ROUTE_FLAG_NEXTHOP_IS_THIS_DEVICE) != 0)
+    {
+        aConfig.mNextHopIsThisDevice = true;
+    }
+
+    if ((aFlags & SPINEL_ROUTE_FLAG_NAT64) != 0)
+    {
+        aConfig.mNat64 = true;
+    }
+
+    aConfig.mPreference = (aFlags & SPINEL_NET_FLAG_PREFERENCE_MASK) >> SPINEL_NET_FLAG_PREFERENCE_OFFSET;
 }
 
 otError RadioSpinel::BorderRouterAddRoute(otExternalRouteConfig &aRoute)
-{ 
+{
     otError error = OT_ERROR_NONE;
 
     uint8_t flag = ExternalRouteConfigToFlagByte(aRoute);
 
-    error = Insert(SPINEL_PROP_THREAD_OFF_MESH_ROUTES, 
+    error = Insert(SPINEL_PROP_THREAD_OFF_MESH_ROUTES,
                    SPINEL_DATATYPE_IPv6ADDR_S
                    SPINEL_DATATYPE_UINT8_S
                    SPINEL_DATATYPE_BOOL_S
@@ -4149,7 +4179,7 @@ otError RadioSpinel::BorderRouterAddRoute(otExternalRouteConfig &aRoute)
 }
 
 otError RadioSpinel::BorderRouterRegister(void)
-{ 
+{
     return Set(SPINEL_PROP_THREAD_ALLOW_LOCAL_NET_DATA_CHANGE, SPINEL_DATATYPE_BOOL_S, true);
 }
 
@@ -4162,7 +4192,7 @@ otError RadioSpinel::BorderRouterRemoveRoute(otIp6Prefix &aIp6Prefix)
                   aIp6Prefix.mLength);
 }
 
-otError RadioSpinel::BorderRouterGetExternalRoutes(otExternalRouteConfig *aRouteList, uint8_t &aRouteCount)
+otError RadioSpinel::BorderRouterGetExternalRouteConfig(otExternalRouteConfig *aRouteList, uint8_t &aRouteCount)
 {
     otError error = OT_ERROR_NONE;
     uint8_t routesListBuffer[sizeof(otExternalRouteConfig) * 20];
@@ -4205,14 +4235,16 @@ otError RadioSpinel::BorderRouterGetExternalRoutes(otExternalRouteConfig *aRoute
 
         VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
 
+        bufferPtr += unpacked;
+        length -= unpacked;
+
+        if (!isLocal) continue;
+
         memcpy(&route->mPrefix.mPrefix, addr, sizeof(otIp6Address));
         route->mStable = isStable;
         route->mNextHopIsThisDevice = nextHopIsThisDevice;
-        // TODO: Fill route fields
-        route->mPreference = 0;
+        SetExternalRouteConfigFromFlagByte(*route, flag);
 
-        bufferPtr += unpacked;
-        length -= unpacked;
         index++;
     }
 
@@ -4220,6 +4252,302 @@ otError RadioSpinel::BorderRouterGetExternalRoutes(otExternalRouteConfig *aRoute
 
 exit:
     LogWarn("GetExternalRoutes, error:%s, aRouteCount:%u", otThreadErrorToString(error), aRouteCount);
+    return error;
+}
+
+static uint8_t BorderRouterConfigToFlagByte(const otBorderRouterConfig &aConfig)
+{
+    uint8_t flags = 0;
+
+    if (aConfig.mPreferred)
+    {
+        flags |= SPINEL_NET_FLAG_PREFERRED;
+    }
+
+    if (aConfig.mSlaac)
+    {
+        flags |= SPINEL_NET_FLAG_SLAAC;
+    }
+
+    if (aConfig.mDhcp)
+    {
+        flags |= SPINEL_NET_FLAG_DHCP;
+    }
+
+    if (aConfig.mDefaultRoute)
+    {
+        flags |= SPINEL_NET_FLAG_DEFAULT_ROUTE;
+    }
+
+    if (aConfig.mConfigure)
+    {
+        flags |= SPINEL_NET_FLAG_CONFIGURE;
+    }
+
+    if (aConfig.mOnMesh)
+    {
+        flags |= SPINEL_NET_FLAG_ON_MESH;
+    }
+
+    flags |= (static_cast<uint8_t>(aConfig.mPreference) << SPINEL_NET_FLAG_PREFERENCE_OFFSET);
+
+    return flags;
+}
+
+static void SetBorderRouterConfigFromFlagByte(otBorderRouterConfig &aConfig, uint8_t aFlags)
+{
+    if ((aFlags & SPINEL_NET_FLAG_PREFERRED) != 0)
+    {
+        aConfig.mPreferred = true;
+    }
+
+    if ((aFlags & SPINEL_NET_FLAG_SLAAC) != 0)
+    {
+        aConfig.mSlaac = true;
+    }
+
+    if ((aFlags & SPINEL_NET_FLAG_DHCP) != 0)
+    {
+        aConfig.mDhcp = true;
+    }
+
+    if ((aFlags & SPINEL_NET_FLAG_DEFAULT_ROUTE) != 0)
+    {
+        aConfig.mDefaultRoute = true;
+    }
+
+    if ((aFlags & SPINEL_NET_FLAG_CONFIGURE) != 0)
+    {
+        aConfig.mConfigure = true;
+    }
+
+    if ((aFlags & SPINEL_NET_FLAG_ON_MESH) != 0)
+    {
+        aConfig.mOnMesh = true;
+    }
+
+    aConfig.mPreference = (aFlags & SPINEL_NET_FLAG_PREFERENCE_MASK) >> SPINEL_NET_FLAG_PREFERENCE_OFFSET;
+}
+
+static void SetBorderRouterConfigFromFlagByteExt(otBorderRouterConfig &aConfig, uint8_t aFlagsExt)
+{
+    if ((aFlagsExt & SPINEL_NET_FLAG_EXT_DNS) != 0)
+    {
+        aConfig.mNdDns = true;
+    }
+
+    if ((aFlagsExt & SPINEL_NET_FLAG_EXT_DP) != 0)
+    {
+        aConfig.mDp = true;
+    }
+}
+
+otError RadioSpinel::BorderRouterAddOnMeshPrefix(const otBorderRouterConfig &aConfig)
+{
+    otError error = OT_ERROR_NONE;
+
+    uint8_t flag = BorderRouterConfigToFlagByte(aConfig);
+
+    error = Insert(SPINEL_PROP_THREAD_ON_MESH_NETS,
+                   SPINEL_DATATYPE_IPv6ADDR_S
+                   SPINEL_DATATYPE_UINT8_S
+                   SPINEL_DATATYPE_BOOL_S
+                   SPINEL_DATATYPE_UINT8_S,
+                   &aConfig.mPrefix.mPrefix,
+                   aConfig.mPrefix.mLength,
+                   aConfig.mStable,
+                   flag
+                   );
+
+    return error;
+}
+
+otError RadioSpinel::BorderRouterRemoveOnMeshPrefix(const otIp6Prefix &aIp6Prefix)
+{
+    otError error = OT_ERROR_NONE;
+
+    error = Remove(SPINEL_PROP_THREAD_ON_MESH_NETS,
+                   SPINEL_DATATYPE_IPv6ADDR_S
+                   SPINEL_DATATYPE_UINT8_S,
+                   &aIp6Prefix.mPrefix,
+                   aIp6Prefix.mLength);
+
+    return error;
+}
+
+otError RadioSpinel::NetDataPublishExternalRoute(const otExternalRouteConfig *aConfig)
+{
+    otError error = OT_ERROR_NONE;
+    uint8_t flag = ExternalRouteConfigToFlagByte(*aConfig);
+
+    error = Insert(SPINEL_PROP_THREAD_PUBLISH_EXTERNAL_ROUTES,
+                   SPINEL_DATATYPE_IPv6ADDR_S
+                   SPINEL_DATATYPE_UINT8_S
+                   SPINEL_DATATYPE_BOOL_S
+                   SPINEL_DATATYPE_UINT8_S,
+                   &aConfig->mPrefix.mPrefix,
+                   aConfig->mPrefix.mLength,
+                   aConfig->mStable,
+                   flag);
+
+    return error;
+}
+
+otError RadioSpinel::NetDataReplacePublishedExternalRoute(const otIp6Prefix &aIp6Prefix, const otExternalRouteConfig &aConfig)
+{
+    otError error = OT_ERROR_NONE;
+    uint8_t flag = ExternalRouteConfigToFlagByte(aConfig);
+
+    error = Set(SPINEL_PROP_THREAD_PUBLISH_EXTERNAL_ROUTES,
+                SPINEL_DATATYPE_IPv6ADDR_S
+                SPINEL_DATATYPE_UINT8_S
+                SPINEL_DATATYPE_IPv6ADDR_S
+                SPINEL_DATATYPE_UINT8_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_UINT8_S,
+                &aIp6Prefix.mPrefix,
+                aIp6Prefix.mLength,
+                &aConfig.mPrefix.mPrefix,
+                aConfig.mPrefix.mLength,
+                aConfig.mStable,
+                flag);
+
+    return error;
+}
+
+otError RadioSpinel::NetDataUnpublishPrefix(const otIp6Prefix &aIp6Prefix)
+{
+    otError error = OT_ERROR_NONE;
+
+    error = Remove(SPINEL_PROP_THREAD_NETDATA_PREFIX,
+                   SPINEL_DATATYPE_IPv6ADDR_S
+                   SPINEL_DATATYPE_UINT8_S,
+                   &aIp6Prefix.mPrefix,
+                   aIp6Prefix.mLength);
+
+    return error;
+}
+
+otError RadioSpinel::NetDataGetOnMeshPrefix(otBorderRouterConfig *aConfigList, uint8_t &aCount)
+{
+    otError error = OT_ERROR_NONE;
+
+    uint8_t onMeshPrefixListBuffer[sizeof(otBorderRouterConfig) * 10];
+    uint8_t *bufferPtr = onMeshPrefixListBuffer;
+    spinel_size_t length = sizeof(onMeshPrefixListBuffer);
+    uint8_t index = 0;
+
+    SuccessOrExit(error = Get(SPINEL_PROP_THREAD_ON_MESH_NETS, SPINEL_DATATYPE_DATA_S, onMeshPrefixListBuffer, &length));
+
+    while (length > 0)
+    {
+        VerifyOrExit(index < aCount, error = OT_ERROR_NO_BUFS);
+
+        spinel_ssize_t unpacked;
+        otBorderRouterConfig *prefix = &aConfigList[index];
+        otIp6Address *addr;
+        uint8_t flag;
+        uint8_t flagExt;
+        bool isLocal;
+        bool isStable;
+
+        unpacked = spinel_datatype_unpack(bufferPtr, length,
+            SPINEL_DATATYPE_STRUCT_S(
+                SPINEL_DATATYPE_IPv6ADDR_S
+                SPINEL_DATATYPE_UINT8_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_UINT8_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_UINT16_S
+                SPINEL_DATATYPE_UINT8_S
+            ),
+            &addr,
+            &prefix->mPrefix.mLength,
+            &isStable,
+            &flag,
+            &isLocal,
+            &prefix->mRloc16,
+            &flagExt
+        );
+
+        VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
+
+        length -= unpacked;
+        bufferPtr += unpacked;
+
+        if (isLocal) continue;
+
+        memcpy(&prefix->mPrefix.mPrefix, addr, sizeof(otIp6Address));
+        prefix->mStable = isStable;
+        SetBorderRouterConfigFromFlagByte(*prefix, flag);
+        SetBorderRouterConfigFromFlagByteExt(*prefix, flagExt);
+
+        index++;
+    }
+
+exit:
+    otLogInfoPlat("GetOnMeshPrefix error:%s", otThreadErrorToString(error));
+    aCount = index;
+    return error;
+}
+
+otError RadioSpinel::NetDataGetExternalRouteConfig(otExternalRouteConfig *aConfigList, uint8_t &aCount)
+{
+    otError error = OT_ERROR_NONE;
+
+    uint8_t externalRouteConfigBuffer[sizeof(otExternalRouteConfig) * 10];
+    uint8_t *bufferPtr = externalRouteConfigBuffer;
+    spinel_size_t length = sizeof(externalRouteConfigBuffer);
+    uint8_t index = 0;
+
+    SuccessOrExit(error = Get(SPINEL_PROP_THREAD_OFF_MESH_ROUTES, SPINEL_DATATYPE_DATA_S, externalRouteConfigBuffer, &length));
+
+    while (length > 0)
+    {
+        VerifyOrExit(index < aCount, error = OT_ERROR_NO_BUFS);
+
+        spinel_ssize_t unpacked;
+        otExternalRouteConfig *route = &aConfigList[index];
+        otIp6Address *addr;
+        uint8_t flag;
+        bool isLocal;
+        bool isStable;
+        bool nextHopIsThisDevice;
+
+        unpacked = spinel_datatype_unpack(bufferPtr, length,
+            SPINEL_DATATYPE_STRUCT_S(
+                SPINEL_DATATYPE_IPv6ADDR_S
+                SPINEL_DATATYPE_UINT8_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_UINT8_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_BOOL_S
+                SPINEL_DATATYPE_UINT16_S
+            ),
+            &addr,
+            &route->mPrefix.mLength,
+            &isStable,
+            &flag,
+            &isLocal,
+            &nextHopIsThisDevice,
+            &route->mRloc16
+        );
+
+        bufferPtr += unpacked;
+        length -= unpacked;
+
+        if (isLocal) continue;
+
+        memcpy(&route->mPrefix.mPrefix, addr, sizeof(otIp6Address));
+        route->mStable = isStable;
+        route->mNextHopIsThisDevice = nextHopIsThisDevice;
+        SetExternalRouteConfigFromFlagByte(*route, flag);
+
+        index++;
+    }
+
+exit:
+    aCount = index;
     return error;
 }
 

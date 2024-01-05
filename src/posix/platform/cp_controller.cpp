@@ -146,6 +146,13 @@ void otPlatCpEnable(otInstance *aInstance)
     GetRadioSpinel().EnableCp(aInstance);
 }
 
+otDeviceRole otPlatCpGetDeviceRoleCached(otInstance *aInstance)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    return GetRadioSpinel().GetDeviceRoleCached();
+}
+
 otDeviceRole otPlatCpGetDeviceRole(otInstance *aInstance)
 {
     OT_UNUSED_VARIABLE(aInstance);
@@ -199,7 +206,7 @@ otError otPlatCpFactoryReset(otInstance *aInstance)
     OT_UNUSED_VARIABLE(aInstance);
 
     otError error = OT_ERROR_NONE;
-    GetRadioSpinel().FactoryResetNcp();     
+    GetRadioSpinel().FactoryResetNcp();
 
     return error;
 }
@@ -268,7 +275,7 @@ otError otPlatCpDatasetGetPending(otInstance *aInstance, otOperationalDataset *a
 {
     (void)aInstance;
     return GetRadioSpinel().DatasetGetPending(aDataset);
-}    
+}
 
 otError otPlatCpDatasetGetPendingTlvs(otInstance *aInstance, otOperationalDatasetTlvs *aDataset)
 {
@@ -289,4 +296,56 @@ otError otPlatCpDatasetSetActive(otOperationalDataset *aDataset)
 otError otPlatCpDatasetSetPending(otOperationalDataset *aDataset)
 {
     return GetRadioSpinel().DatasetSetPending(aDataset);
+}
+
+otError otPlatCpBorderRouterAddOnMeshPrefix(const otBorderRouterConfig *aConfig)
+{
+    otError error;
+
+    VerifyOrExit(aConfig != nullptr, error = OT_ERROR_INVALID_ARGS);
+    error = GetRadioSpinel().BorderRouterAddOnMeshPrefix(*aConfig);
+
+exit:
+    return error;
+}
+
+otError otPlatCpBorderRouterRemoveOnMeshPrefix(const otIp6Prefix *aIp6Prefix)
+{
+    otError error;
+
+    VerifyOrExit(aIp6Prefix != nullptr, error = OT_ERROR_INVALID_ARGS);
+    error = GetRadioSpinel().BorderRouterRemoveOnMeshPrefix(*aIp6Prefix);
+
+exit:
+    return error;
+}
+
+void otPlatCpThreadGetExtendedPanIdCached(otExtendedPanId *extPanId)
+{
+    GetRadioSpinel().ThreadGetExtendedPanIdCached(extPanId);
+}
+
+otError otPlatCpNetDataUnpublishPrefix(otIp6Prefix* aIp6Prefix)
+{
+    return GetRadioSpinel().NetDataUnpublishPrefix(*aIp6Prefix);
+}
+
+otError otPlatCpNetDataPublishExternalRoute(otExternalRouteConfig *aConfig)
+{
+    return GetRadioSpinel().NetDataPublishExternalRoute(aConfig);
+}
+
+otError otPlatCpNetDataReplacePublishedExternalRoute(otIp6Prefix *aPrefix, otExternalRouteConfig *aConfig)
+{
+    return GetRadioSpinel().NetDataReplacePublishedExternalRoute(*aPrefix, *aConfig);
+}
+
+otError otPlatCpNetDataGetOnMeshPrefix(otBorderRouterConfig *aConfigList, uint8_t &aCount)
+{
+    return GetRadioSpinel().NetDataGetOnMeshPrefix(aConfigList, aCount);
+}
+
+otError otPlatCpNetDataGetExternalRouteConfig(otExternalRouteConfig *aConfigList, uint8_t &aCount)
+{
+    return GetRadioSpinel().NetDataGetExternalRouteConfig(aConfigList, aCount);
 }

@@ -941,7 +941,7 @@ public:
                                     uint8_t                     aLength,
                                     otDatasetMgmtSetCallback    aCallback,
                                     void                       *aContext);
-                                    
+
     /**
       * Link APIs
       */
@@ -959,7 +959,7 @@ public:
     otError RadioGetTxPower(int8_t &aTxPower);
 
     /**
-     * Thread APIs 
+     * Thread APIs
      */
     otError ThreadStartStop(bool aStart);
 
@@ -1036,7 +1036,24 @@ public:
 
     otError BorderRouterRemoveRoute(otIp6Prefix &aIp6Prefix);
 
-    otError BorderRouterGetExternalRoutes(otExternalRouteConfig *aRouteList, uint8_t &aRouteCount);
+    otError BorderRouterGetExternalRouteConfig(otExternalRouteConfig *aRouteList, uint8_t &aRouteCount);
+
+    otError BorderRouterAddOnMeshPrefix(const otBorderRouterConfig &aConfig);
+
+    otError BorderRouterRemoveOnMeshPrefix(const otIp6Prefix &aIp6Prefix);
+
+    /*
+     * Netdata APIs
+     */
+    otError NetDataUnpublishPrefix(const otIp6Prefix &aIp6Prefix);
+
+    otError NetDataPublishExternalRoute(const otExternalRouteConfig *aConfig);
+
+    otError NetDataReplacePublishedExternalRoute(const otIp6Prefix &aIp6Prefix, const otExternalRouteConfig &aConfig);
+
+    otError NetDataGetOnMeshPrefix(otBorderRouterConfig *aConfigList, uint8_t &aCount);
+
+    otError NetDataGetExternalRouteConfig(otExternalRouteConfig *aConfigList, uint8_t &aCount);
 
 private:
     enum

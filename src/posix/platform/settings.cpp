@@ -55,6 +55,7 @@
 #include "common/code_utils.hpp"
 #include "common/encoding.hpp"
 #include "posix/platform/settings.hpp"
+#include "posix/platform/cp_spinel.hpp"
 
 #include "system.hpp"
 
@@ -86,8 +87,9 @@ static void getSettingsFileName(otInstance *aInstance, char aFileName[kMaxFileNa
 {
     const char *offset = getenv("PORT_OFFSET");
     uint64_t    nodeId;
+    (void)aInstance;
 
-    otPlatRadioGetIeeeEui64(aInstance, reinterpret_cast<uint8_t *>(&nodeId));
+    ot::Posix::GetSpinel().GetIeeeEui64(reinterpret_cast<uint8_t *>(&nodeId));
     nodeId = ot::Encoding::BigEndian::HostSwap64(nodeId);
     snprintf(aFileName, kMaxFileNameSize, OPENTHREAD_CONFIG_POSIX_SETTINGS_PATH "/%s_%" PRIx64 ".%s",
              offset == nullptr ? "0" : offset, nodeId, (aSwap ? "swap" : "data"));

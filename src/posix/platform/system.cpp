@@ -412,7 +412,7 @@ void otSysMainloopProcess(otInstance *aInstance, const otSysMainloopContext *aMa
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
     // platformTrelProcess(aInstance, aMainloop);
 #endif
-    // platformAlarmProcess(aInstance);
+    platformAlarmProcess(aInstance);
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
     platformNetifProcess(aMainloop);
 #endif

@@ -31,6 +31,7 @@ set(COMMON_INCLUDES
 )
 
 set(COMMON_SOURCES
+    api/border_routing_offload_api.cpp
     api/dataset_api.cpp
     api/error_api.cpp
     api/instance_api.cpp
@@ -39,27 +40,35 @@ set(COMMON_SOURCES
     api/offload_api.cpp
     api/tasklet_api.cpp
     api/thread_api.cpp
-    border_router/router_manager_offload.cpp
+    border_router/infra_if_offload.cpp
+    border_router/routing_manager_offload.cpp
     common/binary_search.cpp
     common/error.cpp
     common/heap.cpp
     common/log.cpp
+    common/notifier.cpp
     common/random.cpp
+    common/settings.cpp
     common/string.cpp
     common/tasklet.cpp
     common/timer.cpp
     common/tlvs.cpp
+    common/preference.cpp
     common/uptime.cpp
     crypto/crypto_platform.cpp
     crypto/mbedtls.cpp
     instance/instance.cpp
     instance/offload.cpp
+    mac/mac_types.cpp
     meshcop/dataset.cpp
     meshcop/meshcop.cpp
     meshcop/meshcop_tlvs.cpp
     meshcop/network_name.cpp
     meshcop/timestamp.cpp
+    net/ip4_types.cpp
     net/ip6_address.cpp
+    net/nd6.cpp
+    net/netif.cpp
     offload/offload_platform.cpp
     thread/key_manager.cpp
     thread/mle_types.cpp

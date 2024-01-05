@@ -72,10 +72,10 @@ Instance::Instance(void)
     , mUptime(*this)
 #endif
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
-    //, mNotifier(*this)
+    , mNotifier(*this)
     //, mTimeTicker(*this)
-    //, mSettings(*this)
-    //, mSettingsDriver(*this)
+    , mSettings(*this)
+    , mSettingsDriver(*this)
     //, mMessagePool(*this)
     //, mIp6(*this)
     //, mThreadNetif(*this)
@@ -334,7 +334,7 @@ void Instance::AfterInit(void)
 
     // Restore datasets and network information
 
-    // Get<Settings>().Init();
+    Get<Settings>().Init();
     // Get<Mle::MleRouter>().Restore();
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
@@ -386,7 +386,7 @@ exit:
 
 void Instance::FactoryReset(void)
 {
-    // Get<Settings>().Wipe();
+    Get<Settings>().Wipe();
 #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
     // Get<KeyManager>().DestroyTemporaryKeys();
     // Get<KeyManager>().DestroyPersistentKeys();
@@ -412,29 +412,29 @@ void Instance::FactoryReset(void)
 // void Instance::GetBufferInfo(BufferInfo &aInfo)
 // {
     // aInfo.Clear();
-// 
+//
     // aInfo.mTotalBuffers   = Get<MessagePool>().GetTotalBufferCount();
     // aInfo.mFreeBuffers    = Get<MessagePool>().GetFreeBufferCount();
     // aInfo.mMaxUsedBuffers = Get<MessagePool>().GetMaxUsedBufferCount();
-// 
+//
     // Get<MeshForwarder>().GetSendQueue().GetInfo(aInfo.m6loSendQueue);
     // Get<MeshForwarder>().GetReassemblyQueue().GetInfo(aInfo.m6loReassemblyQueue);
     // Get<Ip6::Ip6>().GetSendQueue().GetInfo(aInfo.mIp6Queue);
-// 
+//
 // #if OPENTHREAD_FTD
     // Get<Ip6::Mpl>().GetBufferedMessageSet().GetInfo(aInfo.mMplQueue);
 // #endif
-// 
+//
     // Get<Mle::MleRouter>().GetMessageQueue().GetInfo(aInfo.mMleQueue);
-// 
+//
     // Get<Tmf::Agent>().GetRequestMessages().GetInfo(aInfo.mCoapQueue);
     // Get<Tmf::Agent>().GetCachedResponses().GetInfo(aInfo.mCoapQueue);
-// 
+//
 // #if OPENTHREAD_CONFIG_DTLS_ENABLE
     // Get<Tmf::SecureAgent>().GetRequestMessages().GetInfo(aInfo.mCoapSecureQueue);
     // Get<Tmf::SecureAgent>().GetCachedResponses().GetInfo(aInfo.mCoapSecureQueue);
 // #endif
-// 
+//
 // #if OPENTHREAD_CONFIG_COAP_API_ENABLE
     // GetApplicationCoap().GetRequestMessages().GetInfo(aInfo.mApplicationCoapQueue);
     // GetApplicationCoap().GetCachedResponses().GetInfo(aInfo.mApplicationCoapQueue);

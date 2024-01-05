@@ -33,7 +33,7 @@
 
 #include "notifier.hpp"
 
-#include "border_router/routing_manager.hpp"
+#include "border_router/routing_manager_offload.hpp"
 #include "common/array.hpp"
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
@@ -125,75 +125,9 @@ void Notifier::EmitEvents(void)
     LogEvents(events);
 
     // Emit events to core internal modules
-/*
-    Get<Mle::Mle>().HandleNotifierEvents(events);
-    Get<EnergyScanServer>().HandleNotifierEvents(events);
-#if OPENTHREAD_FTD
-    Get<MeshCoP::JoinerRouter>().HandleNotifierEvents(events);
-#if OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
-    Get<BackboneRouter::Manager>().HandleNotifierEvents(events);
-#endif
-    Get<ChildSupervisor>().HandleNotifierEvents(events);
-#if OPENTHREAD_CONFIG_DATASET_UPDATER_ENABLE || OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE
-    Get<MeshCoP::DatasetUpdater>().HandleNotifierEvents(events);
-#endif
-#endif // OPENTHREAD_FTD
-#if OPENTHREAD_FTD || OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
-    Get<NetworkData::Notifier>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_ANNOUNCE_SENDER_ENABLE
-    Get<AnnounceSender>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
-    Get<MeshCoP::BorderAgent>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_MLR_ENABLE || (OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE)
-    Get<MlrManager>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_DUA_ENABLE || (OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_DUA_ENABLE)
-    Get<DuaManager>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    Get<Trel::Link>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
-    Get<TimeSync>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_IP6_SLAAC_ENABLE
-    Get<Utils::Slaac>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_JAM_DETECTION_ENABLE
-    Get<Utils::JamDetector>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_HISTORY_TRACKER_ENABLE
-    Get<Utils::HistoryTracker>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_ENABLE_VENDOR_EXTENSION
-    Get<Extension::ExtensionBase>().HandleNotifierEvents(events);
-#endif
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-    Get<BorderRouter::RoutingManager>().HandleNotifierEvents(events);
+    Get<BorderRouter::RoutingManagerOffload>().HandleNotifierEvents(events);
 #endif
-#if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
-    Get<Srp::Client>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_ENABLE
-    // The `NetworkData::Publisher` is notified last (e.g., after SRP
-    // client) to allow other modules to request changes to what is
-    // being published (if needed).
-    Get<NetworkData::Publisher>().HandleNotifierEvents(events);
-#endif
-#if OPENTHREAD_CONFIG_LINK_METRICS_MANAGER_ENABLE
-    Get<Utils::LinkMetricsManager>().HandleNotifierEvents(events);
-#endif
-*/
-    for (ExternalCallback &callback : mExternalCallbacks)
-    {
-        callback.InvokeIfSet(events.GetAsFlags());
-    }
 
 exit:
     return;

@@ -79,7 +79,7 @@ const otNetifMulticastAddress Netif::kRealmLocalAllRoutersMulticastAddress = {
 const otNetifMulticastAddress Netif::kLinkLocalAllRoutersMulticastAddress = {
     {{{0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}}},
     &Netif::kRealmLocalAllRoutersMulticastAddress};
-
+/*
 //---------------------------------------------------------------------------------------------------------------------
 // Netif
 
@@ -577,6 +577,6 @@ void Netif::ExternalMulticastAddress::Iterator::AdvanceFrom(const MulticastAddre
 
     mItem = AsNonConst(static_cast<const ExternalMulticastAddress *>(aAddr));
 }
-
+*/
 } // namespace Ip6
 } // namespace ot

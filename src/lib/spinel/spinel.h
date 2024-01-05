@@ -580,8 +580,8 @@ enum
     SPINEL_STATUS_DATASET_SEND_MGMT_FAILURE = SPINEL_STATUS_DATASET_SEND_MGMT__BEGIN + 1,
     SPINEL_STATUS_DATASET_SEND_MGMT__END    = 144,
 
-    SPINEL_STATUS_THREAD__BEGIN  = 144,                                                                                                                                                                                                                                                
-    SPINEL_STATUS_THREAD_DETACH_GRACEFULLY_DONE = SPINEL_STATUS_THREAD__BEGIN + 0,                                                                                                                                                                                                     
+    SPINEL_STATUS_THREAD__BEGIN  = 144,
+    SPINEL_STATUS_THREAD_DETACH_GRACEFULLY_DONE = SPINEL_STATUS_THREAD__BEGIN + 0,
     SPINEL_STATUS_THREAD__END  = 160,
 
     SPINEL_STATUS_VENDOR__BEGIN = 15360,
@@ -687,7 +687,12 @@ enum
 
 enum
 {
+    SPINEL_ROUTE_FLAG_ADV_PIO = (1 << 3),
+    SPINEL_ROUTE_FLAG_NEXTHOP_IS_THIS_DEVICE = (1 << 4),
     SPINEL_ROUTE_FLAG_NAT64 = (1 << 5),
+
+    SPINEL_ROUTE_FLAG_PREFERENCE_OFFSET = 6,
+    SPINEL_ROUTE_FLAG_PREFERENCE_MASK   = (3 << SPINEL_ROUTE_FLAG_PREFERENCE_OFFSET),
 };
 
 enum
@@ -2532,7 +2537,11 @@ enum
      */
     SPINEL_PROP_THREAD_MODE = SPINEL_PROP_THREAD__BEGIN + 14,
 
-    SPINEL_PROP_THREAD__END = 0x60,
+    SPINEL_PROP_THREAD_PUBLISH_EXTERNAL_ROUTES = SPINEL_PROP_THREAD__BEGIN + 15,
+
+    SPINEL_PROP_THREAD_NETDATA_PREFIX = SPINEL_PROP_THREAD__BEGIN + 16,
+
+    SPINEL_PROP_THREAD__END = 0x70,
 
     SPINEL_PROP_THREAD_EXT__BEGIN = 0x1500,
 

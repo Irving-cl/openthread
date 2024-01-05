@@ -69,8 +69,6 @@ template <> otError CliOffload::Process<Cmd("state")>(Arg aArgs[])
     otError error = OT_ERROR_NONE;
     OT_UNUSED_VARIABLE(aArgs);
 
-    otLogCritPlat("cli command dataset active");
-
     OutputLine("%s", otThreadDeviceRoleToString(otOffloadThreadGetDeviceRole(GetInstancePtr())));
 
     return error;
@@ -360,7 +358,7 @@ const CliOffload::ComponentMapper *CliOffload::LookupMapper(const char *aName) c
 }
 
 otError CliOffload::PrintAll(otOperationalDataset &aDataset)
-{ 
+{
     otError              error = OT_ERROR_NONE;
 
     Print(aDataset);
@@ -373,7 +371,7 @@ otError CliOffload::PrintAll(otOperationalDataset &aDataset)
 }
 
 void CliOffload::Print(otOperationalDataset &aDataset)
-{ 
+{
     struct ComponentTitle
     {
         const char *mTitle; // Title to output.

@@ -595,78 +595,80 @@ const uint8_t      InfraNetif::kValidNat64PrefixLength[]  = {96, 64, 56, 48, 40,
 
 void InfraNetif::DiscoverNat64PrefixDone(union sigval sv)
 {
-    struct gaicb    *req = (struct gaicb *)sv.sival_ptr;
-    struct addrinfo *res = (struct addrinfo *)req->ar_result;
+// TODO: add support for NAT64
+(void)sv;
+//     struct gaicb    *req = (struct gaicb *)sv.sival_ptr;
+//     struct addrinfo *res = (struct addrinfo *)req->ar_result;
 
-    otIp6Prefix prefix = {};
+//     otIp6Prefix prefix = {};
 
-    VerifyOrExit((char *)req->ar_name == kWellKnownIpv4OnlyName);
+//     VerifyOrExit((char *)req->ar_name == kWellKnownIpv4OnlyName);
 
-    otLogInfoPlat("Handling host address response for %s", kWellKnownIpv4OnlyName);
+//     otLogInfoPlat("Handling host address response for %s", kWellKnownIpv4OnlyName);
 
-    // We extract the first valid NAT64 prefix from the address look-up response.
-    for (struct addrinfo *rp = res; rp != NULL && prefix.mLength == 0; rp = rp->ai_next)
-    {
-        struct sockaddr_in6 *ip6Addr;
-        otIp6Address         ip6Address;
+//     // We extract the first valid NAT64 prefix from the address look-up response.
+//     for (struct addrinfo *rp = res; rp != NULL && prefix.mLength == 0; rp = rp->ai_next)
+//     {
+//         struct sockaddr_in6 *ip6Addr;
+//         otIp6Address         ip6Address;
 
-        if (rp->ai_family != AF_INET6)
-        {
-            continue;
-        }
+//         if (rp->ai_family != AF_INET6)
+//         {
+//             continue;
+//         }
 
-        ip6Addr = reinterpret_cast<sockaddr_in6 *>(rp->ai_addr);
-        memcpy(&ip6Address.mFields.m8, &ip6Addr->sin6_addr.s6_addr, OT_IP6_ADDRESS_SIZE);
-        for (uint8_t length : kValidNat64PrefixLength)
-        {
-            otIp4Address ip4Address;
+//         ip6Addr = reinterpret_cast<sockaddr_in6 *>(rp->ai_addr);
+//         memcpy(&ip6Address.mFields.m8, &ip6Addr->sin6_addr.s6_addr, OT_IP6_ADDRESS_SIZE);
+//         for (uint8_t length : kValidNat64PrefixLength)
+//         {
+//             otIp4Address ip4Address;
 
-            otIp4ExtractFromIp6Address(length, &ip6Address, &ip4Address);
-            if (otIp4IsAddressEqual(&ip4Address, &kWellKnownIpv4OnlyAddress1) ||
-                otIp4IsAddressEqual(&ip4Address, &kWellKnownIpv4OnlyAddress2))
-            {
-                // We check that the well-known IPv4 address is present only once in the IPv6 address.
-                // In case another instance of the value is found for another prefix length, we ignore this address
-                // and search for the other well-known IPv4 address (per RFC 7050 section 3).
-                bool foundDuplicate = false;
+//             otIp4ExtractFromIp6Address(length, &ip6Address, &ip4Address);
+//             if (otIp4IsAddressEqual(&ip4Address, &kWellKnownIpv4OnlyAddress1) ||
+//                 otIp4IsAddressEqual(&ip4Address, &kWellKnownIpv4OnlyAddress2))
+//             {
+//                 // We check that the well-known IPv4 address is present only once in the IPv6 address.
+//                 // In case another instance of the value is found for another prefix length, we ignore this address
+//                 // and search for the other well-known IPv4 address (per RFC 7050 section 3).
+//                 bool foundDuplicate = false;
 
-                for (uint8_t dupLength : kValidNat64PrefixLength)
-                {
-                    otIp4Address dupIp4Address;
+//                 for (uint8_t dupLength : kValidNat64PrefixLength)
+//                 {
+//                     otIp4Address dupIp4Address;
 
-                    if (dupLength == length)
-                    {
-                        continue;
-                    }
+//                     if (dupLength == length)
+//                     {
+//                         continue;
+//                     }
 
-                    otIp4ExtractFromIp6Address(dupLength, &ip6Address, &dupIp4Address);
-                    if (otIp4IsAddressEqual(&dupIp4Address, &ip4Address))
-                    {
-                        foundDuplicate = true;
-                        break;
-                    }
-                }
+//                     otIp4ExtractFromIp6Address(dupLength, &ip6Address, &dupIp4Address);
+//                     if (otIp4IsAddressEqual(&dupIp4Address, &ip4Address))
+//                     {
+//                         foundDuplicate = true;
+//                         break;
+//                     }
+//                 }
 
-                if (!foundDuplicate)
-                {
-                    otIp6GetPrefix(&ip6Address, length, &prefix);
-                    break;
-                }
-            }
+//                 if (!foundDuplicate)
+//                 {
+//                     otIp6GetPrefix(&ip6Address, length, &prefix);
+//                     break;
+//                 }
+//             }
 
-            if (prefix.mLength != 0)
-            {
-                break;
-            }
-        }
-    }
+//             if (prefix.mLength != 0)
+//             {
+//                 break;
+//             }
+//         }
+//     }
 
-    otPlatInfraIfDiscoverNat64PrefixDone(gInstance, Get().mInfraIfIndex, &prefix);
+//     otPlatInfraIfDiscoverNat64PrefixDone(gInstance, Get().mInfraIfIndex, &prefix);
 
-exit:
-    freeaddrinfo(res);
-    freeaddrinfo((struct addrinfo *)req->ar_request);
-    free(req);
+// exit:
+//     freeaddrinfo(res);
+//     freeaddrinfo((struct addrinfo *)req->ar_request);
+//     free(req);
 }
 
 otError InfraNetif::DiscoverNat64Prefix(uint32_t aInfraIfIndex)

@@ -52,38 +52,6 @@ RegisterLogModule("Settings");
 
 #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
 
-void SettingsBase::NetworkInfo::Log(Action aAction) const
-{
-    LogInfo("%s NetworkInfo {rloc:0x%04x, extaddr:%s, role:%s, mode:0x%02x, version:%u, keyseq:0x%lx, ...",
-            ActionToString(aAction), GetRloc16(), GetExtAddress().ToString().AsCString(),
-            Mle::RoleToString(static_cast<Mle::DeviceRole>(GetRole())), GetDeviceMode(), GetVersion(),
-            ToUlong(GetKeySequence()));
-
-    LogInfo("... pid:0x%lx, mlecntr:0x%lx, maccntr:0x%lx, mliid:%s}", ToUlong(GetPreviousPartitionId()),
-            ToUlong(GetMleFrameCounter()), ToUlong(GetMacFrameCounter()), GetMeshLocalIid().ToString().AsCString());
-}
-
-void SettingsBase::ParentInfo::Log(Action aAction) const
-{
-    LogInfo("%s ParentInfo {extaddr:%s, version:%u}", ActionToString(aAction), GetExtAddress().ToString().AsCString(),
-            GetVersion());
-}
-
-#if OPENTHREAD_FTD
-void SettingsBase::ChildInfo::Log(Action aAction) const
-{
-    LogInfo("%s ChildInfo {rloc:0x%04x, extaddr:%s, timeout:%lu, mode:0x%02x, version:%u}", ActionToString(aAction),
-            GetRloc16(), GetExtAddress().ToString().AsCString(), ToUlong(GetTimeout()), GetMode(), GetVersion());
-}
-#endif
-
-#if OPENTHREAD_CONFIG_DUA_ENABLE
-void SettingsBase::DadInfo::Log(Action aAction) const
-{
-    LogInfo("%s DadInfo {DadCounter:%2d}", ActionToString(aAction), GetDadCounter());
-}
-#endif
-
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
 void SettingsBase::LogPrefix(Action aAction, Key aKey, const Ip6::Prefix &aPrefix)
 {
@@ -493,26 +461,6 @@ void Settings::Log(Action aAction, Error aError, Key aKey, const void *aValue)
     {
         switch (aKey)
         {
-        case kKeyNetworkInfo:
-            reinterpret_cast<const NetworkInfo *>(aValue)->Log(aAction);
-            break;
-
-        case kKeyParentInfo:
-            reinterpret_cast<const ParentInfo *>(aValue)->Log(aAction);
-            break;
-
-#if OPENTHREAD_FTD
-        case kKeyChildInfo:
-            reinterpret_cast<const ChildInfo *>(aValue)->Log(aAction);
-            break;
-#endif
-
-#if OPENTHREAD_CONFIG_DUA_ENABLE
-        case kKeyDadInfo:
-            reinterpret_cast<const DadInfo *>(aValue)->Log(aAction);
-            break;
-#endif
-
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
         case kKeyBrUlaPrefix:
             LogPrefix(aAction, aKey, *reinterpret_cast<const Ip6::Prefix *>(aValue));

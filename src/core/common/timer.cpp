@@ -41,6 +41,8 @@
 
 namespace ot {
 
+RegisterLogModule("Timer");
+
 const Timer::Scheduler::AlarmApi TimerMilli::Scheduler::sAlarmMilliApi = {
     &otPlatAlarmMilliStartAt,
     &otPlatAlarmMilliStop,

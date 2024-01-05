@@ -33,6 +33,7 @@
 #include <openthread/instance.h>
 #include <openthread/ip6.h>
 #include <openthread/link.h>
+#include <openthread/netdata.h>
 #include <openthread/thread.h>
 #include <openthread/thread_ftd.h>
 #include <lib/spinel/radio_spinel_metrics.h>
@@ -53,6 +54,8 @@ void otPlatCpActiveScanDone(otInstance *aInstance,
                                otActiveScanResult *aScanResult);
 
 otDeviceRole otPlatCpGetDeviceRole(otInstance *aInstance);
+
+otDeviceRole otPlatCpGetDeviceRoleCached(otInstance *aInstance);
 
 otError otPlatCpDatasetInitNew(otInstance *aInstance, otOperationalDataset *aDataset);
 
@@ -91,6 +94,26 @@ otError otPlatCpDatasetGetPendingTlvs(otInstance *aInstance, otOperationalDatase
 otError otPlatCpDatasetSetActive(otOperationalDataset *aDataset);
 
 otError otPlatCpDatasetSetPending(otOperationalDataset *aDataset);
+
+otError otPlatCpBorderRouterAddOnMeshPrefix(const otBorderRouterConfig *aConfig);
+
+otError otPlatCpBorderRouterRemoveOnMeshPrefix(const otIp6Prefix *aIp6Prefix);
+
+void otPlatCpThreadGetExtendedPanIdCached(otExtendedPanId *extPanId);
+
+otError otPlatCpNetDataUnpublishPrefix(otIp6Prefix* aIp6Prefix);
+
+otError otPlatCpNetDataPublishExternalRoute(otExternalRouteConfig *aConfig);
+
+otError otPlatCpNetDataReplacePublishedExternalRoute(otIp6Prefix *aPrefix, otExternalRouteConfig *aConfig);
+
+otError otPlatCpNetDataGetOnMeshPrefix(otBorderRouterConfig *aConfigList, uint8_t &aCount);
+
+otError otPlatCpNetDataGetExternalRouteConfig(otExternalRouteConfig *aConfigList, uint8_t &aCount);
+
+// ----------------------------------------------------------------------------------------------------
+// Platform call core
+void otPlatCpSignalEvent(otInstance *aInstance, uint32_t aEvent);
 
 #ifdef __cplusplus
 } // extern "C"

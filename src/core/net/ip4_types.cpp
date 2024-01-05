@@ -187,19 +187,5 @@ void Cidr::Set(const uint8_t *aAddress, uint8_t aLength)
     mLength = aLength;
 }
 
-Error Header::ParseFrom(const Message &aMessage)
-{
-    Error error = kErrorParse;
-
-    SuccessOrExit(aMessage.Read(0, *this));
-    VerifyOrExit(IsValid());
-    VerifyOrExit(GetTotalLength() == aMessage.GetLength());
-
-    error = kErrorNone;
-
-exit:
-    return error;
-}
-
 } // namespace Ip4
 } // namespace ot

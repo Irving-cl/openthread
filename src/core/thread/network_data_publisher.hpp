@@ -45,7 +45,7 @@
 
 #include <openthread/netdata_publisher.h>
 
-#include "border_router/routing_manager.hpp"
+#include "border_router/routing_manager_offload.hpp"
 #include "common/callback.hpp"
 #include "common/clearable.hpp"
 #include "common/equatable.hpp"
@@ -450,7 +450,7 @@ private:
     static constexpr uint16_t kMaxUserPrefixEntries = OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES;
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-    static constexpr uint16_t kMaxRoutingManagerPrefixEntries = BorderRouter::RoutingManager::kMaxPublishedPrefixes;
+    static constexpr uint16_t kMaxRoutingManagerPrefixEntries = BorderRouter::RoutingManagerOffload::kMaxPublishedPrefixes;
 #else
     static constexpr uint16_t kMaxRoutingManagerPrefixEntries = 0;
 #endif

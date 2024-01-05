@@ -35,6 +35,7 @@
 
 #include "common/as_core_type.hpp"
 #include "common/code_utils.hpp"
+#include "common/notifier.hpp"
 #include "instance/instance.hpp"
 #include "instance/offload.hpp"
 
@@ -48,3 +49,13 @@ extern "C" void otPlatCpActiveScanDone(otInstance *aInstance, otActiveScanResult
 
     return;
 }
+
+
+extern "C" void otPlatCpSignalEvent(otInstance *aInstance, uint32_t aEvent)
+{
+    Instance &instance = AsCoreType(aInstance);
+
+    instance.Get<Notifier>().Signal(static_cast<Event>(aEvent));
+    return;
+}
+

@@ -68,7 +68,7 @@
 #include "backbone_router/bbr_leader.hpp"
 #include "backbone_router/bbr_local.hpp"
 #include "backbone_router/bbr_manager.hpp"
-#include "border_router/routing_manager.hpp"
+#include "border_router/routing_manager_offload.hpp"
 #include "coap/coap_secure.hpp"
 #include "common/code_utils.hpp"
 #include "common/notifier.hpp"
@@ -437,10 +437,10 @@ private:
     // Notifier, TimeTicker, Settings, and MessagePool are initialized
     // before other member variables since other classes/objects from
     // their constructor may use them.
-    //Notifier       mNotifier;
+    Notifier       mNotifier;
     //TimeTicker     mTimeTicker;
-    //Settings       mSettings;
-    //SettingsDriver mSettingsDriver;
+    Settings       mSettings;
+    SettingsDriver mSettingsDriver;
     //MessagePool    mMessagePool;
 
     //Ip6::Ip6    mIp6;
@@ -642,7 +642,7 @@ private:
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     //BorderRouter::RoutingManager mRoutingManager;
-    BorderRouter::RoutingManagerOffload mRoutingManager;
+    BorderRouter::RoutingManagerOffload mRoutingManagerOffload;
 #endif
 
 #if OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE
@@ -701,13 +701,13 @@ template <> inline Uptime &Instance::Get(void) { return mUptime; }
 #endif
 
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
-//template <> inline Notifier &Instance::Get(void) { return mNotifier; }
+template <> inline Notifier &Instance::Get(void) { return mNotifier; }
 
 //template <> inline TimeTicker &Instance::Get(void) { return mTimeTicker; }
 
-//template <> inline Settings &Instance::Get(void) { return mSettings; }
+template <> inline Settings &Instance::Get(void) { return mSettings; }
 
-//template <> inline SettingsDriver &Instance::Get(void) { return mSettingsDriver; }
+template <> inline SettingsDriver &Instance::Get(void) { return mSettingsDriver; }
 
 //template <> inline MeshForwarder &Instance::Get(void) { return mMeshForwarder; }
 
@@ -991,8 +991,10 @@ template <> inline Uptime &Instance::Get(void) { return mUptime; }
 #endif
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
+template <> inline BorderRouter::RoutingManagerOffload &Instance::Get(void) { return mRoutingManagerOffload; }
 //template <> inline BorderRouter::RoutingManager &Instance::Get(void) { return mRoutingManager; }
 
+template <> inline BorderRouter::InfraIf &Instance::Get(void) { return mRoutingManagerOffload.mInfraIf; }
 //template <> inline BorderRouter::InfraIf &Instance::Get(void) { return mRoutingManager.mInfraIf; }
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
 
