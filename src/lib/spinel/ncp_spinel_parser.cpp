@@ -47,7 +47,7 @@ exit:
 }
 
 otError ParseOperationalDataset(uint8_t *aBuf, uint8_t aLen, otOperationalDataset *aOpDataset)
-{ 
+{
     otError error = OT_ERROR_NONE;
     Decoder decoder;
 
@@ -232,9 +232,11 @@ otError ParseIp6Addresses(const uint8_t *aBuf, uint8_t aLen, otNetifAddress *aAd
         SuccessOrExit(error = decoder.ReadUint8(prefixLength));
         cur->mPrefixLength = prefixLength;
         SuccessOrExit(error = decoder.ReadUint32(preferred));
-        cur->mPreferred = preferred;
+        cur->mPreferred = preferred ? true : false;
         SuccessOrExit(error = decoder.ReadUint32(valid));
-        cur->mValid = valid;
+        cur->mValid = valid ? true : false;
+        // TODO: workaround
+        cur->mScopeOverrideValid = false;
 
         SuccessOrExit((error = decoder.CloseStruct()));
         index++;

@@ -35,7 +35,10 @@
 
 #include "common/error.hpp"
 #include "common/locator.hpp"
+#include "common/linked_list.hpp"
 #include "common/non_copyable.hpp"
+#include "common/pool.hpp"
+#include "net/netif.hpp"
 #include "thread/mle_types.hpp"
 
 namespace ot {
@@ -58,11 +61,23 @@ public:
 
     Error ThreadStartStop(bool aStart);
 
+    void DataUpdateIPv6AddressTable(Ip6::Netif::UnicastAddress *aAddressList, uint8_t aCount);
+
 private:
+
+    void UpdateUnicastAddresses(void);
+
+    using UpdateUnicastAddressesTask = TaskletIn<Offload, &Offload::UpdateUnicastAddresses>;
 
     bool mIsActiveScanInProgress;
     ActiveScanHandler mActiveScanHandler;
     void *mScanHandlerContext;
+
+    UpdateUnicastAddressesTask             mUpdateUnicastAddressesTask;
+    LinkedList<Ip6::Netif::UnicastAddress> mUnicastAddresses;
+    LinkedList<Ip6::Netif::UnicastAddress> mUnicastAddressesPending;
+
+    Pool<Ip6::Netif::UnicastAddress, 20>   mUnicastAddressPool;
 };
 
 } // namespace ot

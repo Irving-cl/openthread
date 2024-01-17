@@ -1903,9 +1903,7 @@ void RoutingManagerOffload::OmrPrefixManager::DetermineFavoredPrefix(void)
 
     mFavoredPrefix.Clear();
 
-    LogInfo("!!!!!DetermineFavoredPrefix");
     SuccessOrExit(error = otPlatCpNetDataGetOnMeshPrefix(onMeshPrefixList, count));
-    LogInfo("!!!!!NetDataOnMeshPrefixCount:%u", count);
 
     for (uint8_t i = 0; i < count; i++)
     {

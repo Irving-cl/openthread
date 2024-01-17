@@ -111,9 +111,13 @@ otError otPlatCpNetDataGetOnMeshPrefix(otBorderRouterConfig *aConfigList, uint8_
 
 otError otPlatCpNetDataGetExternalRouteConfig(otExternalRouteConfig *aConfigList, uint8_t &aCount);
 
+void otPlatNetifProcessAddressChange(const otIp6AddressInfo *aAddressInfo, bool aIsAdded, void *aContext);
+
 // ----------------------------------------------------------------------------------------------------
 // Platform call core
 void otPlatCpSignalEvent(otInstance *aInstance, uint32_t aEvent);
+
+void otPlatOffloadDataUpdateIPv6AddressTable(otInstance *aInstance, otNetifAddress *aAddressList, uint8_t aCount);
 
 #ifdef __cplusplus
 } // extern "C"

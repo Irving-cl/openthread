@@ -502,7 +502,6 @@ void RadioSpinel::HandleResponse(const uint8_t *aBuffer, uint16_t aLength)
     otError           error  = OT_ERROR_NONE;
 
     rval = spinel_datatype_unpack(aBuffer, aLength, "CiiD", &header, &cmd, &key, &data, &len);
-    otLogInfoPlat("!!!HandleResponse, rval:%u, cmd:%u ", rval, cmd);
     VerifyOrExit(rval > 0 && cmd >= SPINEL_CMD_PROP_VALUE_IS && cmd <= SPINEL_CMD_PROP_VALUE_REMOVED,
                  error = OT_ERROR_PARSE);
 
@@ -783,7 +782,8 @@ void RadioSpinel::HandleValueIs(spinel_prop_key_t aKey, const uint8_t *aBuffer, 
         uint8_t numAddr = 10;
 
         ParseIp6Addresses(aBuffer, aLength, addresses, numAddr);
-        platformNetifOffloadUpdateIp6Addresses(addresses, numAddr);
+        //platformNetifOffloadUpdateIp6Addresses(addresses, numAddr);
+        otPlatOffloadDataUpdateIPv6AddressTable(mInstance, addresses, numAddr);
 
         LogInfo("Receive IPv6 address table");
     }

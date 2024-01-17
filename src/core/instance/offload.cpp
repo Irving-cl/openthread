@@ -31,7 +31,9 @@
 #include <openthread/platform/offload.h>
 
 #include "common/as_core_type.hpp"
+#include "common/locator_getters.hpp"
 #include "common/log.hpp"
+#include "common/notifier.hpp"
 #include "instance/instance.hpp"
 
 namespace ot {
@@ -43,6 +45,7 @@ Offload::Offload(Instance &aInstance)
     , mIsActiveScanInProgress(false)
     , mActiveScanHandler(nullptr)
     , mScanHandlerContext(nullptr)
+    , mUpdateUnicastAddressesTask(aInstance)
 {
     otPlatCpEnable(&GetInstance());
 }
@@ -74,13 +77,75 @@ Mle::DeviceRole Offload::GetDeviceRole(void)
 }
 
 Error Offload::DatasetInitNew(otOperationalDataset &aDataset)
-{ 
+{
     return otPlatCpDatasetInitNew(&GetInstance(), &aDataset);
 }
 
 Error Offload::ThreadStartStop(bool aStart)
 {
     return otPlatCpThreadStartStop(&GetInstance(), aStart);
+}
+
+void Offload::DataUpdateIPv6AddressTable(Ip6::Netif::UnicastAddress *aAddressList, uint8_t aCount)
+{
+    OT_ASSERT(aAddressList != nullptr);
+
+    // Clear Pending Addresses
+    while (!mUnicastAddressesPending.IsEmpty())
+    {
+        Ip6::Netif::UnicastAddress *address = mUnicastAddressesPending.Pop();
+        mUnicastAddressPool.Free(*address);
+    }
+
+    for (uint8_t i = 0; i < aCount; i++)
+    {
+        Ip6::Netif::UnicastAddress *address = mUnicastAddressPool.Allocate();
+        *address = aAddressList[i];
+        mUnicastAddressesPending.Add(*address);
+    }
+
+    mUpdateUnicastAddressesTask.Post();
+}
+
+void Offload::UpdateUnicastAddresses(void)
+{
+    for (const Ip6::Netif::UnicastAddress &address : mUnicastAddresses)
+    {
+        if (!mUnicastAddressesPending.ContainsMatching(address.GetAddress()))
+        {
+            otIp6AddressInfo info;
+
+            info.mAddress      = &address.mAddress;
+            info.mPrefixLength = address.mPrefixLength;
+            info.mScope        = address.GetScope();
+            info.mPreferred    = address.mPreferred;
+
+            LogInfo("Remove address %s, prefixLen:%u, scope:%u, preferred:%u", address.GetAddress().ToString().AsCString(),
+                    info.mPrefixLength, info.mScope, info.mPreferred);
+            otPlatNetifProcessAddressChange(&info, false, &GetInstance());
+        }
+    }
+
+    for (const Ip6::Netif::UnicastAddress &address : mUnicastAddressesPending)
+    {
+        if (!mUnicastAddresses.ContainsMatching(address.GetAddress()))
+        {
+            otIp6AddressInfo info;
+
+            info.mAddress      = &address.mAddress;
+            info.mPrefixLength = address.mPrefixLength;
+            info.mScope        = address.GetScope();
+            info.mPreferred    = address.mPreferred;
+
+            LogInfo("Add address %s, prefixLen:%u, scope:%u, preferred:%u", address.GetAddress().ToString().AsCString(),
+                    info.mPrefixLength, info.mScope, info.mPreferred);
+            otPlatNetifProcessAddressChange(&info, true, &GetInstance());
+        }
+    }
+
+    LinkedList<Ip6::Netif::UnicastAddress> tmp = mUnicastAddresses;
+    mUnicastAddresses = mUnicastAddressesPending;
+    mUnicastAddressesPending = tmp;
 }
 
 } // namespace ot

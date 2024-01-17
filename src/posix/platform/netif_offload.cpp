@@ -90,7 +90,9 @@ extern int
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
+#include "common/linked_list.hpp"
 #include "net/ip6_address.hpp"
+#include "net/netif.hpp"
 
 #include "resolver.hpp"
 
@@ -143,6 +145,8 @@ static constexpr size_t kMaxIp6Size = OPENTHREAD_CONFIG_IP6_MAX_DATAGRAM_LENGTH;
 #if defined(RTM_NEWLINK) && defined(RTM_DELLINK)
 static bool sIsSyncingState = false;
 #endif
+
+static ot::LinkedList<ot::Ip6::Netif::UnicastAddress> mUnicastAddresses;
 
 #if defined(__linux__)
 
@@ -241,7 +245,6 @@ static void SetLinkState(otInstance *aInstance, bool aState)
 
     if (ifState != aState)
     {
-        otLogNotePlat("!!! ifr_name:%s, state:%d", ifr.ifr_name, aState);
         ifr.ifr_flags = aState ? (ifr.ifr_flags | IFF_UP) : (ifr.ifr_flags & ~IFF_UP);
         VerifyOrExit(ioctl(sIpFd, SIOCSIFFLAGS, &ifr) == 0, perror("ioctl"); error = OT_ERROR_FAILED);
 #if defined(RTM_NEWLINK) && defined(RTM_DELLINK)
@@ -301,7 +304,7 @@ static void platformConfigureTunDevice(otPlatformConfig *aPlatformConfig)
     ifr.ifr_mtu = static_cast<int>(kMaxIp6Size);
     VerifyOrDie(ioctl(sIpFd, SIOCSIFMTU, static_cast<void *>(&ifr)) == 0, OT_EXIT_ERROR_ERRNO);
 
-    // SetLinkState(gInstance, true);
+    //SetLinkState(gInstance, true);
 }
 #endif // defined(__linux__)
 
@@ -390,6 +393,9 @@ void platformNetifInit(otPlatformConfig *aPlatformConfig)
 #if __linux__
     SetAddrGenModeToNone();
 #endif
+
+    // TODO: workaround
+    SetLinkState(nullptr, true);
 }
 
 void platformNetifDeinit(void)
@@ -432,7 +438,7 @@ static void clearAllAddresses(void)
 
 }
 
-static void UpdateUnicastLinux(otInstance *aInstance, const otNetifAddress &aAddressInfo, bool aIsAdded)
+static void UpdateUnicastLinux_(otInstance *aInstance, const otNetifAddress &aAddressInfo, bool aIsAdded)
 {
     OT_UNUSED_VARIABLE(aInstance);
 
@@ -502,7 +508,151 @@ static void UpdateUnicastLinux(otInstance *aInstance, const otNetifAddress &aAdd
     }
 }
 
-static void processAddressChange(const otNetifAddress *aAddressArray, uint8_t aNumAddr, void *aContext)
+static void UpdateUnicastLinux(otInstance *aInstance, const otIp6AddressInfo &aAddressInfo, bool aIsAdded)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    struct
+    {
+        struct nlmsghdr  nh;
+        struct ifaddrmsg ifa;
+        char             buf[512];
+    } req;
+
+    memset(&req, 0, sizeof(req));
+
+    req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+    req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | (aIsAdded ? (NLM_F_CREATE | NLM_F_EXCL) : 0);
+    req.nh.nlmsg_type  = aIsAdded ? RTM_NEWADDR : RTM_DELADDR;
+    req.nh.nlmsg_pid   = 0;
+    req.nh.nlmsg_seq   = ++sNetlinkSequence;
+
+    req.ifa.ifa_family    = AF_INET6;
+    req.ifa.ifa_prefixlen = aAddressInfo.mPrefixLength;
+    req.ifa.ifa_flags     = IFA_F_NODAD;
+    req.ifa.ifa_scope     = aAddressInfo.mScope;
+    req.ifa.ifa_index     = gNetifIndex;
+
+    if (!aIsAdded)
+    {
+        req.ifa.ifa_flags = 130;
+        req.ifa.ifa_scope = 253;
+    }
+    AddRtAttr(&req.nh, sizeof(req), IFA_LOCAL, aAddressInfo.mAddress, sizeof(*aAddressInfo.mAddress));
+
+    otLogInfoPlat("UpdateUnicastLinux");
+    otLogInfoPlat("nlmsg_flags:%u", req.nh.nlmsg_flags);
+    otLogInfoPlat("nlmsg_type:%u", req.nh.nlmsg_type);
+    otLogInfoPlat("nlmsg_pid:%u", req.nh.nlmsg_pid);
+    otLogInfoPlat("nlmsg_seq:%u", req.nh.nlmsg_seq);
+    otLogInfoPlat("ifa_family:%u", req.ifa.ifa_family);
+    otLogInfoPlat("ifa_prefixlen:%u", req.ifa.ifa_prefixlen);
+    otLogInfoPlat("ifa_flags:%u", req.ifa.ifa_flags);
+    otLogInfoPlat("ifa_scope:%u", req.ifa.ifa_scope);
+    otLogInfoPlat("ifa_index:%u", req.ifa.ifa_index);
+
+    if (!aAddressInfo.mPreferred)
+    {
+        struct ifa_cacheinfo cacheinfo;
+
+        memset(&cacheinfo, 0, sizeof(cacheinfo));
+        cacheinfo.ifa_valid = UINT32_MAX;
+
+        AddRtAttr(&req.nh, sizeof(req), IFA_CACHEINFO, &cacheinfo, sizeof(cacheinfo));
+    }
+
+#if OPENTHREAD_POSIX_CONFIG_INSTALL_OMR_ROUTES_ENABLE
+    if (IsOmrAddress(aInstance, aAddressInfo))
+    {
+        // Remove prefix route for OMR address if `OPENTHREAD_POSIX_CONFIG_INSTALL_OMR_ROUTES_ENABLE` is enabled to
+        // avoid having two routes.
+        if (aIsAdded)
+        {
+            AddRtAttrUint32(&req.nh, sizeof(req), IFA_FLAGS, IFA_F_NOPREFIXROUTE);
+        }
+    }
+    else
+#endif
+    {
+#if OPENTHREAD_POSIX_CONFIG_NETIF_PREFIX_ROUTE_METRIC > 0
+        if (aAddressInfo.mScope > ot::Ip6::Address::kLinkLocalScope)
+        {
+            AddRtAttrUint32(&req.nh, sizeof(req), IFA_RT_PRIORITY, OPENTHREAD_POSIX_CONFIG_NETIF_PREFIX_ROUTE_METRIC);
+        }
+#endif
+    }
+
+    if (send(sNetlinkFd, &req, req.nh.nlmsg_len, 0) != -1)
+    {
+        otLogInfoPlat("[netif] Sent request#%u to %s %s/%u", sNetlinkSequence, (aIsAdded ? "add" : "remove"),
+                      Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+    }
+    else
+    {
+        otLogWarnPlat("[netif] Failed to send request#%u to %s %s/%u", sNetlinkSequence, (aIsAdded ? "add" : "remove"),
+                      Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+    }
+}
+
+static void UpdateUnicast(otInstance *aInstance, const otIp6AddressInfo &aAddressInfo, bool aIsAdded)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    assert(gInstance == aInstance);
+    assert(sIpFd >= 0);
+
+#if defined(__linux__)
+    UpdateUnicastLinux(aInstance, aAddressInfo, aIsAdded);
+#elif defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__)
+    {
+        int                 rval;
+        struct in6_aliasreq ifr6;
+
+        memset(&ifr6, 0, sizeof(ifr6));
+        strlcpy(ifr6.ifra_name, gNetifName, sizeof(ifr6.ifra_name));
+        ifr6.ifra_addr.sin6_family = AF_INET6;
+        ifr6.ifra_addr.sin6_len    = sizeof(ifr6.ifra_addr);
+        memcpy(&ifr6.ifra_addr.sin6_addr, aAddressInfo.mAddress, sizeof(struct in6_addr));
+        ifr6.ifra_prefixmask.sin6_family = AF_INET6;
+        ifr6.ifra_prefixmask.sin6_len    = sizeof(ifr6.ifra_prefixmask);
+        InitNetaskWithPrefixLength(&ifr6.ifra_prefixmask.sin6_addr, aAddressInfo.mPrefixLength);
+        ifr6.ifra_lifetime.ia6t_vltime    = ND6_INFINITE_LIFETIME;
+        ifr6.ifra_lifetime.ia6t_pltime    = ND6_INFINITE_LIFETIME;
+
+#if defined(__APPLE__)
+        ifr6.ifra_lifetime.ia6t_expire    = ND6_INFINITE_LIFETIME;
+        ifr6.ifra_lifetime.ia6t_preferred = (aAddressInfo.mPreferred ? ND6_INFINITE_LIFETIME : 0);
+#endif
+
+        rval = ioctl(sIpFd, aIsAdded ? SIOCAIFADDR_IN6 : SIOCDIFADDR_IN6, &ifr6);
+        if (rval == 0)
+        {
+            otLogInfoPlat("[netif] %s %s/%u", (aIsAdded ? "Added" : "Removed"),
+                          Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+        }
+        else if (errno != EALREADY)
+        {
+            otLogWarnPlat("[netif] Failed to %s %s/%u: %s", (aIsAdded ? "add" : "remove"),
+                          Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength,
+                          strerror(errno));
+        }
+    }
+#endif
+}
+
+static void processAddressChange(const otIp6AddressInfo *aAddressInfo, bool aIsAdded, void *aContext)
+{
+    if (aAddressInfo->mAddress->mFields.m8[0] == 0xff)
+    {
+        //UpdateMulticast(static_cast<otInstance *>(aContext), *aAddressInfo->mAddress, aIsAdded);
+    }
+    else
+    {
+        UpdateUnicast(static_cast<otInstance *>(aContext), *aAddressInfo, aIsAdded);
+    }
+}
+
+static void processAddressChange_(const otNetifAddress *aAddressArray, uint8_t aNumAddr, void *aContext)
 {
     // if (aAddressInfo->mAddress->mFields.m8[0] == 0xff)
     // {
@@ -520,7 +670,7 @@ static void processAddressChange(const otNetifAddress *aAddressArray, uint8_t aN
 
     for (uint8_t i = 0; i < aNumAddr; i++)
     {
-        UpdateUnicastLinux(nullptr, aAddressArray[i], true);
+        UpdateUnicastLinux_(nullptr, aAddressArray[i], true);
     }
 }
 
@@ -584,6 +734,7 @@ static void processNetifLinkEvent(otInstance *aInstance, struct nlmsghdr *aNetli
     (void)aInstance;
 
     VerifyOrExit(ifinfo->ifi_index == static_cast<int>(gNetifIndex) && (ifinfo->ifi_change & IFF_UP));
+    otLogInfoPlat("processNetifLinkEvent");
 
     isUp = ((ifinfo->ifi_flags & IFF_UP) != 0);
 
@@ -972,7 +1123,7 @@ void platformNetifOffloadUpdateIp6Addresses(otNetifAddress *aAddressArray, uint8
         otLogInfoPlat("Addr: %s", buffer);
     }
 
-    processAddressChange(aAddressArray, aNumAddr, nullptr);
+    processAddressChange_(aAddressArray, aNumAddr, nullptr);
 
     SetLinkState(nullptr, true);
 }
@@ -997,6 +1148,11 @@ exit:
     {
         otLogWarnPlat("[netif] Failed to receive, error:%s", otThreadErrorToString(error));
     }
+}
+
+void otPlatNetifProcessAddressChange(const otIp6AddressInfo *aAddressInfo, bool aIsAdded, void *aContext)
+{
+    processAddressChange(aAddressInfo, aIsAdded, aContext);
 }
 
 #endif // OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE

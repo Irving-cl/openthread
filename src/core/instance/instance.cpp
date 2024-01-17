@@ -271,7 +271,6 @@ Utils::Heap &Instance::GetHeap(void)
 Instance &Instance::InitSingle(void)
 {
     Instance *instance = &Get();
-    otLogInfoPlat("!!!!!InitSingle, IsInitialized:%u", instance->mIsInitialized);
 
     VerifyOrExit(!instance->mIsInitialized);
 

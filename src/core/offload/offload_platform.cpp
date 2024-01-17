@@ -59,3 +59,12 @@ extern "C" void otPlatCpSignalEvent(otInstance *aInstance, uint32_t aEvent)
     return;
 }
 
+
+extern "C" void otPlatOffloadDataUpdateIPv6AddressTable(otInstance *aInstance, otNetifAddress *aAddressList, uint8_t aCount)
+{
+    Instance &instance = AsCoreType(aInstance);
+
+    instance.Get<Offload>().DataUpdateIPv6AddressTable(static_cast<Ip6::Netif::UnicastAddress *>(aAddressList), aCount);
+    return;
+}
+
