@@ -99,6 +99,8 @@ class RoutingManager;
 }
 #endif
 
+class Offload;
+
 namespace Srp {
 
 /**
@@ -185,6 +187,7 @@ public:
         friend class LinkedList<Service>;
         friend class LinkedListEntry<Service>;
         friend class Heap::Allocatable<Service>;
+        friend class ot::Offload;
 
     public:
         /**
@@ -404,6 +407,7 @@ public:
 
         Error Init(const char *aInstanceName, const char *aInstanceLabel, Host &aHost, TimeMilli aUpdateTime);
         Error SetTxtDataFromMessage(const Message &aMessage, uint16_t aOffset, uint16_t aLength);
+        Error SetTxtDataFromBuffer(const uint8_t *aBuffer, uint16_t aLength);
         bool  Matches(const char *aInstanceName) const;
         void  Log(Action aAction) const;
 
@@ -435,12 +439,13 @@ public:
     class Host : public otSrpServerHost,
                  public InstanceLocator,
                  public LinkedListEntry<Host>,
-                 private Heap::Allocatable<Host>,
+                 public Heap::Allocatable<Host>,
                  private NonCopyable
     {
         friend class Server;
         friend class LinkedListEntry<Host>;
         friend class Heap::Allocatable<Host>;
+        friend class ot::Offload;
 
     public:
         typedef Crypto::Ecdsa::P256::PublicKey Key; ///< Host key (public ECDSA P256 key).
@@ -564,13 +569,18 @@ public:
          */
         bool Matches(const char *aFullName) const;
 
+        void           FreeAllServices(void);
+        void           ClearResources(void);
+
+        Error SetFullName(const char *aFullName);
+        void  SetLease(uint32_t aLease) { mLease = aLease; }
+        Error          AddIp6Address(const Ip6::Address &aIp6Address);
+
     private:
         Host(Instance &aInstance, TimeMilli aUpdateTime);
         ~Host(void);
 
-        Error SetFullName(const char *aFullName);
         void  SetTtl(uint32_t aTtl) { mTtl = aTtl; }
-        void  SetLease(uint32_t aLease) { mLease = aLease; }
         void  SetKeyLease(uint32_t aKeyLease) { mKeyLease = aKeyLease; }
         void  SetUseShortLeaseOption(bool aUse) { mUseShortLeaseOption = aUse; }
         bool  ShouldUseShortLeaseOption(void) const { return mUseShortLeaseOption; }
@@ -582,9 +592,6 @@ public:
         bool           HasService(const char *aInstanceName) const;
         Service       *FindService(const char *aInstanceName);
         const Service *FindService(const char *aInstanceName) const;
-        void           FreeAllServices(void);
-        void           ClearResources(void);
-        Error          AddIp6Address(const Ip6::Address &aIp6Address);
 
         Host                     *mNext;
         Heap::String              mFullName;

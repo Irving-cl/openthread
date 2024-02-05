@@ -1055,6 +1055,13 @@ public:
 
     otError NetDataGetExternalRouteConfig(otExternalRouteConfig *aConfigList, uint8_t &aCount);
 
+    /*
+     * SRP Server APIs
+     */
+    otError SrpServerSetEnabled(bool aEnabled);
+
+    void SrpServerHandleServiceUpdateResult(otSrpServerServiceUpdateId aId, otError aError);
+
 private:
     enum
     {
@@ -1194,6 +1201,8 @@ private:
 
     otDeviceRole ConvertDeviceRole(spinel_net_role_t aSpinelRole);
 
+    otError ParseSrpServerHostsAndServices(const uint8_t *aBuffer, uint16_t aLength);
+
     otInstance *mInstance;
 
     SpinelInterface::RxFrameBuffer mRxFrameBuffer;
@@ -1300,6 +1309,7 @@ private:
     otDeviceRole mDeviceRole;
     otNetworkName mNetworkName;
     otExtendedPanId mExtendedPanId;
+
 };
 
 } // namespace Spinel

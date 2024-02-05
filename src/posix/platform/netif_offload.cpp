@@ -540,17 +540,6 @@ static void UpdateUnicastLinux(otInstance *aInstance, const otIp6AddressInfo &aA
     }
     AddRtAttr(&req.nh, sizeof(req), IFA_LOCAL, aAddressInfo.mAddress, sizeof(*aAddressInfo.mAddress));
 
-    otLogInfoPlat("UpdateUnicastLinux");
-    otLogInfoPlat("nlmsg_flags:%u", req.nh.nlmsg_flags);
-    otLogInfoPlat("nlmsg_type:%u", req.nh.nlmsg_type);
-    otLogInfoPlat("nlmsg_pid:%u", req.nh.nlmsg_pid);
-    otLogInfoPlat("nlmsg_seq:%u", req.nh.nlmsg_seq);
-    otLogInfoPlat("ifa_family:%u", req.ifa.ifa_family);
-    otLogInfoPlat("ifa_prefixlen:%u", req.ifa.ifa_prefixlen);
-    otLogInfoPlat("ifa_flags:%u", req.ifa.ifa_flags);
-    otLogInfoPlat("ifa_scope:%u", req.ifa.ifa_scope);
-    otLogInfoPlat("ifa_index:%u", req.ifa.ifa_index);
-
     if (!aAddressInfo.mPreferred)
     {
         struct ifa_cacheinfo cacheinfo;

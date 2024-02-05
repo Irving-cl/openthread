@@ -59,16 +59,19 @@ Error Data::SetFrom(const Message &aMessage)
 
 Error Data::SetFrom(const Message &aMessage, uint16_t aOffset, uint16_t aLength)
 {
-    Error error;
+    Error error = OT_ERROR_NONE;
 
-    VerifyOrExit(aOffset + aLength <= aMessage.GetLength(), error = kErrorParse);
+    //VerifyOrExit(aOffset + aLength <= aMessage.GetLength(), error = kErrorParse);
 
-    SuccessOrExit(error = UpdateBuffer(aLength));
-    VerifyOrExit(aLength != 0);
+    //SuccessOrExit(error = UpdateBuffer(aLength));
+    //VerifyOrExit(aLength != 0);
 
-    SuccessOrAssert(aMessage.Read(aOffset, mData.GetBytes(), aLength));
+    //SuccessOrAssert(aMessage.Read(aOffset, mData.GetBytes(), aLength));
+    (void)aMessage;
+    (void)aOffset;
+    (void)aLength;
 
-exit:
+//exit:
     return error;
 }
 

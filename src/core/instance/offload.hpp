@@ -33,17 +33,46 @@
 
 #include <openthread/offload.h>
 
+#include "common/callback.hpp"
 #include "common/error.hpp"
 #include "common/locator.hpp"
 #include "common/linked_list.hpp"
 #include "common/non_copyable.hpp"
 #include "common/pool.hpp"
 #include "net/netif.hpp"
+//#include "net/srp_server.hpp"
 #include "thread/mle_types.hpp"
 
 namespace ot {
 
 typedef otHandleActiveScanResult ActiveScanHandler;
+
+constexpr uint16_t kMaxSrpServerHostFullNameLength = 256;
+constexpr uint16_t kMaxSrpServerHostServiceInstanceNameLength = 128;
+constexpr uint16_t kMaxSrpServerHostServiceTxtDataLength = 256;
+constexpr uint8_t  kMaxSrpServerHostAddrNum        = 10;
+constexpr uint8_t  kSrpServerServiceMaxSubTypeNum  = 10;
+constexpr uint8_t  kSrpServerServiceMaxSubTypeNameLength = 128;
+
+struct OffloadSrpServerHost
+{
+    otSrpServerServiceUpdateId mUpdateId;
+    char     mFullName[kMaxSrpServerHostFullNameLength];
+    uint32_t mLease;
+    uint8_t  mAddressNum;
+    otIp6Address mAddresses[kMaxSrpServerHostAddrNum];
+};
+
+struct OffloadSrpServerService
+{
+    char     mInstanceName[kMaxSrpServerHostServiceInstanceNameLength];
+    bool     mIsDeleted;
+    uint16_t mPort;
+    uint8_t  mTxtData[kMaxSrpServerHostServiceTxtDataLength];
+    uint16_t mTxtDataLen;
+    uint8_t  mSubTypeNum;
+    char     mSubTypeNames[kSrpServerServiceMaxSubTypeNum][kSrpServerServiceMaxSubTypeNameLength];
+};
 
 class Offload : public InstanceLocator, private NonCopyable
 {
@@ -63,7 +92,15 @@ public:
 
     void DataUpdateIPv6AddressTable(Ip6::Netif::UnicastAddress *aAddressList, uint8_t aCount);
 
+    void UpdateSrpServerHost(OffloadSrpServerHost *aHost, OffloadSrpServerService *aServices, uint8_t aSrvCount);
+
+    void SetServiceUpdateHandler(otSrpServerServiceUpdateHandler aServiceHandler, void *aContext) {
+        mServiceUpdateHandler.Set(aServiceHandler, aContext);
+    }
+
 private:
+
+    static constexpr uint32_t kDefaultEventsHandlerTimeout = OPENTHREAD_CONFIG_SRP_SERVER_SERVICE_UPDATE_TIMEOUT;
 
     void UpdateUnicastAddresses(void);
 
@@ -78,7 +115,11 @@ private:
     LinkedList<Ip6::Netif::UnicastAddress> mUnicastAddressesPending;
 
     Pool<Ip6::Netif::UnicastAddress, 20>   mUnicastAddressPool;
+
+    Callback<otSrpServerServiceUpdateHandler> mServiceUpdateHandler;
 };
+
+Offload &GetOffload(otInstance *aInstance);
 
 } // namespace ot
 

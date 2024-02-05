@@ -207,7 +207,6 @@ exit:
 
 otError ParseIp6Addresses(const uint8_t *aBuf, uint8_t aLen, otNetifAddress *aAddressList, uint8_t &aListLen)
 {
-
     otError error = OT_ERROR_NONE;
     Decoder decoder;
     uint8_t index = 0;

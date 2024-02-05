@@ -31,14 +31,19 @@
 #include <openthread/platform/offload.h>
 
 #include "common/as_core_type.hpp"
+#include "common/linked_list.hpp"
 #include "common/locator_getters.hpp"
 #include "common/log.hpp"
 #include "common/notifier.hpp"
+#include "common/timer.hpp"
 #include "instance/instance.hpp"
+#include "net/srp_server.hpp"
 
 namespace ot {
 
 RegisterLogModule("Offload");
+
+LinkedList<Srp::Server::Host> sHosts;
 
 Offload::Offload(Instance &aInstance)
     : InstanceLocator(aInstance)
@@ -146,6 +151,79 @@ void Offload::UpdateUnicastAddresses(void)
     LinkedList<Ip6::Netif::UnicastAddress> tmp = mUnicastAddresses;
     mUnicastAddresses = mUnicastAddressesPending;
     mUnicastAddressesPending = tmp;
+}
+
+void Offload::UpdateSrpServerHost(OffloadSrpServerHost *aHost, OffloadSrpServerService *aServices, uint8_t aSrvCount)
+{
+    Srp::Server::Host *existingHost;
+    Srp::Server::Host *host;
+    Srp::Server::Service *service;
+    TimeMilli now = TimerMilli::GetNow();
+
+    // TODO: Implement
+    LogInfo("!!! UpdateSrpServerHost");
+    LogInfo("HostFullName: %s", aHost->mFullName);
+
+    for (uint8_t i = 0; i < aSrvCount; i++)
+    {
+        LogInfo("Service Instance Name: %s", aServices[i].mInstanceName);
+        for (uint8_t j = 0; j < aServices[i].mSubTypeNum; j++)
+        {
+            LogInfo(" - SubType: %s", aServices[i].mSubTypeNames[j]);
+        }
+    }
+
+    existingHost = sHosts.FindMatching(aHost->mFullName);
+    if (existingHost != nullptr)
+    {
+        existingHost->FreeAllServices();
+        existingHost->ClearResources();
+
+        sHosts.Remove(*existingHost);
+        existingHost->Free();
+    }
+
+    host = Srp::Server::Host::Allocate(GetInstance(), now);
+    VerifyOrExit(host != nullptr);
+
+    host->SetFullName(aHost->mFullName);
+    host->SetLease(aHost->mLease);
+    for (uint8_t i = 0; i < aHost->mAddressNum; i++)
+    {
+        LogInfo("HostAddr: %s", AsCoreType(&aHost->mAddresses[i]).ToString().AsCString());
+        host->AddIp6Address(AsCoreType(&aHost->mAddresses[i]));
+    }
+
+    for (uint8_t i = 0; i < aSrvCount; i++)
+    {
+        service = host->AddNewService(aServices[i].mInstanceName, "", now);
+        VerifyOrExit(service != nullptr);
+
+        service->mPort = aServices[i].mPort;
+        SuccessOrExit(service->SetTxtDataFromBuffer(aServices[i].mTxtData, aServices[i].mTxtDataLen));
+
+        for (uint8_t j = 0; j < aServices[i].mSubTypeNum; j++)
+        {
+            Heap::String *newSubTypeLabel = service->mSubTypes.PushBack();
+
+            VerifyOrExit(newSubTypeLabel != nullptr);
+            newSubTypeLabel->Set(aServices[i].mSubTypeNames[j]);
+        }
+
+    }
+
+    if (mServiceUpdateHandler.IsSet())
+    {
+        mServiceUpdateHandler.Invoke(aHost->mUpdateId, host, static_cast<uint32_t>(kDefaultEventsHandlerTimeout));
+    }
+
+exit:
+    return;
+}
+
+Offload &GetOffload(otInstance *aInstance)
+{
+    return AsCoreType(aInstance).Get<Offload>();
 }
 
 } // namespace ot

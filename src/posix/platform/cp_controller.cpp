@@ -349,3 +349,13 @@ otError otPlatCpNetDataGetExternalRouteConfig(otExternalRouteConfig *aConfigList
 {
     return GetRadioSpinel().NetDataGetExternalRouteConfig(aConfigList, aCount);
 }
+
+void otPlatSrpServerSetEnabled(bool aEnabled)
+{
+    GetRadioSpinel().SrpServerSetEnabled(aEnabled);
+}
+
+void otPlatSrpServerHandleServiceUpdateResult(otSrpServerServiceUpdateId aId, otError aError)
+{
+    GetRadioSpinel().SrpServerHandleServiceUpdateResult(aId, aError);
+}

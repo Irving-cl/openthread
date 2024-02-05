@@ -34,6 +34,7 @@
 #include <openthread/ip6.h>
 #include <openthread/link.h>
 #include <openthread/netdata.h>
+#include <openthread/srp_server.h>
 #include <openthread/thread.h>
 #include <openthread/thread_ftd.h>
 #include <lib/spinel/radio_spinel_metrics.h>
@@ -112,6 +113,10 @@ otError otPlatCpNetDataGetOnMeshPrefix(otBorderRouterConfig *aConfigList, uint8_
 otError otPlatCpNetDataGetExternalRouteConfig(otExternalRouteConfig *aConfigList, uint8_t &aCount);
 
 void otPlatNetifProcessAddressChange(const otIp6AddressInfo *aAddressInfo, bool aIsAdded, void *aContext);
+
+void otPlatSrpServerSetEnabled(bool aEnabled);
+
+void otPlatSrpServerHandleServiceUpdateResult(otSrpServerServiceUpdateId aId, otError aError);
 
 // ----------------------------------------------------------------------------------------------------
 // Platform call core

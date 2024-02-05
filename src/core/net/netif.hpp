@@ -44,7 +44,7 @@
 #include "common/iterator_utils.hpp"
 #include "common/linked_list.hpp"
 #include "common/locator.hpp"
-#include "common/message.hpp"
+#include "common/pool.hpp"
 #include "common/non_copyable.hpp"
 #include "common/tasklet.hpp"
 #include "mac/mac_types.hpp"

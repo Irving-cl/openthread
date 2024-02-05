@@ -30,6 +30,7 @@
 #define OPENTHREAD_OFFLOAD_H_
 
 #include <openthread/link.h>
+#include <openthread/srp_server.h>
 #include <openthread/thread.h>
 
 #ifdef __cplusplus
@@ -48,9 +49,14 @@ otError otOffloadDatasetInitNew(otInstance *aInstance, otOperationalDataset *aDa
 
 otError otOffloadThreadStartStop(otInstance *aInstance, bool aStart);
 
+void otOffloadSrpServerSetServiceUpdateHandler(otInstance *aInstance,
+                                               otSrpServerServiceUpdateHandler aServiceHandler,
+                                               void                           *aContext);
+
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
 #endif // OPENTHREAD_OFFLOAD_H_
- 
+

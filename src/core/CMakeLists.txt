@@ -38,6 +38,7 @@ set(COMMON_SOURCES
     api/ip6_api.cpp
     api/logging_api.cpp
     api/offload_api.cpp
+    api/srp_server_api.cpp
     api/tasklet_api.cpp
     api/thread_api.cpp
     border_router/infra_if_offload.cpp
@@ -45,6 +46,8 @@ set(COMMON_SOURCES
     common/binary_search.cpp
     common/error.cpp
     common/heap.cpp
+    common/heap_data.cpp
+    common/heap_string.cpp
     common/log.cpp
     common/notifier.cpp
     common/random.cpp
@@ -65,10 +68,12 @@ set(COMMON_SOURCES
     meshcop/meshcop_tlvs.cpp
     meshcop/network_name.cpp
     meshcop/timestamp.cpp
+    net/dns_types.cpp
     net/ip4_types.cpp
     net/ip6_address.cpp
     net/nd6.cpp
     net/netif.cpp
+    net/srp_server.cpp
     offload/offload_platform.cpp
     thread/key_manager.cpp
     thread/mle_types.cpp

@@ -48,6 +48,7 @@
 #include "common/error.hpp"
 #include "common/new.hpp"
 #include "common/notifier.hpp"
+#include "instance/offload.hpp"
 #include "lib/platform/exit_code.h"
 #include "lib/spinel/spinel_decoder.hpp"
 #include "mac/mac_frame.hpp"
@@ -58,6 +59,10 @@ namespace Spinel {
 
 uint8_t sBuffer[256] = {0};
 uint16_t sLen = 250;
+
+OffloadSrpServerHost sSrpServerHost;
+OffloadSrpServerService sSrpServerHostServices[10];
+uint8_t sSrpServerHostServiceCount;
 
 RadioSpinel::RadioSpinel(void)
     : mInstance(nullptr)
@@ -866,6 +871,13 @@ void RadioSpinel::HandleValueInserted(spinel_prop_key_t aKey, const uint8_t *aBu
         result.mMaxRssi = maxRssi;
 
         mEnergyScanCallback.InvokeIfSet(&result);
+    }
+    else if (aKey == SPINEL_PROP_SRP_SERVER_HOST)
+    {
+        Offload &offload = GetOffload(mInstance);
+
+        SuccessOrExit(error = ParseSrpServerHostsAndServices(aBuffer, aLength));
+        offload.UpdateSrpServerHost(&sSrpServerHost, sSrpServerHostServices, 1);
     }
     else
     {
@@ -4551,6 +4563,16 @@ exit:
     return error;
 }
 
+otError RadioSpinel::SrpServerSetEnabled(bool aEnabled)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = Set(SPINEL_PROP_SRP_SERVER_ENABLED, SPINEL_DATATYPE_BOOL_S, aEnabled));
+
+exit:
+    return error;
+}
+
 void RadioSpinel::LogIfFail(const char *aText, otError aError)
 {
     OT_UNUSED_VARIABLE(aText);
@@ -4606,6 +4628,84 @@ void RadioSpinel::LogDebg(const char *aFormat, ...)
     va_start(args, aFormat);
     otLogPlatArgs(OT_LOG_LEVEL_DEBG, kModuleName, aFormat, args);
     va_end(args);
+}
+
+otError RadioSpinel::ParseSrpServerHostsAndServices(const uint8_t *aBuffer, uint16_t aLength)
+{
+    otError error = OT_ERROR_NONE;
+    Decoder decoder;
+    const char *name;
+    uint16_t len;
+    uint8_t serviceIndex = 0;
+    otSrpServerServiceUpdateId updateId;
+
+    VerifyOrExit(aBuffer != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+    decoder.Init(aBuffer, aLength);
+
+    SuccessOrExit(error = decoder.ReadUint32(updateId));
+    sSrpServerHost.mUpdateId = updateId;
+    SuccessOrExit(error = decoder.ReadUtf8(name));
+    len = StringLength(name, kMaxSrpServerHostFullNameLength);
+    memcpy(sSrpServerHost.mFullName, name, len);
+
+    SuccessOrExit(error = decoder.ReadUint32(sSrpServerHost.mLease));
+
+    SuccessOrExit(error = decoder.ReadUint8(sSrpServerHost.mAddressNum));
+
+    for (uint8_t i = 0; i < sSrpServerHost.mAddressNum; i++)
+    {
+        SuccessOrExit(error = decoder.ReadIp6Address(sSrpServerHost.mAddresses[i]));
+    }
+
+    while (!decoder.IsAllReadInStruct())
+    {
+        OffloadSrpServerService &service = sSrpServerHostServices[serviceIndex];
+        const uint8_t *txtData;
+
+        SuccessOrExit(error = decoder.OpenStruct());
+
+        SuccessOrExit(error = decoder.ReadUtf8(name));
+        memset(service.mInstanceName, 0, sizeof(service.mInstanceName));
+        memcpy(service.mInstanceName, name, len);
+
+        SuccessOrExit(error = decoder.ReadBool(service.mIsDeleted));
+
+        if (!service.mIsDeleted)
+        {
+            SuccessOrExit(error = decoder.ReadUint16(service.mPort));
+            SuccessOrExit(error = decoder.ReadDataWithLen(txtData, service.mTxtDataLen));
+            memcpy(service.mTxtData, txtData, service.mTxtDataLen);
+            SuccessOrExit(error = decoder.ReadUint8(service.mSubTypeNum));
+            memset(service.mSubTypeNames, 0, sizeof(service.mSubTypeNames));
+            for (uint8_t i = 0; i < service.mSubTypeNum; i++)
+            {
+                SuccessOrExit(error = decoder.ReadUtf8(name));
+                len = StringLength(name, kSrpServerServiceMaxSubTypeNameLength);
+                memcpy(service.mSubTypeNames[i], name, len);
+            }
+        }
+
+        SuccessOrExit(error = decoder.CloseStruct());
+
+        serviceIndex++;
+    }
+    sSrpServerHostServiceCount = serviceIndex;
+
+exit:
+    if (error != OT_ERROR_NONE)
+    {
+        sSrpServerHostServiceCount = 0;
+    }
+    return error;
+}
+
+void RadioSpinel::SrpServerHandleServiceUpdateResult(otSrpServerServiceUpdateId aId, otError aError)
+{
+    Set(SPINEL_PROP_SRP_SERVER_UPDATE_ID,
+            SPINEL_DATATYPE_UINT32_S
+            SPINEL_DATATYPE_UINT8_S,
+            aId, aError);
 }
 
 } // namespace Spinel

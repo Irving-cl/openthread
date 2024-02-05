@@ -42,6 +42,7 @@
 
 using namespace ot;
 
+/*
 const char *otSrpServerGetDomain(otInstance *aInstance) { return AsCoreType(aInstance).Get<Srp::Server>().GetDomain(); }
 
 otError otSrpServerSetDomain(otInstance *aInstance, const char *aDomain)
@@ -134,7 +135,7 @@ const otSrpServerResponseCounters *otSrpServerGetResponseCounters(otInstance *aI
 {
     return AsCoreType(aInstance).Get<Srp::Server>().GetResponseCounters();
 }
-
+*/
 bool otSrpServerHostIsDeleted(const otSrpServerHost *aHost) { return AsCoreType(aHost).IsDeleted(); }
 
 const char *otSrpServerHostGetFullName(const otSrpServerHost *aHost) { return AsCoreType(aHost).GetFullName(); }

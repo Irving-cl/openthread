@@ -340,6 +340,8 @@ private:
     static constexpr uint16_t kMaxSeriesSupported = OPENTHREAD_CONFIG_MLE_LINK_METRICS_MAX_SERIES_SUPPORTED;
 #elif OPENTHREAD_MTD
     static constexpr uint16_t kMaxSeriesSupported = OPENTHREAD_CONFIG_MLE_LINK_METRICS_SERIES_MTD;
+#else
+    static constexpr uint16_t kMaxSeriesSupported = 0;
 #endif
 
     static Error ReadTypeIdsFromMessage(const Message &aMessage,

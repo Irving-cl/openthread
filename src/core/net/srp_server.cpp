@@ -55,6 +55,7 @@ RegisterLogModule("SrpServer");
 static const char kDefaultDomain[]       = "default.service.arpa.";
 static const char kServiceSubTypeLabel[] = "._sub.";
 
+/*
 static Dns::UpdateHeader::Response ErrorToDnsResponseCode(Error aError)
 {
     Dns::UpdateHeader::Response responseCode;
@@ -80,10 +81,11 @@ static Dns::UpdateHeader::Response ErrorToDnsResponseCode(Error aError)
 
     return responseCode;
 }
+*/
 
 //---------------------------------------------------------------------------------------------------------------------
 // Server
-
+/*
 Server::Server(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mSocket(aInstance)
@@ -1735,7 +1737,7 @@ void Server::UpdateResponseCounters(Dns::UpdateHeader::Response aResponseCode)
         break;
     }
 }
-
+*/
 //---------------------------------------------------------------------------------------------------------------------
 // Server::Service
 
@@ -1905,13 +1907,16 @@ void Server::Service::Log(Action) const {}
 
 Error Server::Service::SetTxtDataFromMessage(const Message &aMessage, uint16_t aOffset, uint16_t aLength)
 {
-    Error error;
+    Error error = kErrorNone;
 
-    SuccessOrExit(error = mTxtData.SetFrom(aMessage, aOffset, aLength));
-    VerifyOrExit(Dns::TxtRecord::VerifyTxtData(mTxtData.GetBytes(), mTxtData.GetLength(), /* aAllowEmpty */ false),
-                 error = kErrorParse);
+    //SuccessOrExit(error = mTxtData.SetFrom(aMessage, aOffset, aLength));
+    //VerifyOrExit(Dns::TxtRecord::VerifyTxtData(mTxtData.GetBytes(), mTxtData.GetLength(), [> aAllowEmpty <] false),
+                 //error = kErrorParse);
+    (void)aMessage;
+    (void)aOffset;
+    (void)aLength;
 
-exit:
+//exit:
     if (error != kErrorNone)
     {
         mTxtData.Free();
@@ -1920,6 +1925,21 @@ exit:
     return error;
 }
 
+Error Server::Service::SetTxtDataFromBuffer(const uint8_t *aBuffer, uint16_t aLength)
+{
+    Error error = kErrorNone;
+
+    SuccessOrExit(error = mTxtData.SetFrom(aBuffer, aLength));
+    VerifyOrExit(Dns::TxtRecord::VerifyTxtData(mTxtData.GetBytes(), mTxtData.GetLength(), /* aAllowEmpty */ false),
+                 error = kErrorParse);
+
+exit:
+    if (error != kErrorNone)
+    {
+        mTxtData.Free();
+    }
+    return error;
+}
 //---------------------------------------------------------------------------------------------------------------------
 // Server::Host
 
@@ -2038,7 +2058,7 @@ void Server::Host::AddService(Service &aService)
 
 void Server::Host::RemoveService(Service *aService, RetainName aRetainName, NotifyMode aNotifyServiceHandler)
 {
-    Server &server = Get<Server>();
+    //Server &server = Get<Server>();
 
     VerifyOrExit(aService != nullptr);
 
@@ -2046,6 +2066,7 @@ void Server::Host::RemoveService(Service *aService, RetainName aRetainName, Noti
 
     aService->Log(aRetainName ? Service::kRemoveButRetainName : Service::kFullyRemove);
 
+    /*
     if (aNotifyServiceHandler && server.mServiceUpdateHandler.IsSet())
     {
         uint32_t updateId = server.AllocateId();
@@ -2058,6 +2079,9 @@ void Server::Host::RemoveService(Service *aService, RetainName aRetainName, Noti
         // failure of the platform mDNS implementation and in which case the
         // service is not expected to be still registered.
     }
+    */
+    (void)aRetainName;
+    (void)aNotifyServiceHandler;
 
     if (!aRetainName)
     {
@@ -2116,6 +2140,7 @@ exit:
 //---------------------------------------------------------------------------------------------------------------------
 // Server::UpdateMetadata
 
+/*
 Server::UpdateMetadata::UpdateMetadata(Instance &aInstance, Host &aHost, const MessageMetadata &aMessageMetadata)
     : InstanceLocator(aInstance)
     , mNext(nullptr)
@@ -2133,6 +2158,7 @@ Server::UpdateMetadata::UpdateMetadata(Instance &aInstance, Host &aHost, const M
         mMessageInfo = *aMessageMetadata.mMessageInfo;
     }
 }
+*/
 
 } // namespace Srp
 } // namespace ot

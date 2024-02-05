@@ -56,6 +56,13 @@ otError otOffloadDatasetInitNew(otInstance *aInstance, otOperationalDataset *aDa
 }
 
 otError otOffloadThreadStartStop(otInstance *aInstance, bool aStart)
-{ 
+{
     return AsCoreType(aInstance).Get<Offload>().ThreadStartStop(aStart);
+}
+
+void otOffloadSrpServerSetServiceUpdateHandler(otInstance *aInstance,
+                                               otSrpServerServiceUpdateHandler aServiceHandler,
+                                               void                           *aContext)
+{
+    return AsCoreType(aInstance).Get<Offload>().SetServiceUpdateHandler(aServiceHandler, aContext);
 }
