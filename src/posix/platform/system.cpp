@@ -132,33 +132,34 @@ void otSysSetInfraNetif(const char *aInfraNetifName, int aIcmp6Socket)
 
 void platformInit(otPlatformConfig *aPlatformConfig)
 {
+    PosixSpinelMode spinelMode;
 #if OPENTHREAD_POSIX_CONFIG_BACKTRACE_ENABLE
     platformBacktraceInit();
 #endif
 
     platformAlarmInit(aPlatformConfig->mSpeedUpFactor, aPlatformConfig->mRealTimeSignal);
-    //platformRadioInit(get802154RadioUrl(aPlatformConfig));
-    platformCpInit(get802154RadioUrl(aPlatformConfig));
 
-    // For Dry-Run option, only init the radio.
+    spinelMode = platformSpinelInit(get802154RadioUrl(aPlatformConfig));
+
+    // For Dry-Run option, only init the co-processor
     VerifyOrExit(!aPlatformConfig->mDryRun);
 
+    if (spinelMode == PosixSpinelMode::RCP)
+    {
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    // platformTrelInit(getTrelRadioUrl(aPlatformConfig));
+        // platformTrelInit(getTrelRadioUrl(aPlatformConfig));
 #endif
-    platformRandomInit();
+        platformRandomInit();
 
 #if OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
     // platformBackboneInit(aPlatformConfig->mBackboneInterfaceName);
 #endif
 
 #if OPENTHREAD_POSIX_CONFIG_INFRA_IF_ENABLE
-    ot::Posix::InfraNetif::Get().Init();
-
+        ot::Posix::InfraNetif::Get().Init();
 #endif
 
-    //gNetifName[0] = '\0';
-
+        //gNetifName[0] = '\0';
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
     platformNetifInit(aPlatformConfig);
 #endif
@@ -170,6 +171,14 @@ void platformInit(otPlatformConfig *aPlatformConfig)
     //ot::Posix::Udp::Get().Init(aPlatformConfig->mInterfaceName);
 #endif
 #endif
+    }
+    else if (spinelMode == PosixSpinelMode::NCP)
+    {
+    }
+    else
+    {
+        exit(-1);
+    }
 
 exit:
     return;

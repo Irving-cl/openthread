@@ -69,6 +69,7 @@ target_include_directories(openthread-spinel-rcp PUBLIC ${OT_PUBLIC_INCLUDES} PR
 target_sources(openthread-radio-spinel
     PRIVATE
     radio_spinel.cpp
+    spinel_base.cpp
     ncp_spinel_parser.cpp
     spinel_decoder.cpp
 )

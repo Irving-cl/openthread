@@ -84,6 +84,13 @@ enum
     OT_EVENT_DATA_MAX_SIZE          = 1024,
 };
 
+enum PosixSpinelMode
+{
+    UNKNOWN = 0,
+    RCP     = 1,
+    NCP     = 2,
+};
+
 OT_TOOL_PACKED_BEGIN
 struct VirtualTimeEvent
 {
@@ -485,6 +492,12 @@ bool platformInfraIfIsRunning(void);
  *
  */
 void platformBacktraceInit(void);
+
+PosixSpinelMode platformSpinelInit(const char *aUrl);
+
+void platformSpinelProcess(otInstance *aInstance, const otSysMainloopContext *aContext);
+
+void platformSpinelUpdateFdSet(otSysMainloopContext *aContext);
 
 void platformCpInit(const char *aUrl);
 
