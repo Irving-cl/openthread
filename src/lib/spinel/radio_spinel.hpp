@@ -1044,7 +1044,7 @@ private:
     bool    mResetRadioOnStartup : 1; ///< Whether should send reset command when init.
     int16_t mRcpFailureCount;         ///< Count of consecutive RCP failures.
     uint8_t mRcpFailure : 2;          ///< RCP failure reason, should recover and retry operation.
-
+                                      ///
     // Properties set by core.
     uint8_t      mKeyIdMode;
     uint8_t      mKeyId;
@@ -1070,8 +1070,7 @@ private:
     bool mFemLnaGainSet : 1;               ///< Whether FEM LNA gain has been set.
     bool mEnergyScanning : 1;              ///< If fails while scanning, restarts scanning.
     bool mMacFrameCounterSet : 1;          ///< Whether the MAC frame counter has been set.
-
-#endif // OPENTHREAD_SPINEL_CONFIG_RCP_RESTORATION_MAX_COUNT > 0
+#endif                                     // OPENTHREAD_SPINEL_CONFIG_RCP_RESTORATION_MAX_COUNT > 0
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
     bool   mDiagMode;
@@ -1086,11 +1085,6 @@ private:
     MaxPowerTable mMaxPowerTable;
 
     otRadioSpinelMetrics mRadioSpinelMetrics;
-
-#if OPENTHREAD_SPINEL_CONFIG_VENDOR_HOOK_ENABLE
-    otRadioSpinelVendorRestorePropertiesCallback mVendorRestorePropertiesCallback;
-    void                                        *mVendorRestorePropertiesContext;
-#endif
 };
 
 } // namespace Spinel

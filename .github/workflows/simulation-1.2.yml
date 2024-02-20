@@ -258,7 +258,10 @@ jobs:
       run: |
         ulimit -c unlimited
         ./script/test prepare_coredump_upload
-        OT_OPTIONS=-DOT_READLINE=OFF OT_NODE_TYPE=rcp ./script/test build expect
+        OT_OPTIONS='-DOT_READLINE=OFF -DOT_FULL_LOGS=ON -DOT_LOG_OUTPUT=PLATFORM_DEFINED' OT_NODE_TYPE=rcp ./script/test build expect
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
     - name: Check Crash
       if: ${{ failure() }}
       run: |

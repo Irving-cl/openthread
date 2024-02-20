@@ -35,9 +35,20 @@
 #ifndef SPINEL_SPINEL_INTERFACE_HPP_
 #define SPINEL_SPINEL_INTERFACE_HPP_
 
+#include "openthread-spinel-config.h"
 #include "lib/spinel/multi_frame_buffer.hpp"
 #include "lib/spinel/radio_spinel_metrics.h"
 #include "lib/spinel/spinel.h"
+
+/**
+ * Maximum number of Spinel Interface IDs.
+ *
+ */
+#if OPENTHREAD_CONFIG_MULTIPAN_RCP_ENABLE
+static constexpr uint8_t kSpinelHeaderMaxNumIid = 4;
+#else
+static constexpr uint8_t kSpinelHeaderMaxNumIid = 1;
+#endif
 
 namespace ot {
 namespace Spinel {

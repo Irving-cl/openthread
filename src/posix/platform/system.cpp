@@ -37,6 +37,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <syslog.h>
 
 #include <openthread-core-config.h>
 #include <openthread/border_router.h>
@@ -128,6 +129,8 @@ void otSysSetInfraNetif(const char *aInfraNetifName, int aIcmp6Socket)
 
 void platformInit(otPlatformConfig *aPlatformConfig)
 {
+    PosixSpinelMode spinelMode;
+
 #if OPENTHREAD_POSIX_CONFIG_BACKTRACE_ENABLE
     platformBacktraceInit();
 #endif

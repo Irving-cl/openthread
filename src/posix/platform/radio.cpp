@@ -58,7 +58,11 @@ namespace {
 extern "C" void platformRadioInit(const char *aUrl) { sRadio.Init(aUrl); }
 } // namespace
 
+<<<<<<< HEAD
 Radio::Radio(ot::Spinel::SpinelBase &aSpinelBase)
+=======
+Radio::Radio(Spinel::SpinelBase &aSpinelBase)
+>>>>>>> 1e4875982 ([posix] refactor radio spinel to separate the spinel handling from radio methods)
     : mRadioUrl(nullptr)
     , mRadioSpinel(aSpinelBase)
 {
