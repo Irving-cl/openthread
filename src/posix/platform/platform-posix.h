@@ -84,6 +84,13 @@ enum
     OT_EVENT_DATA_MAX_SIZE          = 1024,
 };
 
+enum PosixSpinelMode
+{
+    UNKNOWN = 0,
+    RCP     = 1,
+    NCP     = 2,
+};
+
 OT_TOOL_PACKED_BEGIN
 struct VirtualTimeEvent
 {
@@ -338,13 +345,13 @@ void virtualTimeReceiveEvent(struct VirtualTimeEvent *aEvent);
 void virtualTimeSendSleepEvent(const struct timeval *aTimeout);
 
 /**
- * Performs radio spinel processing of virtual time simulation.
+ * Performs spinel processing of virtual time simulation.
  *
  * @param[in]   aInstance   A pointer to the OpenThread instance.
  * @param[in]   aEvent      A pointer to the current event.
  *
  */
-void virtualTimeRadioSpinelProcess(otInstance *aInstance, const struct VirtualTimeEvent *aEvent);
+void virtualTimeSpinelProcess(otInstance *aInstance, const struct VirtualTimeEvent *aEvent);
 
 enum SocketBlockOption
 {
@@ -420,6 +427,12 @@ extern otInstance *gInstance;
  *
  */
 void platformBacktraceInit(void);
+
+PosixSpinelMode platformSpinelInit(const char *aUrl);
+
+void platformSpinelDeinit(void);
+
+void platformSpinelProcess(otInstance *aInstance, const otSysMainloopContext *aContext);
 
 #ifdef __cplusplus
 }

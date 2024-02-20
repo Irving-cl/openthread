@@ -37,6 +37,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <syslog.h>
 
 #include <openthread-core-config.h>
 #include <openthread/border_router.h>
@@ -127,12 +128,27 @@ void otSysSetInfraNetif(const char *aInfraNetifName, int aIcmp6Socket)
 
 void platformInit(otPlatformConfig *aPlatformConfig)
 {
+    PosixSpinelMode spinelMode;
+
 #if OPENTHREAD_POSIX_CONFIG_BACKTRACE_ENABLE
     platformBacktraceInit();
 #endif
 
     platformAlarmInit(aPlatformConfig->mSpeedUpFactor, aPlatformConfig->mRealTimeSignal);
-    platformRadioInit(get802154RadioUrl(aPlatformConfig));
+
+    spinelMode = platformSpinelInit(get802154RadioUrl(aPlatformConfig));
+
+    if (spinelMode == PosixSpinelMode::RCP)
+    {
+        platformRadioInit(get802154RadioUrl(aPlatformConfig));
+    }
+    else if (spinelMode == PosixSpinelMode::NCP)
+    {
+    }
+    else
+    {
+        exit(-1);
+    }
 
     // For Dry-Run option, only init the radio.
     VerifyOrExit(!aPlatformConfig->mDryRun);
@@ -252,6 +268,7 @@ void platformDeinit(void)
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
     virtualTimeDeinit();
 #endif
+    platformSpinelDeinit();
     platformRadioDeinit();
 
     // For Dry-Run option, only the radio is initialized.
@@ -389,8 +406,10 @@ void otSysMainloopProcess(otInstance *aInstance, const otSysMainloopContext *aMa
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
     virtualTimeProcess(aInstance, aMainloop);
 #else
-    platformRadioProcess(aInstance, aMainloop);
+    platformSpinelProcess(aInstance, aMainloop);
 #endif
+    platformRadioProcess(aInstance, aMainloop);
+
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
     platformTrelProcess(aInstance, aMainloop);
 #endif
