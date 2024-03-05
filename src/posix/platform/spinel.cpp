@@ -58,7 +58,7 @@ Spinel::Spinel(void)
 {
 }
 
-PosixSpinelMode Spinel::Init(const char *aUrl)
+otSpinelMode Spinel::Init(const char *aUrl)
 {
     bool         swReset;
     spinel_iid_t iidList[ot::Spinel::kSpinelHeaderMaxNumIid];
@@ -81,7 +81,8 @@ PosixSpinelMode Spinel::Init(const char *aUrl)
 
     ProcessRadioUrl(mUrl);
 
-    return PosixSpinelMode::RCP;
+    // TODO: ATTENTION
+    return otSpinelMode::NCP;
 }
 
 void Spinel::ProcessRadioUrl(const RadioUrl &aRadioUrl) { (void)aRadioUrl; }
@@ -185,7 +186,7 @@ void Spinel::VirtualTimeInit(void)
 } // namespace Posix
 } // namespace ot
 
-PosixSpinelMode platformSpinelInit(const char *aUrl) { return ot::Posix::GetSpinel().Init(aUrl); }
+otSpinelMode platformSpinelInit(const char *aUrl) { return ot::Posix::GetSpinel().Init(aUrl); }
 
 void platformSpinelDeinit(void) { return ot::Posix::GetSpinel().GetSpinelBase().Deinit(); }
 
@@ -203,3 +204,11 @@ void platformSpinelProcess(otInstance *aInstance, const otSysMainloopContext *aC
     ot::Posix::GetSpinelBase().Process(aContext);
 }
 #endif // OPENTHREAD_POSIX_VIRTUAL_TIME
+
+void platformSpinelUpdateFdSet(otSysMainloopContext *aContext)
+{
+    aContext->mTimeout.tv_sec  = 0;
+    aContext->mTimeout.tv_usec = 0;
+
+    ot::Posix::GetSpinelInterface().UpdateFdSet(aContext);
+}

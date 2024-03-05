@@ -84,13 +84,6 @@ enum
     OT_EVENT_DATA_MAX_SIZE          = 1024,
 };
 
-enum PosixSpinelMode
-{
-    UNKNOWN = 0,
-    RCP     = 1,
-    NCP     = 2,
-};
-
 OT_TOOL_PACKED_BEGIN
 struct VirtualTimeEvent
 {
@@ -246,6 +239,8 @@ void platformNetifInit(otPlatformConfig *aPlatformConfig);
  *
  */
 void platformNetifSetUp(void);
+
+void platformNetifSetUpNcp(void);
 
 /**
  * Tears down platform netif.
@@ -440,7 +435,7 @@ void platformBacktraceInit(void);
  * @retval  RCP      The Co-processor is a RCP.
  * @retval  NCP      The Co-processor is a NCP.
  */
-PosixSpinelMode platformSpinelInit(const char *aUrl);
+otSpinelMode platformSpinelInit(const char *aUrl);
 
 /**
  * Shuts down the spinel service used by OpenThread.
@@ -456,6 +451,8 @@ void platformSpinelDeinit(void);
  *
  */
 void platformSpinelProcess(otInstance *aInstance, const otSysMainloopContext *aContext);
+
+void platformSpinelUpdateFdSet(otSysMainloopContext *aContext);
 
 #ifdef __cplusplus
 }

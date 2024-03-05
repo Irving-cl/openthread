@@ -57,6 +57,13 @@ typedef struct otCliCommand
                         char   *aArgs[]); ///< A function pointer to process the command.
 } otCliCommand;
 
+typedef enum otCliMode
+{
+    INVALID,
+    CORE,
+    OFFLOAD,
+} otCliMode;
+
 /**
  * @addtogroup api-cli
  *
@@ -87,7 +94,7 @@ typedef int (*otCliOutputCallback)(void *aContext, const char *aFormat, va_list 
  * @param[in]  aContext    A user context pointer.
  *
  */
-void otCliInit(otInstance *aInstance, otCliOutputCallback aCallback, void *aContext);
+void otCliInit(otInstance *aInstance, otCliOutputCallback aCallback, otCliMode aMode, void *aContext);
 
 /**
  * Is called to feed in a console input line.

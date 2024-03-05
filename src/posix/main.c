@@ -68,6 +68,7 @@
 #include <openthread/platform/misc.h>
 
 #include "lib/platform/reset_util.h"
+#include "posix/platform/posix-offload.h"
 
 /**
  * Initializes NCP app.
@@ -288,7 +289,8 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
 
 static otInstance *InitInstance(PosixConfig *aConfig)
 {
-    otInstance *instance = NULL;
+    otInstance  *instance = NULL;
+    otSpinelMode mode     = UNKNOWN;
 
     syslog(LOG_INFO, "Running %s", otGetVersionString());
     syslog(LOG_INFO, "Thread version: %hu", otThreadGetVersion());
@@ -297,14 +299,22 @@ static otInstance *InitInstance(PosixConfig *aConfig)
     instance = otSysInit(&aConfig->mPlatformConfig);
     VerifyOrDie(instance != NULL, OT_EXIT_FAILURE);
     syslog(LOG_INFO, "Thread interface: %s", otSysGetThreadNetifName());
+    mode = aConfig->mPlatformConfig.mSpinelMode;
 
-    if (aConfig->mPrintRadioVersion)
+    if (mode == RCP)
     {
-        printf("%s\n", otPlatRadioGetVersionString(instance));
+        if (aConfig->mPrintRadioVersion)
+        {
+            printf("%s\n", otPlatRadioGetVersionString(instance));
+        }
+        else
+        {
+            syslog(LOG_INFO, "RCP version: %s", otPlatRadioGetVersionString(instance));
+        }
     }
-    else
+    else if (mode == NCP)
     {
-        syslog(LOG_INFO, "RCP version: %s", otPlatRadioGetVersionString(instance));
+        // TODO: print NCP version string
     }
 
     if (aConfig->mPlatformConfig.mDryRun)
@@ -389,7 +399,8 @@ int main(int argc, char *argv[])
     {
         otSysMainloopContext mainloop;
 
-        otTaskletsProcess(instance);
+        // TODO: ATTENTION
+        offloadTaskletsProcess(instance);
 
         FD_ZERO(&mainloop.mReadFdSet);
         FD_ZERO(&mainloop.mWriteFdSet);

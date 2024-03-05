@@ -139,6 +139,8 @@ add_library(openthread-posix
     misc.cpp
     multicast_routing.cpp
     netif.cpp
+    offload.cpp
+    offload_tasklet.cpp
     power.cpp
     radio.cpp
     radio_url.cpp

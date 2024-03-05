@@ -68,6 +68,13 @@ enum
     OT_PLATFORM_CONFIG_MAX_RADIO_URLS = 2, ///< Max number of Radio URLs.
 };
 
+typedef enum otSpinelMode
+{
+    UNKNOWN = 0,
+    RCP     = 1,
+    NCP     = 2,
+} otSpinelMode;
+
 /**
  * Represents platform specific configurations.
  *
@@ -83,6 +90,7 @@ typedef struct otPlatformConfig
     bool        mPersistentInterface;                          ///< Whether persistent the interface
     bool        mDryRun;                                       ///< If 'DryRun' is set, the posix daemon will exit
                                                                ///< directly after initialization.
+    otSpinelMode mSpinelMode;
 } otPlatformConfig;
 
 /**

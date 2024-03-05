@@ -55,11 +55,14 @@
 #include "posix/platform/firewall.hpp"
 #include "posix/platform/infra_if.hpp"
 #include "posix/platform/mainloop.hpp"
+#include "posix/platform/offload.hpp"
 #include "posix/platform/radio_url.hpp"
 #include "posix/platform/udp.hpp"
 
 otInstance *gInstance = nullptr;
 bool        gDryRun   = false;
+
+otSpinelMode sSpinelMode;
 
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
 static void processStateChange(otChangedFlags aFlags, void *aContext)
@@ -129,22 +132,25 @@ void otSysSetInfraNetif(const char *aInfraNetifName, int aIcmp6Socket)
 
 void platformInit(otPlatformConfig *aPlatformConfig)
 {
-    PosixSpinelMode spinelMode;
-
 #if OPENTHREAD_POSIX_CONFIG_BACKTRACE_ENABLE
     platformBacktraceInit();
 #endif
 
     platformAlarmInit(aPlatformConfig->mSpeedUpFactor, aPlatformConfig->mRealTimeSignal);
-    platformSpinelInit(get802154RadioUrl(aPlatformConfig));
-    platformRadioInit(get802154RadioUrl(aPlatformConfig));
+    sSpinelMode = platformSpinelInit(get802154RadioUrl(aPlatformConfig));
 
     // For Dry-Run option, only init the radio.
     VerifyOrExit(!aPlatformConfig->mDryRun);
 
+    if (sSpinelMode == RCP)
+    {
+        platformRadioInit(get802154RadioUrl(aPlatformConfig));
+
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    platformTrelInit(getTrelRadioUrl(aPlatformConfig));
+        platformTrelInit(getTrelRadioUrl(aPlatformConfig));
 #endif
+    }
+
     platformRandomInit();
 
 #if OPENTHREAD_POSIX_CONFIG_INFRA_IF_ENABLE
@@ -158,13 +164,16 @@ void platformInit(otPlatformConfig *aPlatformConfig)
     platformNetifInit(aPlatformConfig);
 #endif
 
+    if (sSpinelMode == RCP)
+    {
 #if OPENTHREAD_CONFIG_PLATFORM_UDP_ENABLE
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
-    ot::Posix::Udp::Get().Init(otSysGetThreadNetifName());
+        ot::Posix::Udp::Get().Init(otSysGetThreadNetifName());
 #else
-    ot::Posix::Udp::Get().Init(aPlatformConfig->mInterfaceName);
+        ot::Posix::Udp::Get().Init(aPlatformConfig->mInterfaceName);
 #endif
 #endif
+    }
 
 exit:
     return;
@@ -176,26 +185,35 @@ void platformSetUp(otPlatformConfig *aPlatformConfig)
 
     VerifyOrExit(!gDryRun);
 
-#if OPENTHREAD_POSIX_CONFIG_INFRA_IF_ENABLE
-    if (aPlatformConfig->mBackboneInterfaceName != nullptr && strlen(aPlatformConfig->mBackboneInterfaceName) > 0)
+    if (sSpinelMode == RCP)
     {
-        int icmp6Sock = -1;
+#if OPENTHREAD_POSIX_CONFIG_INFRA_IF_ENABLE
+        if (aPlatformConfig->mBackboneInterfaceName != nullptr && strlen(aPlatformConfig->mBackboneInterfaceName) > 0)
+        {
+            int icmp6Sock = -1;
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-        icmp6Sock = ot::Posix::InfraNetif::CreateIcmp6Socket(aPlatformConfig->mBackboneInterfaceName);
+            icmp6Sock = ot::Posix::InfraNetif::CreateIcmp6Socket(aPlatformConfig->mBackboneInterfaceName);
 #endif
 
-        otSysSetInfraNetif(aPlatformConfig->mBackboneInterfaceName, icmp6Sock);
-    }
+            otSysSetInfraNetif(aPlatformConfig->mBackboneInterfaceName, icmp6Sock);
+        }
 #endif
 
 #if OPENTHREAD_POSIX_CONFIG_INFRA_IF_ENABLE
-    ot::Posix::InfraNetif::Get().SetUp();
+        ot::Posix::InfraNetif::Get().SetUp();
 #endif
 
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
-    platformNetifSetUp();
+        platformNetifSetUp();
 #endif
+    }
+    else if (sSpinelMode == NCP)
+    {
+#if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
+        platformNetifSetUpNcp();
+#endif
+    }
 
 #if OPENTHREAD_CONFIG_PLATFORM_UDP_ENABLE
     ot::Posix::Udp::Get().SetUp();
@@ -205,9 +223,18 @@ void platformSetUp(otPlatformConfig *aPlatformConfig)
     ot::Posix::Daemon::Get().SetUp();
 #endif
 
+    if (sSpinelMode == NCP)
+    {
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
-    SuccessOrDie(otSetStateChangedCallback(gInstance, processStateChange, gInstance));
+        static_cast<ot::Posix::Offload *>(gInstance)->NetifSetStateChangedCallback(processStateChange, gInstance);
 #endif
+    }
+    else if (sSpinelMode == RCP)
+    {
+#if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE || OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
+        SuccessOrDie(otSetStateChangedCallback(gInstance, processStateChange, gInstance));
+#endif
+    }
 
 exit:
     return;
@@ -218,9 +245,13 @@ otInstance *otSysInit(otPlatformConfig *aPlatformConfig)
     OT_ASSERT(gInstance == nullptr);
 
     platformInit(aPlatformConfig);
+    aPlatformConfig->mSpinelMode = NCP;
 
-    gDryRun   = aPlatformConfig->mDryRun;
-    gInstance = otInstanceInitSingle();
+    gDryRun = aPlatformConfig->mDryRun;
+    // TODO: ATTENTION
+    // gInstance = otInstanceInitSingle();
+    gInstance = ot::Posix::offloadInstanceInit();
+
     OT_ASSERT(gInstance != nullptr);
 
     platformSetUp(aPlatformConfig);
@@ -254,11 +285,18 @@ exit:
 
 void platformDeinit(void)
 {
+    if (sSpinelMode == RCP)
+    {
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
-    virtualTimeDeinit();
+        virtualTimeDeinit();
 #endif
+    }
     platformSpinelDeinit();
-    platformRadioDeinit();
+
+    if (sSpinelMode == RCP)
+    {
+        platformRadioDeinit();
+    }
 
     // For Dry-Run option, only the radio is initialized.
     VerifyOrExit(!gDryRun);
@@ -269,13 +307,17 @@ void platformDeinit(void)
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
     platformNetifDeinit();
 #endif
+
+    if (sSpinelMode == RCP)
+    {
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    platformTrelDeinit();
+        platformTrelDeinit();
 #endif
 
 #if OPENTHREAD_POSIX_CONFIG_INFRA_IF_ENABLE
-    ot::Posix::InfraNetif::Get().Deinit();
+        ot::Posix::InfraNetif::Get().Deinit();
 #endif
+    }
 
 exit:
     return;
@@ -286,7 +328,14 @@ void otSysDeinit(void)
     OT_ASSERT(gInstance != nullptr);
 
     platformTearDown();
-    otInstanceFinalize(gInstance);
+    if (sSpinelMode == RCP)
+    {
+        otInstanceFinalize(gInstance);
+    }
+    else if (sSpinelMode == NCP)
+    {
+    }
+
     gInstance = nullptr;
     platformDeinit();
 }
@@ -325,23 +374,35 @@ void otSysMainloopUpdate(otInstance *aInstance, otSysMainloopContext *aMainloop)
 {
     ot::Posix::Mainloop::Manager::Get().Update(*aMainloop);
 
-    platformAlarmUpdateTimeout(&aMainloop->mTimeout);
+    if (sSpinelMode == RCP)
+    {
+        platformAlarmUpdateTimeout(&aMainloop->mTimeout);
+    }
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
     platformNetifUpdateFdSet(aMainloop);
 #endif
+
+    if (sSpinelMode == RCP)
+    {
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
-    virtualTimeUpdateFdSet(aMainloop);
+        virtualTimeUpdateFdSet(aMainloop);
 #else
-    platformRadioUpdateFdSet(aMainloop);
+        platformRadioUpdateFdSet(aMainloop);
 #endif
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    platformTrelUpdateFdSet(aMainloop);
+        platformTrelUpdateFdSet(aMainloop);
 #endif
 
-    if (otTaskletsArePending(aInstance))
+        if (otTaskletsArePending(aInstance))
+        {
+            aMainloop->mTimeout.tv_sec  = 0;
+            aMainloop->mTimeout.tv_usec = 0;
+        }
+    }
+    else if (sSpinelMode == NCP)
     {
-        aMainloop->mTimeout.tv_sec  = 0;
-        aMainloop->mTimeout.tv_usec = 0;
+        platformSpinelUpdateFdSet(aMainloop);
+        // TODO: TaskletsArePending
     }
 }
 
@@ -397,12 +458,18 @@ void otSysMainloopProcess(otInstance *aInstance, const otSysMainloopContext *aMa
 #else
     platformSpinelProcess(aInstance, aMainloop);
 #endif
-    platformRadioProcess(aInstance, aMainloop);
+
+    if (sSpinelMode == RCP)
+    {
+        platformRadioProcess(aInstance, aMainloop);
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    platformTrelProcess(aInstance, aMainloop);
+        platformTrelProcess(aInstance, aMainloop);
 #endif
-    platformAlarmProcess(aInstance);
+
+        platformAlarmProcess(aInstance);
+    }
+
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
     platformNetifProcess(aMainloop);
 #endif
@@ -413,11 +480,12 @@ bool IsSystemDryRun(void) { return gDryRun; }
 #if OPENTHREAD_POSIX_CONFIG_DAEMON_ENABLE && OPENTHREAD_POSIX_CONFIG_DAEMON_CLI_ENABLE
 void otSysCliInitUsingDaemon(otInstance *aInstance)
 {
+    // TODO: introduce spinel mode
     otCliInit(
         aInstance,
         [](void *aContext, const char *aFormat, va_list aArguments) -> int {
             return static_cast<ot::Posix::Daemon *>(aContext)->OutputFormatV(aFormat, aArguments);
         },
-        &ot::Posix::Daemon::Get());
+        OFFLOAD, &ot::Posix::Daemon::Get());
 }
 #endif

@@ -73,6 +73,7 @@
 #include "common/notifier.hpp"
 #include "common/settings.hpp"
 #include "crypto/mbedtls.hpp"
+#include "instance/instance_def.hpp"
 #include "mac/mac.hpp"
 #include "meshcop/border_agent.hpp"
 #include "meshcop/commissioner.hpp"
@@ -146,14 +147,6 @@
  * @{
  *
  */
-
-/**
- * Represents an opaque (and empty) type corresponding to an OpenThread instance object.
- *
- */
-typedef struct otInstance
-{
-} otInstance;
 
 namespace ot {
 

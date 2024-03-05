@@ -68,6 +68,7 @@
 #include "cli/cli_link_metrics.hpp"
 #include "cli/cli_mac_filter.hpp"
 #include "cli/cli_network_data.hpp"
+#include "cli/cli_offload.hpp"
 #include "cli/cli_output.hpp"
 #include "cli/cli_ping.hpp"
 #include "cli/cli_srp_client.hpp"
@@ -87,6 +88,8 @@
 #include "common/debug.hpp"
 #include "common/type_traits.hpp"
 #include "instance/instance.hpp"
+#include "posix/platform/include/openthread/openthread-system.h"
+#include "posix/platform/offload.hpp"
 
 namespace ot {
 
@@ -104,24 +107,8 @@ extern "C" void otCliAppendResult(otError aError);
 extern "C" void otCliOutputBytes(const uint8_t *aBytes, uint8_t aLength);
 extern "C" void otCliOutputFormat(const char *aFmt, ...);
 
-/**
- * Implements the CLI interpreter.
- *
- */
-class Interpreter : public OutputImplementer, public Output
+class InterpreterBase : public OutputImplementer, public Output
 {
-#if OPENTHREAD_FTD || OPENTHREAD_MTD
-    friend class Br;
-    friend class Bbr;
-    friend class Commissioner;
-    friend class Dns;
-    friend class Joiner;
-    friend class LinkMetrics;
-    friend class NetworkData;
-    friend class PingSender;
-    friend class SrpClient;
-    friend class SrpServer;
-#endif
     friend void otCliPlatLogv(otLogLevel, otLogRegion, const char *, va_list);
     friend void otCliAppendResult(otError aError);
     friend void otCliOutputBytes(const uint8_t *aBytes, uint8_t aLength);
@@ -130,6 +117,8 @@ class Interpreter : public OutputImplementer, public Output
 public:
     typedef Utils::CmdLineParser::Arg Arg;
 
+    typedef void (*ProcessLineHandler)(char *aBuf, void *aContext);
+
     /**
      * Constructor
      *
@@ -137,7 +126,10 @@ public:
      * @param[in]  aCallback    A callback method called to process CLI output.
      * @param[in]  aContext     A user context pointer.
      */
-    explicit Interpreter(Instance *aInstance, otCliOutputCallback aCallback, void *aContext);
+    explicit InterpreterBase(otInstance         *aInstance,
+                             otCliOutputCallback aCallback,
+                             ProcessLineHandler  aProcessLineHandler,
+                             void               *aContext);
 
     /**
      * Returns a reference to the interpreter object.
@@ -145,7 +137,7 @@ public:
      * @returns A reference to the interpreter object.
      *
      */
-    static Interpreter &GetInterpreter(void)
+    static InterpreterBase &GetInterpreterBase(void)
     {
         OT_ASSERT(sInterpreter != nullptr);
 
@@ -160,7 +152,7 @@ public:
      * @param[in]  aContext   A pointer to a user context.
      *
      */
-    static void Initialize(otInstance *aInstance, otCliOutputCallback aCallback, void *aContext);
+    static void Initialize(otInstance *aInstance, otCliOutputCallback aCallback, otCliMode aMode, void *aContext);
 
     /**
      * Returns whether the interpreter is initialized.
@@ -203,91 +195,13 @@ public:
      */
     otError SetUserCommands(const otCliCommand *aCommands, uint8_t aLength, void *aContext);
 
-    static constexpr uint8_t kLinkModeStringSize = sizeof("rdn"); ///< Size of string buffer for a MLE Link Mode.
-
-    /**
-     * Converts a given MLE Link Mode to flag string.
-     *
-     * The characters 'r', 'd', and 'n' are respectively used for `mRxOnWhenIdle`, `mDeviceType` and `mNetworkData`
-     * flags. If all flags are `false`, then "-" is returned.
-     *
-     * @param[in]  aLinkMode       The MLE Link Mode to convert.
-     * @param[out] aStringBuffer   A reference to an string array to place the string.
-     *
-     * @returns A pointer @p aStringBuffer which contains the converted string.
-     *
-     */
-    static const char *LinkModeToString(const otLinkModeConfig &aLinkMode, char (&aStringBuffer)[kLinkModeStringSize]);
-
-    /**
-     * Converts an IPv6 address origin `OT_ADDRESS_ORIGIN_*` value to human-readable string.
-     *
-     * @param[in] aOrigin   The IPv6 address origin to convert.
-     *
-     * @returns A human-readable string representation of @p aOrigin.
-     *
-     */
-    static const char *AddressOriginToString(uint8_t aOrigin);
-
-    /**
-     * Parses a given argument string as a route preference comparing it against  "high", "med", or
-     * "low".
-     *
-     * @param[in]  aArg          The argument string to parse.
-     * @param[out] aPreference   Reference to a `otRoutePreference` to return the parsed preference.
-     *
-     * @retval OT_ERROR_NONE             Successfully parsed @p aArg and updated @p aPreference.
-     * @retval OT_ERROR_INVALID_ARG      @p aArg is not a valid preference string "high", "med", or "low".
-     *
-     */
-    static otError ParsePreference(const Arg &aArg, otRoutePreference &aPreference);
-
-    /**
-     * Converts a route preference value to human-readable string.
-     *
-     * @param[in] aPreference   The preference value to convert (`OT_ROUTE_PREFERENCE_*` values).
-     *
-     * @returns A string representation @p aPreference.
-     *
-     */
-    static const char *PreferenceToString(signed int aPreference);
-
-    /**
-     * Parses the argument as an IP address.
-     *
-     * If the argument string is an IPv4 address, this method will try to synthesize an IPv6 address using preferred
-     * NAT64 prefix in the network data.
-     *
-     * @param[in]  aInstance       A pointer to OpenThread instance.
-     * @param[in]  aArg            The argument string to parse.
-     * @param[out] aAddress        A reference to an `otIp6Address` to output the parsed IPv6 address.
-     * @param[out] aSynthesized    Whether @p aAddress is synthesized from an IPv4 address.
-     *
-     * @retval OT_ERROR_NONE           The argument was parsed successfully.
-     * @retval OT_ERROR_INVALID_ARGS   The argument is empty or does not contain a valid IP address.
-     * @retval OT_ERROR_INVALID_STATE  No valid NAT64 prefix in the network data.
-     *
-     */
-    static otError ParseToIp6Address(otInstance   *aInstance,
-                                     const Arg    &aArg,
-                                     otIp6Address &aAddress,
-                                     bool         &aSynthesized);
-
 protected:
-    static Interpreter *sInterpreter;
+    static InterpreterBase *sInterpreter;
 
-private:
     static constexpr uint8_t  kIndentSize            = 4;
     static constexpr uint16_t kMaxArgs               = 32;
     static constexpr uint16_t kMaxLineLength         = OPENTHREAD_CONFIG_CLI_MAX_LINE_LENGTH;
     static constexpr uint16_t kMaxUserCommandEntries = OPENTHREAD_CONFIG_CLI_MAX_USER_CMD_ENTRIES;
-
-    static constexpr uint32_t kNetworkDiagnosticTimeoutMsecs = 5000;
-    static constexpr uint32_t kLocateTimeoutMsecs            = 2500;
-
-    static constexpr uint16_t kMaxTxtDataSize = OPENTHREAD_CONFIG_CLI_TXT_RECORD_MAX_SIZE;
-
-    using Command = CommandEntry<Interpreter>;
 
     template <typename ValueType> using GetHandler         = ValueType (&)(otInstance *);
     template <typename ValueType> using SetHandler         = void (&)(otInstance *, ValueType);
@@ -378,6 +292,153 @@ private:
                                  SetEnabledHandlerFailable aSetEnabledHandler);
 
     void OutputPrompt(void);
+
+    template <CommandId kCommandId> otError Process(Arg aArgs[]);
+
+    otError ProcessUserCommands(Arg aArgs[]);
+
+    struct UserCommandsEntry
+    {
+        const otCliCommand *mCommands;
+        uint8_t             mLength;
+        void               *mContext;
+    };
+
+    UserCommandsEntry                mUserCommands[kMaxUserCommandEntries];
+    ot::Callback<ProcessLineHandler> mProcessLineHandler;
+};
+
+/**
+ * Implements the CLI interpreter.
+ *
+ */
+class Interpreter : public InterpreterBase
+{
+#if OPENTHREAD_FTD || OPENTHREAD_MTD
+    friend class Br;
+    friend class Bbr;
+    friend class Commissioner;
+    friend class Dns;
+    friend class Joiner;
+    friend class LinkMetrics;
+    friend class NetworkData;
+    friend class PingSender;
+    friend class SrpClient;
+    friend class SrpServer;
+    friend class CliOffload;
+#endif
+
+public:
+    /**
+     * Constructor
+     *
+     * @param[in]  aInstance    The OpenThread instance structure.
+     * @param[in]  aCallback    A callback method called to process CLI output.
+     * @param[in]  aContext     A user context pointer.
+     */
+    explicit Interpreter(Instance *aInstance, otCliOutputCallback aCallback, void *aContext);
+
+    /**
+     * This method returns a reference to the interpreter object.
+     *
+     * @returns A reference to the interpreter object.
+     *
+     */
+    static Interpreter &GetInterpreter(void)
+    {
+        OT_ASSERT(sInterpreter != nullptr);
+
+        return *static_cast<Interpreter *>(sInterpreter);
+    }
+
+    static void ProcessLine(char *aBuf, void *aContext);
+
+    /**
+     * Interprets a CLI command.
+     *
+     * @param[in]  aBuf        A pointer to a string.
+     *
+     */
+    void ProcessLine(char *aBuf);
+
+    static constexpr uint8_t kLinkModeStringSize = sizeof("rdn"); ///< Size of string buffer for a MLE Link Mode.
+
+    /**
+     * Converts a given MLE Link Mode to flag string.
+     *
+     * The characters 'r', 'd', and 'n' are respectively used for `mRxOnWhenIdle`, `mDeviceType` and `mNetworkData`
+     * flags. If all flags are `false`, then "-" is returned.
+     *
+     * @param[in]  aLinkMode       The MLE Link Mode to convert.
+     * @param[out] aStringBuffer   A reference to an string array to place the string.
+     *
+     * @returns A pointer @p aStringBuffer which contains the converted string.
+     *
+     */
+    static const char *LinkModeToString(const otLinkModeConfig &aLinkMode, char (&aStringBuffer)[kLinkModeStringSize]);
+
+    /**
+     * Converts an IPv6 address origin `OT_ADDRESS_ORIGIN_*` value to human-readable string.
+     *
+     * @param[in] aOrigin   The IPv6 address origin to convert.
+     *
+     * @returns A human-readable string representation of @p aOrigin.
+     *
+     */
+    static const char *AddressOriginToString(uint8_t aOrigin);
+
+    /**
+     * Parses a given argument string as a route preference comparing it against  "high", "med", or
+     * "low".
+     *
+     * @param[in]  aArg          The argument string to parse.
+     * @param[out] aPreference   Reference to a `otRoutePreference` to return the parsed preference.
+     *
+     * @retval OT_ERROR_NONE             Successfully parsed @p aArg and updated @p aPreference.
+     * @retval OT_ERROR_INVALID_ARG      @p aArg is not a valid preference string "high", "med", or "low".
+     *
+     */
+    static otError ParsePreference(const Arg &aArg, otRoutePreference &aPreference);
+
+    /**
+     * Converts a route preference value to human-readable string.
+     *
+     * @param[in] aPreference   The preference value to convert (`OT_ROUTE_PREFERENCE_*` values).
+     *
+     * @returns A string representation @p aPreference.
+     *
+     */
+    static const char *PreferenceToString(signed int aPreference);
+
+    /**
+     * Parses the argument as an IP address.
+     *
+     * If the argument string is an IPv4 address, this method will try to synthesize an IPv6 address using preferred
+     * NAT64 prefix in the network data.
+     *
+     * @param[in]  aInstance       A pointer to OpenThread instance.
+     * @param[in]  aArg            The argument string to parse.
+     * @param[out] aAddress        A reference to an `otIp6Address` to output the parsed IPv6 address.
+     * @param[out] aSynthesized    Whether @p aAddress is synthesized from an IPv4 address.
+     *
+     * @retval OT_ERROR_NONE           The argument was parsed successfully.
+     * @retval OT_ERROR_INVALID_ARGS   The argument is empty or does not contain a valid IP address.
+     * @retval OT_ERROR_INVALID_STATE  No valid NAT64 prefix in the network data.
+     *
+     */
+    static otError ParseToIp6Address(otInstance   *aInstance,
+                                     const Arg    &aArg,
+                                     otIp6Address &aAddress,
+                                     bool         &aSynthesized);
+
+private:
+    static constexpr uint32_t kNetworkDiagnosticTimeoutMsecs = 5000;
+    static constexpr uint32_t kLocateTimeoutMsecs            = 2500;
+
+    static constexpr uint16_t kMaxTxtDataSize = OPENTHREAD_CONFIG_CLI_TXT_RECORD_MAX_SIZE;
+
+    using Command = CommandEntry<Interpreter>;
+
     void OutputResult(otError aError);
 
     static otError ParseJoinerDiscerner(Arg &aArg, otJoinerDiscerner &aDiscerner);
@@ -392,8 +453,6 @@ private:
     otError ProcessCommand(Arg aArgs[]);
 
     template <CommandId kCommandId> otError Process(Arg aArgs[]);
-
-    otError ProcessUserCommands(Arg aArgs[]);
 
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
 
@@ -604,25 +663,55 @@ private:
 #endif
 };
 
+/**
+ * Implements the CLI interpreter.
+ *
+ */
+class InterpreterOffload : public InterpreterBase
+{
+    friend class CliOffload;
+
+public:
+    explicit InterpreterOffload(Posix::Offload *aInstance, otCliOutputCallback aCallback, void *aContext);
+
+    static InterpreterOffload &GetInterpreter(void)
+    {
+        OT_ASSERT(sInterpreter != nullptr);
+
+        return *static_cast<InterpreterOffload *>(sInterpreter);
+    }
+
+    static void ProcessLine(char *aBuf, void *aContext);
+
+    void ProcessLine(char *aBuf);
+
+private:
+    void OutputResult(otError aError);
+
+    bool mCommandIsPending;
+
+    CliOffload mOffload;
+};
+
 // Specializations of `FormatStringFor<ValueType>()`
 
-template <> inline constexpr const char *Interpreter::FormatStringFor<uint8_t>(void) { return "%u"; }
+template <> inline constexpr const char *InterpreterBase::FormatStringFor<uint8_t>(void) { return "%u"; }
 
-template <> inline constexpr const char *Interpreter::FormatStringFor<uint16_t>(void) { return "%u"; }
+template <> inline constexpr const char *InterpreterBase::FormatStringFor<uint16_t>(void) { return "%u"; }
 
-template <> inline constexpr const char *Interpreter::FormatStringFor<uint32_t>(void) { return "%lu"; }
+template <> inline constexpr const char *InterpreterBase::FormatStringFor<uint32_t>(void) { return "%lu"; }
 
-template <> inline constexpr const char *Interpreter::FormatStringFor<int8_t>(void) { return "%d"; }
+template <> inline constexpr const char *InterpreterBase::FormatStringFor<int8_t>(void) { return "%d"; }
 
-template <> inline constexpr const char *Interpreter::FormatStringFor<int16_t>(void) { return "%d"; }
+template <> inline constexpr const char *InterpreterBase::FormatStringFor<int16_t>(void) { return "%d"; }
 
-template <> inline constexpr const char *Interpreter::FormatStringFor<int32_t>(void) { return "%ld"; }
+template <> inline constexpr const char *InterpreterBase::FormatStringFor<int32_t>(void) { return "%ld"; }
 
-template <> inline constexpr const char *Interpreter::FormatStringFor<const char *>(void) { return "%s"; }
+template <> inline constexpr const char *InterpreterBase::FormatStringFor<const char *>(void) { return "%s"; }
 
 // Specialization of ProcessGet<> for `uint32_t` and `int32_t`
 
-template <> inline otError Interpreter::ProcessGet<uint32_t>(Arg aArgs[], GetHandler<uint32_t> aGetHandler)
+template <> inline otError InterpreterBase::ProcessGet<uint32_t>(Arg aArgs[], GetHandler<uint32_t> aGetHandler)
 {
     otError error = OT_ERROR_NONE;
 
@@ -633,7 +722,7 @@ exit:
     return error;
 }
 
-template <> inline otError Interpreter::ProcessGet<int32_t>(Arg aArgs[], GetHandler<int32_t> aGetHandler)
+template <> inline otError InterpreterBase::ProcessGet<int32_t>(Arg aArgs[], GetHandler<int32_t> aGetHandler)
 {
     otError error = OT_ERROR_NONE;
 

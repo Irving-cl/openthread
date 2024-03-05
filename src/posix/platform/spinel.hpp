@@ -44,7 +44,7 @@ class Spinel
 public:
     Spinel(void);
 
-    PosixSpinelMode Init(const char *aUrl);
+    otSpinelMode Init(const char *aUrl);
 
     ot::Spinel::SpinelInterface &GetSpinelInterface(void)
     {

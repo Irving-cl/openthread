@@ -90,16 +90,200 @@
 #include "common/numeric_limits.hpp"
 #include "common/string.hpp"
 #include "mac/channel_mask.hpp"
+#include "posix/platform/offload.hpp"
 
 namespace ot {
 namespace Cli {
 
-Interpreter *Interpreter::sInterpreter = nullptr;
+InterpreterBase *InterpreterBase::sInterpreter = nullptr;
 static OT_DEFINE_ALIGNED_VAR(sInterpreterRaw, sizeof(Interpreter), uint64_t);
 
-Interpreter::Interpreter(Instance *aInstance, otCliOutputCallback aCallback, void *aContext)
+InterpreterBase::InterpreterBase(otInstance         *aInstance,
+                                 otCliOutputCallback aCallback,
+                                 ProcessLineHandler  aProcessLineHandler,
+                                 void               *aContext)
     : OutputImplementer(aCallback, aContext)
     , Output(aInstance, *this)
+{
+    ClearAllBytes(mUserCommands);
+
+    mProcessLineHandler.Set(aProcessLineHandler, this);
+
+    OutputPrompt();
+}
+
+void InterpreterBase::Initialize(otInstance *aInstance, otCliOutputCallback aCallback, otCliMode aMode, void *aContext)
+{
+    if (aMode == CORE)
+    {
+        Instance *instance = static_cast<Instance *>(aInstance);
+
+        InterpreterBase::sInterpreter = new (&sInterpreterRaw) Interpreter(instance, aCallback, aContext);
+    }
+    else if (aMode == OFFLOAD)
+    {
+        Posix::Offload *instance = static_cast<Posix::Offload *>(aInstance);
+
+        InterpreterBase::sInterpreter = new (&sInterpreterRaw) InterpreterOffload(instance, aCallback, aContext);
+    }
+    else
+    {
+        // ERROR
+    }
+}
+
+void InterpreterBase::ProcessLine(char *aBuf) { mProcessLineHandler.InvokeIfSet(aBuf); }
+
+otError InterpreterBase::ParseEnableOrDisable(const Arg &aArg, bool &aEnable)
+{
+    otError error = OT_ERROR_NONE;
+
+    if (aArg == "enable")
+    {
+        aEnable = true;
+    }
+    else if (aArg == "disable")
+    {
+        aEnable = false;
+    }
+    else
+    {
+        error = OT_ERROR_INVALID_COMMAND;
+    }
+
+    return error;
+}
+
+otError InterpreterBase::SetUserCommands(const otCliCommand *aCommands, uint8_t aLength, void *aContext)
+{
+    otError error = OT_ERROR_FAILED;
+
+    for (UserCommandsEntry &entry : mUserCommands)
+    {
+        if (entry.mCommands == nullptr)
+        {
+            entry.mCommands = aCommands;
+            entry.mLength   = aLength;
+            entry.mContext  = aContext;
+
+            error = OT_ERROR_NONE;
+            break;
+        }
+    }
+
+    return error;
+}
+
+otError InterpreterBase::ProcessEnableDisable(Arg aArgs[], SetEnabledHandler aSetEnabledHandler)
+{
+    otError error = OT_ERROR_NONE;
+    bool    enable;
+
+    if (ParseEnableOrDisable(aArgs[0], enable) == OT_ERROR_NONE)
+    {
+        aSetEnabledHandler(GetInstancePtr(), enable);
+    }
+    else
+    {
+        error = OT_ERROR_INVALID_COMMAND;
+    }
+
+    return error;
+}
+
+otError InterpreterBase::ProcessEnableDisable(Arg aArgs[], SetEnabledHandlerFailable aSetEnabledHandler)
+{
+    otError error = OT_ERROR_NONE;
+    bool    enable;
+
+    if (ParseEnableOrDisable(aArgs[0], enable) == OT_ERROR_NONE)
+    {
+        error = aSetEnabledHandler(GetInstancePtr(), enable);
+    }
+    else
+    {
+        error = OT_ERROR_INVALID_COMMAND;
+    }
+
+    return error;
+}
+
+otError InterpreterBase::ProcessEnableDisable(Arg               aArgs[],
+                                              IsEnabledHandler  aIsEnabledHandler,
+                                              SetEnabledHandler aSetEnabledHandler)
+{
+    otError error = OT_ERROR_NONE;
+
+    if (aArgs[0].IsEmpty())
+    {
+        OutputEnabledDisabledStatus(aIsEnabledHandler(GetInstancePtr()));
+    }
+    else
+    {
+        error = ProcessEnableDisable(aArgs, aSetEnabledHandler);
+    }
+
+    return error;
+}
+
+otError InterpreterBase::ProcessEnableDisable(Arg                       aArgs[],
+                                              IsEnabledHandler          aIsEnabledHandler,
+                                              SetEnabledHandlerFailable aSetEnabledHandler)
+{
+    otError error = OT_ERROR_NONE;
+
+    if (aArgs[0].IsEmpty())
+    {
+        OutputEnabledDisabledStatus(aIsEnabledHandler(GetInstancePtr()));
+    }
+    else
+    {
+        error = ProcessEnableDisable(aArgs, aSetEnabledHandler);
+    }
+
+    return error;
+}
+
+void InterpreterBase::OutputPrompt(void)
+{
+#if OPENTHREAD_CONFIG_CLI_PROMPT_ENABLE
+    static const char sPrompt[] = "> ";
+
+    // The `OutputFormat()` below is adding the prompt which is not
+    // part of any command output, so we set the `EmittingCommandOutput`
+    // flag to false to avoid it being included in the command output
+    // log (under `OPENTHREAD_CONFIG_CLI_LOG_INPUT_OUTPUT_ENABLE`).
+
+    SetEmittingCommandOutput(false);
+    OutputFormat("%s", sPrompt);
+    SetEmittingCommandOutput(true);
+#endif // OPENTHREAD_CONFIG_CLI_PROMPT_ENABLE
+}
+
+otError InterpreterBase::ProcessUserCommands(Arg aArgs[])
+{
+    otError error = OT_ERROR_INVALID_COMMAND;
+
+    for (const UserCommandsEntry &entry : mUserCommands)
+    {
+        for (uint8_t i = 0; i < entry.mLength; i++)
+        {
+            if (aArgs[0] == entry.mCommands[i].mName)
+            {
+                char *args[kMaxArgs];
+
+                Arg::CopyArgsToStringArray(aArgs, args);
+                error = entry.mCommands[i].mCommand(entry.mContext, Arg::GetArgsLength(aArgs) - 1, args + 1);
+                break;
+            }
+        }
+    }
+
+    return error;
+}
+
+Interpreter::Interpreter(Instance *aInstance, otCliOutputCallback aCallback, void *aContext)
+    : InterpreterBase(aInstance, aCallback, &Interpreter::ProcessLine, aContext)
     , mCommandIsPending(false)
     , mInternalDebugCommand(false)
     , mTimer(*aInstance, HandleTimer, this)
@@ -321,6 +505,8 @@ template <> otError Interpreter::Process<Cmd("reset")>(Arg aArgs[])
     return error;
 }
 
+void Interpreter::ProcessLine(char *aBuf, void *aContext) { static_cast<Interpreter *>(aContext)->ProcessLine(aBuf); }
+
 void Interpreter::ProcessLine(char *aBuf)
 {
     Arg     args[kMaxArgs + 1];
@@ -364,68 +550,6 @@ exit:
     {
         OutputPrompt();
     }
-}
-
-otError Interpreter::ProcessUserCommands(Arg aArgs[])
-{
-    otError error = OT_ERROR_INVALID_COMMAND;
-
-    for (const UserCommandsEntry &entry : mUserCommands)
-    {
-        for (uint8_t i = 0; i < entry.mLength; i++)
-        {
-            if (aArgs[0] == entry.mCommands[i].mName)
-            {
-                char *args[kMaxArgs];
-
-                Arg::CopyArgsToStringArray(aArgs, args);
-                error = entry.mCommands[i].mCommand(entry.mContext, Arg::GetArgsLength(aArgs) - 1, args + 1);
-                break;
-            }
-        }
-    }
-
-    return error;
-}
-
-otError Interpreter::SetUserCommands(const otCliCommand *aCommands, uint8_t aLength, void *aContext)
-{
-    otError error = OT_ERROR_FAILED;
-
-    for (UserCommandsEntry &entry : mUserCommands)
-    {
-        if (entry.mCommands == nullptr)
-        {
-            entry.mCommands = aCommands;
-            entry.mLength   = aLength;
-            entry.mContext  = aContext;
-
-            error = OT_ERROR_NONE;
-            break;
-        }
-    }
-
-    return error;
-}
-
-otError Interpreter::ParseEnableOrDisable(const Arg &aArg, bool &aEnable)
-{
-    otError error = OT_ERROR_NONE;
-
-    if (aArg == "enable")
-    {
-        aEnable = true;
-    }
-    else if (aArg == "disable")
-    {
-        aEnable = false;
-    }
-    else
-    {
-        error = OT_ERROR_INVALID_COMMAND;
-    }
-
-    return error;
 }
 
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
@@ -8318,99 +8442,6 @@ void Interpreter::HandleIp6Receive(otMessage *aMessage, void *aContext)
 
 #endif // OPENTHREAD_FTD || OPENTHREAD_MTD
 
-void Interpreter::Initialize(otInstance *aInstance, otCliOutputCallback aCallback, void *aContext)
-{
-    Instance *instance = static_cast<Instance *>(aInstance);
-
-    Interpreter::sInterpreter = new (&sInterpreterRaw) Interpreter(instance, aCallback, aContext);
-}
-
-otError Interpreter::ProcessEnableDisable(Arg aArgs[], SetEnabledHandler aSetEnabledHandler)
-{
-    otError error = OT_ERROR_NONE;
-    bool    enable;
-
-    if (ParseEnableOrDisable(aArgs[0], enable) == OT_ERROR_NONE)
-    {
-        aSetEnabledHandler(GetInstancePtr(), enable);
-    }
-    else
-    {
-        error = OT_ERROR_INVALID_COMMAND;
-    }
-
-    return error;
-}
-
-otError Interpreter::ProcessEnableDisable(Arg aArgs[], SetEnabledHandlerFailable aSetEnabledHandler)
-{
-    otError error = OT_ERROR_NONE;
-    bool    enable;
-
-    if (ParseEnableOrDisable(aArgs[0], enable) == OT_ERROR_NONE)
-    {
-        error = aSetEnabledHandler(GetInstancePtr(), enable);
-    }
-    else
-    {
-        error = OT_ERROR_INVALID_COMMAND;
-    }
-
-    return error;
-}
-
-otError Interpreter::ProcessEnableDisable(Arg               aArgs[],
-                                          IsEnabledHandler  aIsEnabledHandler,
-                                          SetEnabledHandler aSetEnabledHandler)
-{
-    otError error = OT_ERROR_NONE;
-
-    if (aArgs[0].IsEmpty())
-    {
-        OutputEnabledDisabledStatus(aIsEnabledHandler(GetInstancePtr()));
-    }
-    else
-    {
-        error = ProcessEnableDisable(aArgs, aSetEnabledHandler);
-    }
-
-    return error;
-}
-
-otError Interpreter::ProcessEnableDisable(Arg                       aArgs[],
-                                          IsEnabledHandler          aIsEnabledHandler,
-                                          SetEnabledHandlerFailable aSetEnabledHandler)
-{
-    otError error = OT_ERROR_NONE;
-
-    if (aArgs[0].IsEmpty())
-    {
-        OutputEnabledDisabledStatus(aIsEnabledHandler(GetInstancePtr()));
-    }
-    else
-    {
-        error = ProcessEnableDisable(aArgs, aSetEnabledHandler);
-    }
-
-    return error;
-}
-
-void Interpreter::OutputPrompt(void)
-{
-#if OPENTHREAD_CONFIG_CLI_PROMPT_ENABLE
-    static const char sPrompt[] = "> ";
-
-    // The `OutputFormat()` below is adding the prompt which is not
-    // part of any command output, so we set the `EmittingCommandOutput`
-    // flag to false to avoid it being included in the command output
-    // log (under `OPENTHREAD_CONFIG_CLI_LOG_INPUT_OUTPUT_ENABLE`).
-
-    SetEmittingCommandOutput(false);
-    OutputFormat("%s", sPrompt);
-    SetEmittingCommandOutput(true);
-#endif // OPENTHREAD_CONFIG_CLI_PROMPT_ENABLE
-}
-
 void Interpreter::HandleTimer(Timer &aTimer)
 {
     static_cast<Interpreter *>(static_cast<TimerMilliContext &>(aTimer).GetContext())->HandleTimer();
@@ -8687,10 +8718,7 @@ otError Interpreter::ProcessCommand(Arg aArgs[])
 #endif // OPENTHREAD_FTD || OPENTHREAD_MTD
         CmdEntry("version"),
     };
-
 #undef CmdEntry
-
-    static_assert(BinarySearch::IsSorted(kCommands), "Command Table is not sorted");
 
     otError        error   = OT_ERROR_NONE;
     const Command *command = BinarySearch::Find(aArgs[0].GetCString(), kCommands);
@@ -8719,50 +8747,109 @@ otError Interpreter::ProcessCommand(Arg aArgs[])
     return error;
 }
 
-extern "C" void otCliInit(otInstance *aInstance, otCliOutputCallback aCallback, void *aContext)
+InterpreterOffload::InterpreterOffload(Posix::Offload *aInstance, otCliOutputCallback aCallback, void *aContext)
+    : InterpreterBase(aInstance, aCallback, &InterpreterOffload::ProcessLine, aContext)
+    , mCommandIsPending(false)
+    , mOffload(aInstance, *this)
 {
-    Interpreter::Initialize(aInstance, aCallback, aContext);
+}
+
+void InterpreterOffload::ProcessLine(char *aBuf, void *aContext)
+{
+    static_cast<InterpreterOffload *>(aContext)->ProcessLine(aBuf);
+}
+
+void InterpreterOffload::ProcessLine(char *aBuf)
+{
+    Arg     args[kMaxArgs + 1];
+    otError error = OT_ERROR_NONE;
+
+    OT_ASSERT(aBuf != nullptr);
+
+    VerifyOrExit(!mCommandIsPending, args[0].Clear());
+    mCommandIsPending = true;
+    VerifyOrExit(StringLength(aBuf, kMaxLineLength) <= kMaxLineLength - 1, error = OT_ERROR_PARSE);
+
+    SuccessOrExit(error = Utils::CmdLineParser::ParseCmd(aBuf, args, kMaxArgs));
+    VerifyOrExit(!args[0].IsEmpty(), mCommandIsPending = false);
+
+    error = mOffload.Process(args);
+exit:
+
+    if ((error != OT_ERROR_NONE) || !args[0].IsEmpty())
+    {
+        OutputResult(error);
+    }
+    else if (!mCommandIsPending)
+    {
+        OutputPrompt();
+    }
+}
+
+void InterpreterOffload::OutputResult(otError aError)
+{
+    OT_ASSERT(mCommandIsPending);
+
+    VerifyOrExit(aError != OT_ERROR_PENDING);
+
+    if (aError == OT_ERROR_NONE)
+    {
+        OutputLine("Done");
+    }
+    else
+    {
+        OutputLine("Error %u: %s", aError, otThreadErrorToString(aError));
+    }
+
+    mCommandIsPending = false;
+    OutputPrompt();
+
+exit:
+    return;
+}
+
+extern "C" void otCliInit(otInstance *aInstance, otCliOutputCallback aCallback, otCliMode aMode, void *aContext)
+{
+    InterpreterBase::Initialize(aInstance, aCallback, aMode, aContext);
 
 #if OPENTHREAD_CONFIG_CLI_VENDOR_COMMANDS_ENABLE && OPENTHREAD_CONFIG_CLI_MAX_USER_CMD_ENTRIES > 1
     otCliVendorSetUserCommands();
 #endif
 }
 
-extern "C" void otCliInputLine(char *aBuf) { Interpreter::GetInterpreter().ProcessLine(aBuf); }
+extern "C" void otCliInputLine(char *aBuf) { InterpreterBase::GetInterpreterBase().ProcessLine(aBuf); }
 
 extern "C" otError otCliSetUserCommands(const otCliCommand *aUserCommands, uint8_t aLength, void *aContext)
 {
-    return Interpreter::GetInterpreter().SetUserCommands(aUserCommands, aLength, aContext);
+    return InterpreterBase::GetInterpreterBase().SetUserCommands(aUserCommands, aLength, aContext);
 }
 
 extern "C" void otCliOutputBytes(const uint8_t *aBytes, uint8_t aLength)
 {
-    Interpreter::GetInterpreter().OutputBytes(aBytes, aLength);
+    InterpreterBase::GetInterpreterBase().OutputBytes(aBytes, aLength);
 }
 
 extern "C" void otCliOutputFormat(const char *aFmt, ...)
 {
     va_list aAp;
     va_start(aAp, aFmt);
-    Interpreter::GetInterpreter().OutputFormatV(aFmt, aAp);
+    InterpreterBase::GetInterpreterBase().OutputFormatV(aFmt, aAp);
     va_end(aAp);
 }
-
-extern "C" void otCliAppendResult(otError aError) { Interpreter::GetInterpreter().OutputResult(aError); }
 
 extern "C" void otCliPlatLogv(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, va_list aArgs)
 {
     OT_UNUSED_VARIABLE(aLogLevel);
     OT_UNUSED_VARIABLE(aLogRegion);
 
-    VerifyOrExit(Interpreter::IsInitialized());
+    VerifyOrExit(InterpreterBase::IsInitialized());
 
     // CLI output is being used for logging, so we set the flag
     // `EmittingCommandOutput` to false indicate this.
-    Interpreter::GetInterpreter().SetEmittingCommandOutput(false);
-    Interpreter::GetInterpreter().OutputFormatV(aFormat, aArgs);
-    Interpreter::GetInterpreter().OutputNewLine();
-    Interpreter::GetInterpreter().SetEmittingCommandOutput(true);
+    InterpreterBase::GetInterpreterBase().SetEmittingCommandOutput(false);
+    InterpreterBase::GetInterpreterBase().OutputFormatV(aFormat, aArgs);
+    InterpreterBase::GetInterpreterBase().OutputNewLine();
+    InterpreterBase::GetInterpreterBase().SetEmittingCommandOutput(true);
 
 exit:
     return;

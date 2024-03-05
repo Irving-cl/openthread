@@ -89,6 +89,10 @@ enum
      */
     OT_EXIT_INVALID_STATE = 7,
 
+    /**
+     * No response from the Co-processor.
+     */
+    OT_EXIT_CO_PROCESSOR_NO_RESPONSE = 8,
 };
 
 /**

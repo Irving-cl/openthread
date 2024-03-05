@@ -558,6 +558,7 @@ void SpinelBase::HandleNotification(SpinelInterface::RxFrameBuffer &aFrameBuffer
     VerifyOrExit(unpacked > 0, error = OT_ERROR_PARSE);
     VerifyOrExit(SPINEL_HEADER_GET_TID(header) == 0, error = OT_ERROR_PARSE);
 
+    LogInfo("SpinelBase HandleNotification");
     SuccessOrExit(error = mSpinelCallbacks->HandleCmdFromNotification(cmd, key, data, len, shouldSaveFrame));
 
 exit:
@@ -749,6 +750,7 @@ void SpinelBase::ProcessFrameQueue(void)
 {
     uint8_t *frame = nullptr;
     uint16_t length;
+    LogInfo("ProcessFrameQueue");
 
     while (mRxFrameBuffer.GetNextSavedFrame(frame, length) == OT_ERROR_NONE)
     {
