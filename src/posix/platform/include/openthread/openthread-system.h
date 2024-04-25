@@ -45,6 +45,7 @@
 #include <openthread/instance.h>
 #include <openthread/platform/misc.h>
 
+#include "lib/spinel/coprocessor_type.h"
 #include "lib/spinel/radio_spinel_metrics.h"
 
 #ifdef __cplusplus
@@ -83,6 +84,7 @@ typedef struct otPlatformConfig
     bool        mPersistentInterface;                          ///< Whether persistent the interface
     bool        mDryRun;                                       ///< If 'DryRun' is set, the posix daemon will exit
                                                                ///< directly after initialization.
+    CoprocessorType mCoprocessorType;
 } otPlatformConfig;
 
 /**

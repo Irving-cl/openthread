@@ -92,6 +92,7 @@ target_include_directories(openthread-spinel-rcp PUBLIC ${OT_PUBLIC_INCLUDES} PR
 target_sources(openthread-radio-spinel
     PRIVATE
         logger.cpp
+        ncp_spinel.cpp
         radio_spinel.cpp
         spinel_driver.cpp
 )

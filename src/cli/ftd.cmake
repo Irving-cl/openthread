@@ -39,7 +39,13 @@ target_compile_options(openthread-cli-ftd PRIVATE
     ${OT_CFLAGS}
 )
 
-target_include_directories(openthread-cli-ftd PUBLIC ${OT_PUBLIC_INCLUDES} PRIVATE ${COMMON_INCLUDES})
+target_include_directories(openthread-cli-ftd
+    PUBLIC
+    ${OT_PUBLIC_INCLUDES}
+    PRIVATE
+    ${COMMON_INCLUDES}
+    ${PROJECT_SOURCE_DIR}/src/posix/platform/include
+)
 
 target_sources(openthread-cli-ftd PRIVATE ${COMMON_SOURCES})
 

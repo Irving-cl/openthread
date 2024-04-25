@@ -26,25 +26,23 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OT_PLATFORM_COPROCESSOR_MODE_H_
-#define OT_PLATFORM_COPROCESSOR_MODE_H_
+#include "ncp_controller.hpp"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "common/code_utils.hpp"
 
-/**
- * Represents the mode of the co-processor.
- * A co-processor could be either a RCP or NCP.
- */
-typedef enum CoprocessorType
-{
-    OT_COPROCESSOR_UNKNOWN = 0,
-    OT_COPROCESSOR_RCP     = 1,
-    OT_COPROCESSOR_NCP     = 2,
-} CoprocessorType;
+#include "radio_url.hpp"
+#include "spinel_manager.hpp"
 
-#ifdef __cplusplus
-}
-#endif
-#endif // OT_PLATFORM_COPROCESSOR_MODE_H_
+static ot::Spinel::NcpSpinel sNcpSpinel;
+
+namespace ot {
+namespace Posix {
+
+ot::Spinel::NcpSpinel &GetNcpSpinel(void) { return sNcpSpinel; }
+
+} // namespace Posix
+} // namespace ot
+
+void platformNcpControllerInit(void) { sNcpSpinel.Init(&ot::Posix::SpinelManager::GetSpinelDriver()); }
+
+void platformNcpControllerDeinit(void) { sNcpSpinel.Deinit(); }

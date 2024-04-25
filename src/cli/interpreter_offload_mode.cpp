@@ -31,6 +31,8 @@
 #include "common/debug.hpp"
 #include "utils/parse_cmdline.hpp"
 
+#include "posix/platform/ncp_controller.hpp"
+
 namespace ot {
 namespace Cli {
 
@@ -51,6 +53,7 @@ void InterpreterOffloadMode::ProcessLine(char *aBuf)
     mCommandIsPending = true;
 
     SuccessOrExit(error = ot::Utils::CmdLineParser::ParseCmd(aBuf, args, kMaxArgs));
+    VerifyOrExit(!args[0].IsEmpty(), mCommandIsPending = false);
 
     error = ProcessCommand(args);
 
@@ -59,10 +62,18 @@ exit:
     {
         OutputResult(error);
     }
+    else if (!mCommandIsPending)
+    {
+        OutputPrompt();
+    }
 }
 
 void InterpreterOffloadMode::OutputResult(otError aError)
 {
+    OT_ASSERT(mCommandIsPending);
+
+    VerifyOrExit(aError != OT_ERROR_PENDING);
+
     if (aError == OT_ERROR_NONE)
     {
         OutputLine("Done");
@@ -72,13 +83,19 @@ void InterpreterOffloadMode::OutputResult(otError aError)
         OutputLine("Error %u: %s", aError, otThreadErrorToString(aError));
     }
 
+    mCommandIsPending = false;
     OutputPrompt();
+
+exit:
+    return;
 }
 
 template <> otError InterpreterOffloadMode::Process<Cmd("countrycode")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
+    ot::Spinel::NcpSpinel &ncpSpinel = ot::Posix::GetNcpSpinel();
     (void)aArgs;
+    (void)ncpSpinel;
     OutputLine("countrycode");
     return error;
 }

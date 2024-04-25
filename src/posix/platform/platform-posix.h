@@ -52,9 +52,8 @@
 #include <openthread/openthread-system.h>
 #include <openthread/platform/time.h>
 
-#include "coprocessor_type.h"
 #include "lib/platform/exit_code.h"
-#include "lib/url/url.hpp"
+#include "lib/spinel/coprocessor_type.h"
 
 /**
  * @def OPENTHREAD_POSIX_VIRTUAL_TIME
@@ -464,6 +463,18 @@ void platformSpinelManagerProcess(otInstance *aInstance, const otSysMainloopCont
  *
  */
 void platformSpinelManagerUpdateFdSet(otSysMainloopContext *aContext);
+
+/**
+ * Initializes the Ncp Controller.
+ *
+ */
+void platformNcpControllerInit(void);
+
+/**
+ * De-initializes the Ncp Controller.
+ *
+ */
+void platformNcpControllerDeinit(void);
 
 #ifdef __cplusplus
 }

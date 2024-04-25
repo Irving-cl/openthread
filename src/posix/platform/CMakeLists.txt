@@ -139,6 +139,7 @@ add_library(openthread-posix
     memory.cpp
     misc.cpp
     multicast_routing.cpp
+    ncp_controller.cpp
     netif.cpp
     power.cpp
     radio.cpp

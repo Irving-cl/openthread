@@ -68,6 +68,7 @@
 #include <openthread/platform/misc.h>
 
 #include "lib/platform/reset_util.h"
+#include "lib/spinel/coprocessor_type.h"
 
 /**
  * Initializes NCP app.
@@ -288,23 +289,30 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
 
 static otInstance *InitInstance(PosixConfig *aConfig)
 {
-    otInstance *instance = NULL;
+    otInstance     *instance        = NULL;
+    CoprocessorType coprocessorType = OT_COPROCESSOR_UNKNOWN;
 
-    syslog(LOG_INFO, "Running %s", otGetVersionString());
-    syslog(LOG_INFO, "Thread version: %hu", otThreadGetVersion());
     IgnoreError(otLoggingSetLevel(aConfig->mLogLevel));
 
-    instance = otSysInit(&aConfig->mPlatformConfig);
-    VerifyOrDie(instance != NULL, OT_EXIT_FAILURE);
-    syslog(LOG_INFO, "Thread interface: %s", otSysGetThreadNetifName());
+    instance        = otSysInit(&aConfig->mPlatformConfig);
+    coprocessorType = aConfig->mPlatformConfig.mCoprocessorType;
+    if (coprocessorType == OT_COPROCESSOR_RCP)
+    {
+        VerifyOrDie(instance != NULL, OT_EXIT_FAILURE);
 
-    if (aConfig->mPrintRadioVersion)
-    {
-        printf("%s\n", otPlatRadioGetVersionString(instance));
-    }
-    else
-    {
-        syslog(LOG_INFO, "RCP version: %s", otPlatRadioGetVersionString(instance));
+        syslog(LOG_INFO, "Running %s", otGetVersionString());
+        syslog(LOG_INFO, "Thread version: %hu", otThreadGetVersion());
+
+        if (aConfig->mPrintRadioVersion)
+        {
+            printf("%s\n", otPlatRadioGetVersionString(instance));
+        }
+        else
+        {
+            syslog(LOG_INFO, "RCP version: %s", otPlatRadioGetVersionString(instance));
+        }
+
+        syslog(LOG_INFO, "Thread interface: %s", otSysGetThreadNetifName());
     }
 
     if (aConfig->mPlatformConfig.mDryRun)
@@ -360,9 +368,10 @@ static const otCliCommand kCommands[] = {
 
 int main(int argc, char *argv[])
 {
-    otInstance *instance;
-    int         rval = 0;
-    PosixConfig config;
+    otInstance     *instance;
+    int             rval = 0;
+    PosixConfig     config;
+    CoprocessorType coprocessorType;
 
 #ifdef __linux__
     // Ensure we terminate this process if the
@@ -375,21 +384,28 @@ int main(int argc, char *argv[])
     ParseArg(argc, argv, &config);
     openlog(argv[0], LOG_PID | (config.mIsVerbose ? LOG_PERROR : 0), LOG_DAEMON);
     setlogmask(setlogmask(0) & LOG_UPTO(LOG_DEBUG));
-    instance = InitInstance(&config);
+    instance        = InitInstance(&config);
+    coprocessorType = config.mPlatformConfig.mCoprocessorType;
 
 #if !OPENTHREAD_POSIX_CONFIG_DAEMON_ENABLE
     otAppCliInit(instance);
 #endif
 
 #if !OPENTHREAD_POSIX_CONFIG_DAEMON_ENABLE || OPENTHREAD_POSIX_CONFIG_DAEMON_CLI_ENABLE
-    IgnoreError(otCliSetUserCommands(kCommands, OT_ARRAY_LENGTH(kCommands), instance));
+    if (coprocessorType == OT_COPROCESSOR_RCP)
+    {
+        IgnoreError(otCliSetUserCommands(kCommands, OT_ARRAY_LENGTH(kCommands), instance));
+    }
 #endif
 
     while (true)
     {
         otSysMainloopContext mainloop;
 
-        otTaskletsProcess(instance);
+        if (coprocessorType == OT_COPROCESSOR_RCP)
+        {
+            otTaskletsProcess(instance);
+        }
 
         FD_ZERO(&mainloop.mReadFdSet);
         FD_ZERO(&mainloop.mWriteFdSet);
