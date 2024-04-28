@@ -37,6 +37,7 @@
 
 #include "cli/cli.hpp"
 #include "cli/cli_utils.hpp"
+#include "cli/interpreter.hpp"
 #include "common/code_utils.hpp"
 
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE

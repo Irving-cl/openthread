@@ -37,6 +37,7 @@
 
 #include "cli/cli.hpp"
 #include "cli/cli_utils.hpp"
+#include "cli/interpreter.hpp"
 #include "common/code_utils.hpp"
 
 #if OPENTHREAD_CONFIG_PING_SENDER_ENABLE

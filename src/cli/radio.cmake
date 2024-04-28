@@ -46,6 +46,7 @@ target_sources(openthread-cli-radio
     PRIVATE
         cli.cpp
         cli_utils.cpp
+        interpreter.cpp
 )
 
 if(NOT DEFINED OT_MBEDTLS_RCP)

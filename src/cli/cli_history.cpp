@@ -174,14 +174,14 @@ template <> otError History::Process<Cmd("ipaddr")>(Arg aArgs[])
 
             OutputLine("| %20s | %-7s | %-43s | %-6s | %3d | %c | %c | %c |", ageString,
                        Stringify(info->mEvent, kSimpleEventStrings), addressString,
-                       Interpreter::AddressOriginToString(info->mAddressOrigin), info->mScope,
+                       InterpreterCoreMode::AddressOriginToString(info->mAddressOrigin), info->mScope,
                        info->mPreferred ? 'Y' : 'N', info->mValid ? 'Y' : 'N', info->mRloc ? 'Y' : 'N');
         }
         else
         {
             OutputLine("%s -> event:%s address:%s prefixlen:%d origin:%s scope:%d preferred:%s valid:%s rloc:%s",
                        ageString, Stringify(info->mEvent, kSimpleEventStrings), addressString, info->mPrefixLength,
-                       Interpreter::AddressOriginToString(info->mAddressOrigin), info->mScope,
+                       InterpreterCoreMode::AddressOriginToString(info->mAddressOrigin), info->mScope,
                        info->mPreferred ? "yes" : "no", info->mValid ? "yes" : "no", info->mRloc ? "yes" : "no");
         }
     }
@@ -288,7 +288,7 @@ template <> otError History::Process<Cmd("ipmaddr")>(Arg aArgs[])
 
         OutputLine(isList ? "%s -> event:%s address:%s origin:%s" : "| %20s | %-12s | %-39s | %-6s |", ageString,
                    Stringify(info->mEvent, kEventStrings), addressString,
-                   Interpreter::AddressOriginToString(info->mAddressOrigin));
+                   InterpreterCoreMode::AddressOriginToString(info->mAddressOrigin));
     }
 
 exit:
@@ -368,7 +368,7 @@ template <> otError History::Process<Cmd("neighbor")>(Arg aArgs[])
     uint32_t                            entryAge;
     char                                ageString[OT_HISTORY_TRACKER_ENTRY_AGE_STRING_SIZE];
     otLinkModeConfig                    mode;
-    char                                linkModeString[Interpreter::kLinkModeStringSize];
+    char                                linkModeString[InterpreterCoreMode::kLinkModeStringSize];
 
     static_assert(0 == OT_HISTORY_TRACKER_NEIGHBOR_EVENT_ADDED, "NEIGHBOR_EVENT_ADDED value is incorrect");
     static_assert(1 == OT_HISTORY_TRACKER_NEIGHBOR_EVENT_REMOVED, "NEIGHBOR_EVENT_REMOVED value is incorrect");
@@ -403,7 +403,7 @@ template <> otError History::Process<Cmd("neighbor")>(Arg aArgs[])
         mode.mRxOnWhenIdle = info->mRxOnWhenIdle;
         mode.mDeviceType   = info->mFullThreadDevice;
         mode.mNetworkData  = info->mFullNetworkData;
-        Interpreter::LinkModeToString(mode, linkModeString);
+        InterpreterCoreMode::LinkModeToString(mode, linkModeString);
 
         OutputFormat(isList ? "%s -> type:%s event:%s extaddr:" : "| %20s | %-6s | %-9s | ", ageString,
                      info->mIsChild ? "Child" : "Router", kEventString[info->mEvent]);
@@ -647,7 +647,7 @@ template <> otError History::Process<Cmd("netinfo")>(Arg aArgs[])
     const otHistoryTrackerNetworkInfo *info;
     uint32_t                           entryAge;
     char                               ageString[OT_HISTORY_TRACKER_ENTRY_AGE_STRING_SIZE];
-    char                               linkModeString[Interpreter::kLinkModeStringSize];
+    char                               linkModeString[InterpreterCoreMode::kLinkModeStringSize];
 
     SuccessOrExit(error = ParseArgs(aArgs, isList, numEntries));
 
@@ -671,10 +671,11 @@ template <> otError History::Process<Cmd("netinfo")>(Arg aArgs[])
 
         otHistoryTrackerEntryAgeToString(entryAge, ageString, sizeof(ageString));
 
-        OutputLine(
-            isList ? "%s -> role:%s mode:%s rloc16:0x%04x partition-id:%lu" : "| %20s | %-8s | %-4s | 0x%04x | %12lu |",
-            ageString, otThreadDeviceRoleToString(info->mRole),
-            Interpreter::LinkModeToString(info->mMode, linkModeString), info->mRloc16, ToUlong(info->mPartitionId));
+        OutputLine(isList ? "%s -> role:%s mode:%s rloc16:0x%04x partition-id:%lu"
+                          : "| %20s | %-8s | %-4s | 0x%04x | %12lu |",
+                   ageString, otThreadDeviceRoleToString(info->mRole),
+                   InterpreterCoreMode::LinkModeToString(info->mMode, linkModeString), info->mRloc16,
+                   ToUlong(info->mPartitionId));
     }
 
 exit:
