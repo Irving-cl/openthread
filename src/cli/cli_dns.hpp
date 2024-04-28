@@ -55,6 +55,7 @@
 
 #include "cli/cli_config.h"
 #include "cli/cli_utils.hpp"
+#include "cli/interpreter.hpp"
 
 namespace ot {
 namespace Cli {

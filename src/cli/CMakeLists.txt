@@ -53,6 +53,8 @@ set(COMMON_SOURCES
     cli_tcp.cpp
     cli_udp.cpp
     cli_utils.cpp
+    interpreter.cpp
+    interpreter_offload_mode.cpp
 )
 
 set(OT_CLI_VENDOR_EXTENSION "" CACHE STRING "Path to CMake file to define and link cli vendor extension")

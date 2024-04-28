@@ -85,6 +85,7 @@
 #endif
 
 #include "common/array.hpp"
+#include "common/callback.hpp"
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
 #include "common/type_traits.hpp"
@@ -110,7 +111,7 @@ extern "C" void otCliOutputFormat(const char *aFmt, ...);
  * Implements the CLI interpreter.
  *
  */
-class Interpreter : public OutputImplementer, public Utils
+class InterpreterCoreMode : public OutputImplementer, public Utils
 {
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
     friend class Br;
@@ -138,38 +139,7 @@ public:
      * @param[in]  aCallback    A callback method called to process CLI output.
      * @param[in]  aContext     A user context pointer.
      */
-    explicit Interpreter(Instance *aInstance, otCliOutputCallback aCallback, void *aContext);
-
-    /**
-     * Returns a reference to the interpreter object.
-     *
-     * @returns A reference to the interpreter object.
-     *
-     */
-    static Interpreter &GetInterpreter(void)
-    {
-        OT_ASSERT(sInterpreter != nullptr);
-
-        return *sInterpreter;
-    }
-
-    /**
-     * Initializes the Console interpreter.
-     *
-     * @param[in]  aInstance  The OpenThread instance structure.
-     * @param[in]  aCallback  A pointer to a callback method.
-     * @param[in]  aContext   A pointer to a user context.
-     *
-     */
-    static void Initialize(otInstance *aInstance, otCliOutputCallback aCallback, void *aContext);
-
-    /**
-     * Returns whether the interpreter is initialized.
-     *
-     * @returns  Whether the interpreter is initialized.
-     *
-     */
-    static bool IsInitialized(void) { return sInterpreter != nullptr; }
+    explicit InterpreterCoreMode(Instance *aInstance, otCliOutputCallback aCallback, void *aContext);
 
     /**
      * Interprets a CLI command.
@@ -178,6 +148,11 @@ public:
      *
      */
     void ProcessLine(char *aBuf);
+
+    static void ProcessLine(char *aBuf, void *aContext)
+    {
+        static_cast<InterpreterCoreMode *>(aContext)->ProcessLine(aBuf);
+    }
 
     /**
      * Adds commands to the user command table.
@@ -189,7 +164,22 @@ public:
      * @retval OT_ERROR_NONE    Successfully updated command table with commands from @p aCommands.
      * @retval OT_ERROR_FAILED  No available UserCommandsEntry to register requested user commands.
      */
-    otError SetUserCommands(const otCliCommand *aCommands, uint8_t aLength, void *aContext);
+    otError SetUserCommands(const otCliCommand *aCommands, uint8_t aLength, void *aUsrCmdContext);
+
+    static void SetUserCommands(const otCliCommand *aCommands,
+                                uint8_t             aLength,
+                                void               *aUsrCmdContext,
+                                Error              &aError,
+                                void               *aContext)
+    {
+        Error error = static_cast<InterpreterCoreMode *>(aContext)->SetUserCommands(aCommands, aLength, aUsrCmdContext);
+        aError      = error;
+    }
+
+    static void OutputResult(otError aError, void *aContext)
+    {
+        static_cast<InterpreterCoreMode *>(aContext)->OutputResult(aError);
+    }
 
 protected:
     static Interpreter *sInterpreter;
@@ -205,7 +195,7 @@ private:
 
     static constexpr uint16_t kMaxTxtDataSize = OPENTHREAD_CONFIG_CLI_TXT_RECORD_MAX_SIZE;
 
-    using Command = CommandEntry<Interpreter>;
+    using Command = CommandEntry<InterpreterCoreMode>;
 
     void OutputPrompt(void);
     void OutputResult(otError aError);

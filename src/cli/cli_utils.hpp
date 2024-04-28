@@ -100,6 +100,11 @@ public:
     void SetEmittingCommandOutput(bool) {}
 #endif
 
+    static void SetEmittingCommandOutput(bool aEmittingOutput, void *aContext)
+    {
+        static_cast<OutputImplementer *>(aContext)->SetEmittingCommandOutput(aEmittingOutput);
+    }
+
 private:
     static constexpr uint16_t kInputOutputLogStringSize = OPENTHREAD_CONFIG_CLI_LOG_INPUT_OUTPUT_LOG_STRING_SIZE;
 
@@ -276,6 +281,8 @@ public:
      */
     void OutputNewLine(void);
 
+    static void OutputNewLine(void *aContext) { static_cast<Utils *>(aContext)->OutputNewLine(); }
+
     /**
      * Outputs a given number of space chars to the CLI console.
      *
@@ -292,6 +299,11 @@ public:
      *
      */
     void OutputBytes(const uint8_t *aBytes, uint16_t aLength);
+
+    static void OutputBytes(const uint8_t *aBytes, uint16_t aLength, void *aContext)
+    {
+        static_cast<Utils *>(aContext)->OutputBytes(aBytes, aLength);
+    }
 
     /**
      * Outputs a number of bytes to the CLI console as a hex string and at the end it also outputs newline
@@ -545,6 +557,11 @@ public:
         static_assert(!TypeTraits::IsPointer<ObjectType>::kValue, "ObjectType must not be a pointer");
 
         memset(reinterpret_cast<void *>(&aObject), 0, sizeof(ObjectType));
+    }
+
+    static void OutputFormatV(const char *aFormat, va_list aArguments, void *aContext)
+    {
+        static_cast<Utils *>(aContext)->OutputFormatV(aFormat, aArguments);
     }
 
     // Definitions of handlers to process Get/Set/Enable/Disable.

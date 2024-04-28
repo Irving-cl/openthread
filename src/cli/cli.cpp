@@ -97,10 +97,7 @@
 namespace ot {
 namespace Cli {
 
-Interpreter *Interpreter::sInterpreter = nullptr;
-static OT_DEFINE_ALIGNED_VAR(sInterpreterRaw, sizeof(Interpreter), uint64_t);
-
-Interpreter::Interpreter(Instance *aInstance, otCliOutputCallback aCallback, void *aContext)
+InterpreterCoreMode::InterpreterCoreMode(Instance *aInstance, otCliOutputCallback aCallback, void *aContext)
     : OutputImplementer(aCallback, aContext)
     , Utils(aInstance, *this)
     , mCommandIsPending(false)
@@ -167,14 +164,14 @@ Interpreter::Interpreter(Instance *aInstance, otCliOutputCallback aCallback, voi
 #endif // OPENTHREAD_FTD || OPENTHREAD_MTD
 {
 #if (OPENTHREAD_FTD || OPENTHREAD_MTD) && OPENTHREAD_CONFIG_CLI_REGISTER_IP6_RECV_CALLBACK
-    otIp6SetReceiveCallback(GetInstancePtr(), &Interpreter::HandleIp6Receive, this);
+    otIp6SetReceiveCallback(GetInstancePtr(), &InterpreterCoreMode::HandleIp6Receive, this);
 #endif
     ClearAllBytes(mUserCommands);
 
     OutputPrompt();
 }
 
-void Interpreter::OutputResult(otError aError)
+void InterpreterCoreMode::OutputResult(otError aError)
 {
     if (mInternalDebugCommand)
     {
@@ -208,7 +205,7 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
-template <> otError Interpreter::Process<Cmd("diag")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("diag")>(Arg aArgs[])
 {
     otError error;
     char   *args[kMaxArgs];
@@ -225,7 +222,7 @@ template <> otError Interpreter::Process<Cmd("diag")>(Arg aArgs[])
 }
 #endif
 
-template <> otError Interpreter::Process<Cmd("version")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("version")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -266,7 +263,7 @@ template <> otError Interpreter::Process<Cmd("version")>(Arg aArgs[])
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("reset")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("reset")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -298,7 +295,7 @@ template <> otError Interpreter::Process<Cmd("reset")>(Arg aArgs[])
     return error;
 }
 
-void Interpreter::ProcessLine(char *aBuf)
+void InterpreterCoreMode::ProcessLine(char *aBuf)
 {
     Arg     args[kMaxArgs + 1];
     otError error = OT_ERROR_NONE;
@@ -343,7 +340,7 @@ exit:
     }
 }
 
-otError Interpreter::ProcessUserCommands(Arg aArgs[])
+otError InterpreterCoreMode::ProcessUserCommands(Arg aArgs[])
 {
     otError error = OT_ERROR_INVALID_COMMAND;
 
@@ -365,7 +362,7 @@ otError Interpreter::ProcessUserCommands(Arg aArgs[])
     return error;
 }
 
-otError Interpreter::SetUserCommands(const otCliCommand *aCommands, uint8_t aLength, void *aContext)
+otError InterpreterCoreMode::SetUserCommands(const otCliCommand *aCommands, uint8_t aLength, void *aContext)
 {
     otError error = OT_ERROR_FAILED;
 
@@ -388,11 +385,11 @@ otError Interpreter::SetUserCommands(const otCliCommand *aCommands, uint8_t aLen
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
 
 #if OPENTHREAD_CONFIG_HISTORY_TRACKER_ENABLE
-template <> otError Interpreter::Process<Cmd("history")>(Arg aArgs[]) { return mHistory.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("history")>(Arg aArgs[]) { return mHistory.Process(aArgs); }
 #endif
 
 #if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
-template <> otError Interpreter::Process<Cmd("ba")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("ba")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -574,12 +571,12 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_BORDER_AGENT_EPHEMERAL_KEY_ENABLE
-void Interpreter::HandleBorderAgentEphemeralKeyStateChange(void *aContext)
+void InterpreterCoreMode::HandleBorderAgentEphemeralKeyStateChange(void *aContext)
 {
-    reinterpret_cast<Interpreter *>(aContext)->HandleBorderAgentEphemeralKeyStateChange();
+    reinterpret_cast<InterpreterCoreMode *>(aContext)->HandleBorderAgentEphemeralKeyStateChange();
 }
 
-void Interpreter::HandleBorderAgentEphemeralKeyStateChange(void)
+void InterpreterCoreMode::HandleBorderAgentEphemeralKeyStateChange(void)
 {
     bool active = otBorderAgentIsEphemeralKeyActive(GetInstancePtr());
 
@@ -597,11 +594,11 @@ void Interpreter::HandleBorderAgentEphemeralKeyStateChange(void)
 #endif // OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-template <> otError Interpreter::Process<Cmd("br")>(Arg aArgs[]) { return mBr.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("br")>(Arg aArgs[]) { return mBr.Process(aArgs); }
 #endif
 
 #if OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE || OPENTHREAD_CONFIG_NAT64_BORDER_ROUTING_ENABLE
-template <> otError Interpreter::Process<Cmd("nat64")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("nat64")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -884,7 +881,7 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE
-void Interpreter::OutputNat64Counters(const otNat64Counters &aCounters)
+void InterpreterCoreMode::OutputNat64Counters(const otNat64Counters &aCounters)
 {
     Uint64StringBuffer u64StringBuffer;
 
@@ -899,7 +896,7 @@ void Interpreter::OutputNat64Counters(const otNat64Counters &aCounters)
 
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 
-template <> otError Interpreter::Process<Cmd("bbr")>(Arg aArgs[]) { return mBbr.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("bbr")>(Arg aArgs[]) { return mBbr.Process(aArgs); }
 
 /**
  * @cli domainname
@@ -911,7 +908,7 @@ template <> otError Interpreter::Process<Cmd("bbr")>(Arg aArgs[]) { return mBbr.
  * @par api_copy
  * #otThreadGetDomainName
  */
-template <> otError Interpreter::Process<Cmd("domainname")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("domainname")>(Arg aArgs[])
 {
     /**
      * @cli domainname (set)
@@ -928,7 +925,7 @@ template <> otError Interpreter::Process<Cmd("domainname")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_DUA_ENABLE
-template <> otError Interpreter::Process<Cmd("dua")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("dua")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -1024,7 +1021,7 @@ exit:
  * *   The third number shows total number of bytes of all messages in the queue.
  * @sa otMessageGetBufferInfo
  */
-template <> otError Interpreter::Process<Cmd("bufferinfo")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("bufferinfo")>(Arg aArgs[])
 {
     struct BufferInfoName
     {
@@ -1101,7 +1098,7 @@ template <> otError Interpreter::Process<Cmd("bufferinfo")>(Arg aArgs[])
  * @sa otPlatRadioGetCcaEnergyDetectThreshold
  * @sa otPlatRadioSetCcaEnergyDetectThreshold
  */
-template <> otError Interpreter::Process<Cmd("ccathreshold")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("ccathreshold")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
     int8_t  cca;
@@ -1122,12 +1119,12 @@ exit:
 }
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-template <> otError Interpreter::Process<Cmd("ccm")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("ccm")>(Arg aArgs[])
 {
     return ProcessEnableDisable(aArgs, otThreadSetCcmEnabled);
 }
 
-template <> otError Interpreter::Process<Cmd("test")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("test")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -1179,7 +1176,7 @@ template <> otError Interpreter::Process<Cmd("test")>(Arg aArgs[])
  * @note `OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE` is required.
  * @sa otThreadSetThreadVersionCheckEnabled
  */
-template <> otError Interpreter::Process<Cmd("tvcheck")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("tvcheck")>(Arg aArgs[])
 {
     return ProcessEnableDisable(aArgs, otThreadSetThreadVersionCheckEnabled);
 }
@@ -1201,7 +1198,7 @@ template <> otError Interpreter::Process<Cmd("tvcheck")>(Arg aArgs[])
  * @par
  * Gets or sets the IEEE 802.15.4 Channel value.
  */
-template <> otError Interpreter::Process<Cmd("channel")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("channel")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -1599,7 +1596,7 @@ exit:
 }
 
 #if OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("child")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("child")>(Arg aArgs[])
 {
     otError          error = OT_ERROR_NONE;
     otChildInfo      childInfo;
@@ -1735,7 +1732,7 @@ exit:
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("childip")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("childip")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -1822,7 +1819,7 @@ template <> otError Interpreter::Process<Cmd("childip")>(Arg aArgs[])
  * @par api_copy
  * #otThreadGetMaxAllowedChildren
  */
-template <> otError Interpreter::Process<Cmd("childmax")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("childmax")>(Arg aArgs[])
 {
     /**
      * @cli childmax (set)
@@ -1838,7 +1835,7 @@ template <> otError Interpreter::Process<Cmd("childmax")>(Arg aArgs[])
 }
 #endif // OPENTHREAD_FTD
 
-template <> otError Interpreter::Process<Cmd("childsupervision")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("childsupervision")>(Arg aArgs[])
 {
     otError error = OT_ERROR_INVALID_ARGS;
 
@@ -1915,7 +1912,7 @@ template <> otError Interpreter::Process<Cmd("childsupervision")>(Arg aArgs[])
  * @par api_copy
  * #otThreadGetChildTimeout
  */
-template <> otError Interpreter::Process<Cmd("childtimeout")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("childtimeout")>(Arg aArgs[])
 {
     /** @cli childtimeout (set)
      * @code
@@ -1930,15 +1927,15 @@ template <> otError Interpreter::Process<Cmd("childtimeout")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
-template <> otError Interpreter::Process<Cmd("coap")>(Arg aArgs[]) { return mCoap.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("coap")>(Arg aArgs[]) { return mCoap.Process(aArgs); }
 #endif
 
 #if OPENTHREAD_CONFIG_COAP_SECURE_API_ENABLE
-template <> otError Interpreter::Process<Cmd("coaps")>(Arg aArgs[]) { return mCoapSecure.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("coaps")>(Arg aArgs[]) { return mCoapSecure.Process(aArgs); }
 #endif
 
 #if OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
-template <> otError Interpreter::Process<Cmd("coex")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("coex")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -2025,14 +2022,14 @@ exit:
  * @sa otThreadGetContextIdReuseDelay
  * @sa otThreadSetContextIdReuseDelay
  */
-template <> otError Interpreter::Process<Cmd("contextreusedelay")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("contextreusedelay")>(Arg aArgs[])
 {
     return ProcessGetSet(aArgs, otThreadGetContextIdReuseDelay, otThreadSetContextIdReuseDelay);
 }
 #endif
 
 #if OPENTHREAD_CONFIG_IP6_BR_COUNTERS_ENABLE
-void Interpreter::OutputBorderRouterCounters(void)
+void InterpreterCoreMode::OutputBorderRouterCounters(void)
 {
     struct BrCounterName
     {
@@ -2067,7 +2064,7 @@ void Interpreter::OutputBorderRouterCounters(void)
 }
 #endif // OPENTHREAD_CONFIG_IP6_BR_COUNTERS_ENABLE
 
-template <> otError Interpreter::Process<Cmd("counters")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("counters")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -2418,7 +2415,7 @@ template <> otError Interpreter::Process<Cmd("counters")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
-template <> otError Interpreter::Process<Cmd("csl")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("csl")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -2496,7 +2493,7 @@ template <> otError Interpreter::Process<Cmd("csl")>(Arg aArgs[])
 #endif // OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 
 #if OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("delaytimermin")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("delaytimermin")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -2554,7 +2551,7 @@ exit:
  * setting Child Timeout value to zero on parent if acting as a child) and then stopping Thread protocol operation.
  * @sa otThreadDetachGracefully
  */
-template <> otError Interpreter::Process<Cmd("detach")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("detach")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -2584,12 +2581,12 @@ exit:
     return error;
 }
 
-void Interpreter::HandleDetachGracefullyResult(void *aContext)
+void InterpreterCoreMode::HandleDetachGracefullyResult(void *aContext)
 {
-    static_cast<Interpreter *>(aContext)->HandleDetachGracefullyResult();
+    static_cast<InterpreterCoreMode *>(aContext)->HandleDetachGracefullyResult();
 }
 
-void Interpreter::HandleDetachGracefullyResult(void)
+void InterpreterCoreMode::HandleDetachGracefullyResult(void)
 {
     OutputLine("Finished detaching");
     OutputResult(OT_ERROR_NONE);
@@ -2611,7 +2608,7 @@ void Interpreter::HandleDetachGracefullyResult(void)
  * Perform an MLE Discovery operation.
  * @sa otThreadDiscover
  */
-template <> otError Interpreter::Process<Cmd("discover")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("discover")>(Arg aArgs[])
 {
     otError  error        = OT_ERROR_NONE;
     uint32_t scanChannels = 0;
@@ -2637,7 +2634,7 @@ template <> otError Interpreter::Process<Cmd("discover")>(Arg aArgs[])
 
         if (enable)
         {
-            callback = &Interpreter::HandleDiscoveryRequest;
+            callback = &InterpreterCoreMode::HandleDiscoveryRequest;
             context  = this;
         }
 
@@ -2656,7 +2653,7 @@ template <> otError Interpreter::Process<Cmd("discover")>(Arg aArgs[])
     }
 
     SuccessOrExit(error = otThreadDiscover(GetInstancePtr(), scanChannels, OT_PANID_BROADCAST, false, false,
-                                           &Interpreter::HandleActiveScanResult, this));
+                                           &InterpreterCoreMode::HandleActiveScanResult, this));
 
     static const char *const kScanTableTitles[] = {
         "Network Name", "Extended PAN", "PAN", "MAC Address", "Ch", "dBm", "LQI",
@@ -2675,15 +2672,15 @@ exit:
 }
 
 #if OPENTHREAD_CLI_DNS_ENABLE
-template <> otError Interpreter::Process<Cmd("dns")>(Arg aArgs[]) { return mDns.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("dns")>(Arg aArgs[]) { return mDns.Process(aArgs); }
 #endif
 
 #if OPENTHREAD_CONFIG_MULTICAST_DNS_ENABLE && OPENTHREAD_CONFIG_MULTICAST_DNS_PUBLIC_API_ENABLE
-template <> otError Interpreter::Process<Cmd("mdns")>(Arg aArgs[]) { return mMdns.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("mdns")>(Arg aArgs[]) { return mMdns.Process(aArgs); }
 #endif
 
 #if OPENTHREAD_FTD
-void Interpreter::OutputEidCacheEntry(const otCacheEntryInfo &aEntry)
+void InterpreterCoreMode::OutputEidCacheEntry(const otCacheEntryInfo &aEntry)
 {
     static const char *const kStateStrings[] = {
         "cache", // (0) OT_CACHE_ENTRY_STATE_CACHED
@@ -2735,7 +2732,7 @@ void Interpreter::OutputEidCacheEntry(const otCacheEntryInfo &aEntry)
  * Returns the EID-to-RLOC cache entries.
  * @sa otThreadGetNextCacheEntry
  */
-template <> otError Interpreter::Process<Cmd("eidcache")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("eidcache")>(Arg aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgs);
 
@@ -2765,7 +2762,7 @@ exit:
  * @par api_copy
  * #otPlatRadioGetIeeeEui64
  */
-template <> otError Interpreter::Process<Cmd("eui64")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("eui64")>(Arg aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgs);
 
@@ -2781,7 +2778,7 @@ exit:
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("extaddr")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("extaddr")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -2822,7 +2819,7 @@ exit:
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("log")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("log")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -2894,7 +2891,7 @@ exit:
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("extpanid")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("extpanid")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -2945,7 +2942,7 @@ exit:
  * @par api_copy
  * #otInstanceFactoryReset
  */
-template <> otError Interpreter::Process<Cmd("factoryreset")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("factoryreset")>(Arg aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgs);
 
@@ -2955,7 +2952,7 @@ template <> otError Interpreter::Process<Cmd("factoryreset")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-template <> otError Interpreter::Process<Cmd("fake")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("fake")>(Arg aArgs[])
 {
     otError error = OT_ERROR_INVALID_COMMAND;
 
@@ -3002,7 +2999,7 @@ exit:
 }
 #endif
 
-template <> otError Interpreter::Process<Cmd("fem")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("fem")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -3069,7 +3066,7 @@ exit:
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("ifconfig")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("ifconfig")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -3130,7 +3127,7 @@ exit:
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("instanceid")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("instanceid")>(Arg aArgs[])
 {
     otError error = OT_ERROR_INVALID_ARGS;
 
@@ -3153,7 +3150,7 @@ template <> otError Interpreter::Process<Cmd("instanceid")>(Arg aArgs[])
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("ipaddr")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("ipaddr")>(Arg aArgs[])
 {
     otError error   = OT_ERROR_NONE;
     bool    verbose = false;
@@ -3297,7 +3294,7 @@ exit:
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("ipmaddr")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("ipmaddr")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -3431,7 +3428,7 @@ exit:
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("keysequence")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("keysequence")>(Arg aArgs[])
 {
     otError error = OT_ERROR_INVALID_ARGS;
 
@@ -3503,7 +3500,7 @@ template <> otError Interpreter::Process<Cmd("keysequence")>(Arg aArgs[])
  * Gets the Thread Leader Data.
  * @sa otThreadGetLeaderData
  */
-template <> otError Interpreter::Process<Cmd("leaderdata")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("leaderdata")>(Arg aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgs);
 
@@ -3523,7 +3520,7 @@ exit:
 }
 
 #if OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("partitionid")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("partitionid")>(Arg aArgs[])
 {
     otError error = OT_ERROR_INVALID_COMMAND;
 
@@ -3580,7 +3577,7 @@ template <> otError Interpreter::Process<Cmd("partitionid")>(Arg aArgs[])
  * @par api_copy
  * #otThreadGetLocalLeaderWeight
  */
-template <> otError Interpreter::Process<Cmd("leaderweight")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("leaderweight")>(Arg aArgs[])
 {
     /**
      * @cli leaderweight (set)
@@ -3596,7 +3593,7 @@ template <> otError Interpreter::Process<Cmd("leaderweight")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_MLE_DEVICE_PROPERTY_LEADER_WEIGHT_ENABLE
-template <> otError Interpreter::Process<Cmd("deviceprops")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("deviceprops")>(Arg aArgs[])
 {
     static const char *const kPowerSupplyStrings[4] = {
         "battery",           // (0) OT_POWER_SUPPLY_BATTERY
@@ -3700,10 +3697,13 @@ exit:
 
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
 
-template <> otError Interpreter::Process<Cmd("linkmetrics")>(Arg aArgs[]) { return mLinkMetrics.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("linkmetrics")>(Arg aArgs[])
+{
+    return mLinkMetrics.Process(aArgs);
+}
 
 #if OPENTHREAD_CONFIG_LINK_METRICS_MANAGER_ENABLE
-template <> otError Interpreter::Process<Cmd("linkmetricsmgr")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("linkmetricsmgr")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -3769,7 +3769,7 @@ template <> otError Interpreter::Process<Cmd("linkmetricsmgr")>(Arg aArgs[])
 
 #if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_ENABLE
 
-template <> otError Interpreter::Process<Cmd("locate")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("locate")>(Arg aArgs[])
 {
     otError      error = OT_ERROR_INVALID_ARGS;
     otIp6Address anycastAddress;
@@ -3830,15 +3830,15 @@ exit:
     return error;
 }
 
-void Interpreter::HandleLocateResult(void               *aContext,
-                                     otError             aError,
-                                     const otIp6Address *aMeshLocalAddress,
-                                     uint16_t            aRloc16)
+void InterpreterCoreMode::HandleLocateResult(void               *aContext,
+                                             otError             aError,
+                                             const otIp6Address *aMeshLocalAddress,
+                                             uint16_t            aRloc16)
 {
-    static_cast<Interpreter *>(aContext)->HandleLocateResult(aError, aMeshLocalAddress, aRloc16);
+    static_cast<InterpreterCoreMode *>(aContext)->HandleLocateResult(aError, aMeshLocalAddress, aRloc16);
 }
 
-void Interpreter::HandleLocateResult(otError aError, const otIp6Address *aMeshLocalAddress, uint16_t aRloc16)
+void InterpreterCoreMode::HandleLocateResult(otError aError, const otIp6Address *aMeshLocalAddress, uint16_t aRloc16)
 {
     VerifyOrExit(mLocateInProgress);
 
@@ -3859,7 +3859,7 @@ exit:
 #endif //  OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_ENABLE
 
 #if OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("pskc")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("pskc")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
     otPskc  pskc;
@@ -3926,7 +3926,7 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-template <> otError Interpreter::Process<Cmd("pskcref")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("pskcref")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -3987,7 +3987,7 @@ exit:
  * @par api_copy
  * #otThreadGetAdvertisementTrickleIntervalMax
  */
-template <> otError Interpreter::Process<Cmd("mleadvimax")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("mleadvimax")>(Arg aArgs[])
 {
     return ProcessGet(aArgs, otThreadGetAdvertisementTrickleIntervalMax);
 }
@@ -4008,7 +4008,7 @@ template <> otError Interpreter::Process<Cmd("mleadvimax")>(Arg aArgs[])
  * #otIp6SetMeshLocalIid
  * @cparam mliid @ca{iid}
  */
-template <> otError Interpreter::Process<Cmd("mliid")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("mliid")>(Arg aArgs[])
 {
     otError                  error = OT_ERROR_NONE;
     otIp6InterfaceIdentifier iid;
@@ -4055,7 +4055,7 @@ exit:
  * #otIp6RegisterMulticastListeners
  * @cparam mlr reg @ca{ipaddr} [@ca{timeout}]
  */
-template <> otError Interpreter::Process<Cmd("mlr")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("mlr")>(Arg aArgs[])
 {
     otError error = OT_ERROR_INVALID_COMMAND;
 
@@ -4089,7 +4089,7 @@ template <> otError Interpreter::Process<Cmd("mlr")>(Arg aArgs[])
 
         SuccessOrExit(error = otIp6RegisterMulticastListeners(GetInstancePtr(), addresses, numAddresses,
                                                               hasTimeout ? &timeout : nullptr,
-                                                              Interpreter::HandleMlrRegResult, this));
+                                                              InterpreterCoreMode::HandleMlrRegResult, this));
 
         error = OT_ERROR_PENDING;
     }
@@ -4098,19 +4098,20 @@ exit:
     return error;
 }
 
-void Interpreter::HandleMlrRegResult(void               *aContext,
-                                     otError             aError,
-                                     uint8_t             aMlrStatus,
-                                     const otIp6Address *aFailedAddresses,
-                                     uint8_t             aFailedAddressNum)
+void InterpreterCoreMode::HandleMlrRegResult(void               *aContext,
+                                             otError             aError,
+                                             uint8_t             aMlrStatus,
+                                             const otIp6Address *aFailedAddresses,
+                                             uint8_t             aFailedAddressNum)
 {
-    static_cast<Interpreter *>(aContext)->HandleMlrRegResult(aError, aMlrStatus, aFailedAddresses, aFailedAddressNum);
+    static_cast<InterpreterCoreMode *>(aContext)->HandleMlrRegResult(aError, aMlrStatus, aFailedAddresses,
+                                                                     aFailedAddressNum);
 }
 
-void Interpreter::HandleMlrRegResult(otError             aError,
-                                     uint8_t             aMlrStatus,
-                                     const otIp6Address *aFailedAddresses,
-                                     uint8_t             aFailedAddressNum)
+void InterpreterCoreMode::HandleMlrRegResult(otError             aError,
+                                             uint8_t             aMlrStatus,
+                                             const otIp6Address *aFailedAddresses,
+                                             uint8_t             aFailedAddressNum)
 {
     if (aError == OT_ERROR_NONE)
     {
@@ -4127,7 +4128,7 @@ void Interpreter::HandleMlrRegResult(otError             aError,
 
 #endif // (OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE) && OPENTHREAD_CONFIG_COMMISSIONER_ENABLE
 
-template <> otError Interpreter::Process<Cmd("mode")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("mode")>(Arg aArgs[])
 {
     otError          error = OT_ERROR_NONE;
     otLinkModeConfig linkMode;
@@ -4202,7 +4203,7 @@ exit:
  * @par
  * This command is always available, even when only a single radio is supported by the device.
  */
-template <> otError Interpreter::Process<Cmd("multiradio")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("multiradio")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -4290,7 +4291,7 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-void Interpreter::OutputMultiRadioInfo(const otMultiRadioNeighborInfo &aMultiRadioInfo)
+void InterpreterCoreMode::OutputMultiRadioInfo(const otMultiRadioNeighborInfo &aMultiRadioInfo)
 {
     bool isFirst = true;
 
@@ -4312,7 +4313,7 @@ void Interpreter::OutputMultiRadioInfo(const otMultiRadioNeighborInfo &aMultiRad
 #endif // OPENTHREAD_CONFIG_MULTI_RADIO
 
 #if OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("neighbor")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("neighbor")>(Arg aArgs[])
 {
     otError                error = OT_ERROR_NONE;
     otNeighborInfo         neighborInfo;
@@ -4535,7 +4536,7 @@ template <> otError Interpreter::Process<Cmd("neighbor")>(Arg aArgs[])
  * @par api_copy
  * #otUdpGetSockets
  */
-template <> otError Interpreter::Process<Cmd("netstat")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("netstat")>(Arg aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgs);
 
@@ -4558,7 +4559,7 @@ template <> otError Interpreter::Process<Cmd("netstat")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
-template <> otError Interpreter::Process<Cmd("service")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("service")>(Arg aArgs[])
 {
     otError         error = OT_ERROR_INVALID_COMMAND;
     otServiceConfig cfg;
@@ -4654,7 +4655,7 @@ exit:
 }
 #endif // OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
-template <> otError Interpreter::Process<Cmd("netdata")>(Arg aArgs[]) { return mNetworkData.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("netdata")>(Arg aArgs[]) { return mNetworkData.Process(aArgs); }
 
 #if OPENTHREAD_FTD
 /**
@@ -4678,13 +4679,13 @@ template <> otError Interpreter::Process<Cmd("netdata")>(Arg aArgs[]) { return m
  * @sa otThreadGetNetworkIdTimeout
  * @sa otThreadSetNetworkIdTimeout
  */
-template <> otError Interpreter::Process<Cmd("networkidtimeout")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("networkidtimeout")>(Arg aArgs[])
 {
     return ProcessGetSet(aArgs, otThreadGetNetworkIdTimeout, otThreadSetNetworkIdTimeout);
 }
 #endif
 
-template <> otError Interpreter::Process<Cmd("networkkey")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("networkkey")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -4728,7 +4729,7 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
-template <> otError Interpreter::Process<Cmd("networkkeyref")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("networkkeyref")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -4759,7 +4760,7 @@ exit:
  * @par api_copy
  * #otThreadGetNetworkName
  */
-template <> otError Interpreter::Process<Cmd("networkname")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("networkname")>(Arg aArgs[])
 {
     /**
      * @cli networkname (name)
@@ -4777,7 +4778,7 @@ template <> otError Interpreter::Process<Cmd("networkname")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
-template <> otError Interpreter::Process<Cmd("networktime")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("networktime")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -4859,7 +4860,7 @@ exit:
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
 
 #if OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("nexthop")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("nexthop")>(Arg aArgs[])
 {
     constexpr uint8_t  kRouterIdOffset = 10; // Bit offset of Router ID in RLOC16
     constexpr uint16_t kInvalidRloc16  = 0xfffe;
@@ -4958,7 +4959,7 @@ exit:
 
 #if OPENTHREAD_CONFIG_MESH_DIAG_ENABLE
 
-template <> otError Interpreter::Process<Cmd("meshdiag")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("meshdiag")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -5170,12 +5171,12 @@ exit:
     return error;
 }
 
-void Interpreter::HandleMeshDiagDiscoverDone(otError aError, otMeshDiagRouterInfo *aRouterInfo, void *aContext)
+void InterpreterCoreMode::HandleMeshDiagDiscoverDone(otError aError, otMeshDiagRouterInfo *aRouterInfo, void *aContext)
 {
-    reinterpret_cast<Interpreter *>(aContext)->HandleMeshDiagDiscoverDone(aError, aRouterInfo);
+    reinterpret_cast<InterpreterCoreMode *>(aContext)->HandleMeshDiagDiscoverDone(aError, aRouterInfo);
 }
 
-void Interpreter::HandleMeshDiagDiscoverDone(otError aError, otMeshDiagRouterInfo *aRouterInfo)
+void InterpreterCoreMode::HandleMeshDiagDiscoverDone(otError aError, otMeshDiagRouterInfo *aRouterInfo)
 {
     VerifyOrExit(aRouterInfo != nullptr);
 
@@ -5291,14 +5292,14 @@ exit:
     OutputResult(aError);
 }
 
-void Interpreter::HandleMeshDiagQueryChildTableResult(otError                     aError,
-                                                      const otMeshDiagChildEntry *aChildEntry,
-                                                      void                       *aContext)
+void InterpreterCoreMode::HandleMeshDiagQueryChildTableResult(otError                     aError,
+                                                              const otMeshDiagChildEntry *aChildEntry,
+                                                              void                       *aContext)
 {
-    reinterpret_cast<Interpreter *>(aContext)->HandleMeshDiagQueryChildTableResult(aError, aChildEntry);
+    reinterpret_cast<InterpreterCoreMode *>(aContext)->HandleMeshDiagQueryChildTableResult(aError, aChildEntry);
 }
 
-void Interpreter::HandleMeshDiagQueryChildTableResult(otError aError, const otMeshDiagChildEntry *aChildEntry)
+void InterpreterCoreMode::HandleMeshDiagQueryChildTableResult(otError aError, const otMeshDiagChildEntry *aChildEntry)
 {
     PercentageStringBuffer stringBuffer;
     char                   string[OT_DURATION_STRING_SIZE];
@@ -5336,15 +5337,18 @@ exit:
     OutputResult(aError);
 }
 
-void Interpreter::HandleMeshDiagQueryRouterNeighborTableResult(otError                              aError,
-                                                               const otMeshDiagRouterNeighborEntry *aNeighborEntry,
-                                                               void                                *aContext)
+void InterpreterCoreMode::HandleMeshDiagQueryRouterNeighborTableResult(
+    otError                              aError,
+    const otMeshDiagRouterNeighborEntry *aNeighborEntry,
+    void                                *aContext)
 {
-    reinterpret_cast<Interpreter *>(aContext)->HandleMeshDiagQueryRouterNeighborTableResult(aError, aNeighborEntry);
+    reinterpret_cast<InterpreterCoreMode *>(aContext)->HandleMeshDiagQueryRouterNeighborTableResult(aError,
+                                                                                                    aNeighborEntry);
 }
 
-void Interpreter::HandleMeshDiagQueryRouterNeighborTableResult(otError                              aError,
-                                                               const otMeshDiagRouterNeighborEntry *aNeighborEntry)
+void InterpreterCoreMode::HandleMeshDiagQueryRouterNeighborTableResult(
+    otError                              aError,
+    const otMeshDiagRouterNeighborEntry *aNeighborEntry)
 {
     PercentageStringBuffer stringBuffer;
     char                   string[OT_DURATION_STRING_SIZE];
@@ -5372,17 +5376,18 @@ exit:
     OutputResult(aError);
 }
 
-void Interpreter::HandleMeshDiagQueryChildIp6Addrs(otError                    aError,
-                                                   uint16_t                   aChildRloc16,
-                                                   otMeshDiagIp6AddrIterator *aIp6AddrIterator,
-                                                   void                      *aContext)
+void InterpreterCoreMode::HandleMeshDiagQueryChildIp6Addrs(otError                    aError,
+                                                           uint16_t                   aChildRloc16,
+                                                           otMeshDiagIp6AddrIterator *aIp6AddrIterator,
+                                                           void                      *aContext)
 {
-    reinterpret_cast<Interpreter *>(aContext)->HandleMeshDiagQueryChildIp6Addrs(aError, aChildRloc16, aIp6AddrIterator);
+    reinterpret_cast<InterpreterCoreMode *>(aContext)->HandleMeshDiagQueryChildIp6Addrs(aError, aChildRloc16,
+                                                                                        aIp6AddrIterator);
 }
 
-void Interpreter::HandleMeshDiagQueryChildIp6Addrs(otError                    aError,
-                                                   uint16_t                   aChildRloc16,
-                                                   otMeshDiagIp6AddrIterator *aIp6AddrIterator)
+void InterpreterCoreMode::HandleMeshDiagQueryChildIp6Addrs(otError                    aError,
+                                                           uint16_t                   aChildRloc16,
+                                                           otMeshDiagIp6AddrIterator *aIp6AddrIterator)
 {
     otIp6Address ip6Address;
 
@@ -5405,7 +5410,7 @@ exit:
 
 #endif // OPENTHREAD_FTD
 
-template <> otError Interpreter::Process<Cmd("panid")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("panid")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
     /**
@@ -5440,7 +5445,7 @@ template <> otError Interpreter::Process<Cmd("panid")>(Arg aArgs[])
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("parent")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("parent")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
     /**
@@ -5524,14 +5529,14 @@ exit:
  * @sa otThreadGetParentPriority
  * @sa otThreadSetParentPriority
  */
-template <> otError Interpreter::Process<Cmd("parentpriority")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("parentpriority")>(Arg aArgs[])
 {
     return ProcessGetSet(aArgs, otThreadGetParentPriority, otThreadSetParentPriority);
 }
 #endif
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-template <> otError Interpreter::Process<Cmd("routeridrange")>(Arg *aArgs)
+template <> otError InterpreterCoreMode::Process<Cmd("routeridrange")>(Arg *aArgs)
 {
     uint8_t minRouterId;
     uint8_t maxRouterId;
@@ -5591,7 +5596,7 @@ exit:
  * Note: The command will return InvalidState when the preferred NAT64 prefix is unavailable.
  * @sa otPingSenderPing
  */
-template <> otError Interpreter::Process<Cmd("ping")>(Arg aArgs[]) { return mPing.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("ping")>(Arg aArgs[]) { return mPing.Process(aArgs); }
 #endif // OPENTHREAD_CONFIG_PING_SENDER_ENABLE
 
 /**
@@ -5604,7 +5609,7 @@ template <> otError Interpreter::Process<Cmd("ping")>(Arg aArgs[]) { return mPin
  * @par
  * Print the current platform
  */
-template <> otError Interpreter::Process<Cmd("platform")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("platform")>(Arg aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgs);
     OutputLine("%s", OPENTHREAD_CONFIG_PLATFORM_INFO);
@@ -5627,12 +5632,12 @@ template <> otError Interpreter::Process<Cmd("platform")>(Arg aArgs[])
  * @par
  * Get or set the customized data poll period of sleepy end device (milliseconds). Only for certification test.
  */
-template <> otError Interpreter::Process<Cmd("pollperiod")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("pollperiod")>(Arg aArgs[])
 {
     return ProcessGetSet(aArgs, otLinkGetPollPeriod, otLinkSetPollPeriod);
 }
 
-template <> otError Interpreter::Process<Cmd("promiscuous")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("promiscuous")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -5689,12 +5694,12 @@ exit:
     return error;
 }
 
-void Interpreter::HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx, void *aContext)
+void InterpreterCoreMode::HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx, void *aContext)
 {
-    static_cast<Interpreter *>(aContext)->HandleLinkPcapReceive(aFrame, aIsTx);
+    static_cast<InterpreterCoreMode *>(aContext)->HandleLinkPcapReceive(aFrame, aIsTx);
 }
 
-void Interpreter::HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx)
+void InterpreterCoreMode::HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx)
 {
     otLogHexDumpInfo info;
 
@@ -5712,7 +5717,7 @@ void Interpreter::HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx)
 }
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
-template <> otError Interpreter::Process<Cmd("prefix")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("prefix")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -5839,14 +5844,14 @@ exit:
  * @sa otThreadSetPreferredRouterId
  */
 #if OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("preferrouterid")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("preferrouterid")>(Arg aArgs[])
 {
     return ProcessSet(aArgs, otThreadSetPreferredRouterId);
 }
 #endif
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE && OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
-template <> otError Interpreter::Process<Cmd("radiofilter")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("radiofilter")>(Arg aArgs[])
 {
     return ProcessEnableDisable(aArgs, otLinkIsRadioFilterEnabled, otLinkSetRadioFilterEnabled);
 }
@@ -5856,7 +5861,7 @@ template <> otError Interpreter::Process<Cmd("radiofilter")>(Arg aArgs[])
 inline unsigned long UsToSInt(uint64_t aUs) { return ToUlong(static_cast<uint32_t>(aUs / 1000000)); }
 inline unsigned long UsToSDec(uint64_t aUs) { return ToUlong(static_cast<uint32_t>(aUs % 1000000)); }
 
-void Interpreter::OutputRadioStatsTime(const char *aTimeName, uint64_t aTimeUs, uint64_t aTotalTimeUs)
+void InterpreterCoreMode::OutputRadioStatsTime(const char *aTimeName, uint64_t aTimeUs, uint64_t aTotalTimeUs)
 {
     uint32_t timePercentInt = static_cast<uint32_t>(aTimeUs * 100 / aTotalTimeUs);
     uint32_t timePercentDec = static_cast<uint32_t>((aTimeUs * 100 % aTotalTimeUs) * 100 / aTotalTimeUs);
@@ -5866,7 +5871,7 @@ void Interpreter::OutputRadioStatsTime(const char *aTimeName, uint64_t aTimeUs, 
 }
 #endif // OPENTHREAD_CONFIG_RADIO_STATS_ENABLE
 
-template <> otError Interpreter::Process<Cmd("radio")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("radio")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -5953,7 +5958,7 @@ template <> otError Interpreter::Process<Cmd("radio")>(Arg aArgs[])
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("rcp")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("rcp")>(Arg aArgs[])
 {
     otError     error   = OT_ERROR_NONE;
     const char *version = otPlatRadioGetVersionString(GetInstancePtr());
@@ -5992,7 +5997,7 @@ exit:
  * @par api_copy
  * #otLinkGetRegion
  */
-template <> otError Interpreter::Process<Cmd("region")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("region")>(Arg aArgs[])
 {
     otError  error = OT_ERROR_NONE;
     uint16_t regionCode;
@@ -6038,7 +6043,7 @@ exit:
  * @par api_copy
  * #otThreadReleaseRouterId
  */
-template <> otError Interpreter::Process<Cmd("releaserouterid")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("releaserouterid")>(Arg aArgs[])
 
 {
     return ProcessSet(aArgs, otThreadReleaseRouterId);
@@ -6054,7 +6059,7 @@ template <> otError Interpreter::Process<Cmd("releaserouterid")>(Arg aArgs[])
  * @par api_copy
  * #otThreadGetRloc16
  */
-template <> otError Interpreter::Process<Cmd("rloc16")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("rloc16")>(Arg aArgs[])
 
 {
     OT_UNUSED_VARIABLE(aArgs);
@@ -6065,7 +6070,7 @@ template <> otError Interpreter::Process<Cmd("rloc16")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
-template <> otError Interpreter::Process<Cmd("route")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("route")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
     /**
@@ -6141,7 +6146,7 @@ exit:
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
 
 #if OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("router")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("router")>(Arg aArgs[])
 {
     otError      error = OT_ERROR_NONE;
     otRouterInfo routerInfo;
@@ -6299,7 +6304,7 @@ exit:
  * @sa otThreadGetRouterDowngradeThreshold
  * @sa otThreadSetRouterDowngradeThreshold
  */
-template <> otError Interpreter::Process<Cmd("routerdowngradethreshold")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("routerdowngradethreshold")>(Arg aArgs[])
 {
     return ProcessGetSet(aArgs, otThreadGetRouterDowngradeThreshold, otThreadSetRouterDowngradeThreshold);
 }
@@ -6315,7 +6320,7 @@ template <> otError Interpreter::Process<Cmd("routerdowngradethreshold")>(Arg aA
  * @par
  * Indicates whether the router role is enabled or disabled.
  */
-template <> otError Interpreter::Process<Cmd("routereligible")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("routereligible")>(Arg aArgs[])
 {
     /**
      * @cli routereligible (enable,disable)
@@ -6352,7 +6357,7 @@ template <> otError Interpreter::Process<Cmd("routereligible")>(Arg aArgs[])
  * @sa otThreadGetRouterSelectionJitter
  * @sa otThreadSetRouterSelectionJitter
  */
-template <> otError Interpreter::Process<Cmd("routerselectionjitter")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("routerselectionjitter")>(Arg aArgs[])
 {
     return ProcessGetSet(aArgs, otThreadGetRouterSelectionJitter, otThreadSetRouterSelectionJitter);
 }
@@ -6373,7 +6378,7 @@ template <> otError Interpreter::Process<Cmd("routerselectionjitter")>(Arg aArgs
  * @sa otThreadGetRouterUpgradeThreshold
  * @sa otThreadSetRouterUpgradeThreshold
  */
-template <> otError Interpreter::Process<Cmd("routerupgradethreshold")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("routerupgradethreshold")>(Arg aArgs[])
 {
     return ProcessGetSet(aArgs, otThreadGetRouterUpgradeThreshold, otThreadSetRouterUpgradeThreshold);
 }
@@ -6394,13 +6399,13 @@ template <> otError Interpreter::Process<Cmd("routerupgradethreshold")>(Arg aArg
  * @sa otThreadGetChildRouterLinks
  * @sa otThreadSetChildRouterLinks
  */
-template <> otError Interpreter::Process<Cmd("childrouterlinks")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("childrouterlinks")>(Arg aArgs[])
 {
     return ProcessGetSet(aArgs, otThreadGetChildRouterLinks, otThreadSetChildRouterLinks);
 }
 #endif // OPENTHREAD_FTD
 
-template <> otError Interpreter::Process<Cmd("scan")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("scan")>(Arg aArgs[])
 {
     otError  error        = OT_ERROR_NONE;
     uint32_t scanChannels = 0;
@@ -6473,7 +6478,7 @@ template <> otError Interpreter::Process<Cmd("scan")>(Arg aArgs[])
 
         OutputTableHeader(kEnergyScanTableTitles, kEnergyScanTableColumnWidths);
         SuccessOrExit(error = otLinkEnergyScan(GetInstancePtr(), scanChannels, scanDuration,
-                                               &Interpreter::HandleEnergyScanResult, this));
+                                               &InterpreterCoreMode::HandleEnergyScanResult, this));
     }
     /**
      * @cli scan
@@ -6498,7 +6503,7 @@ template <> otError Interpreter::Process<Cmd("scan")>(Arg aArgs[])
         OutputTableHeader(kScanTableTitles, kScanTableColumnWidths);
 
         SuccessOrExit(error = otLinkActiveScan(GetInstancePtr(), scanChannels, scanDuration,
-                                               &Interpreter::HandleActiveScanResult, this));
+                                               &InterpreterCoreMode::HandleActiveScanResult, this));
     }
 
     error = OT_ERROR_PENDING;
@@ -6507,12 +6512,12 @@ exit:
     return error;
 }
 
-void Interpreter::HandleActiveScanResult(otActiveScanResult *aResult, void *aContext)
+void InterpreterCoreMode::HandleActiveScanResult(otActiveScanResult *aResult, void *aContext)
 {
-    static_cast<Interpreter *>(aContext)->HandleActiveScanResult(aResult);
+    static_cast<InterpreterCoreMode *>(aContext)->HandleActiveScanResult(aResult);
 }
 
-void Interpreter::HandleActiveScanResult(otActiveScanResult *aResult)
+void InterpreterCoreMode::HandleActiveScanResult(otActiveScanResult *aResult)
 {
     if (aResult == nullptr)
     {
@@ -6539,12 +6544,12 @@ exit:
     return;
 }
 
-void Interpreter::HandleEnergyScanResult(otEnergyScanResult *aResult, void *aContext)
+void InterpreterCoreMode::HandleEnergyScanResult(otEnergyScanResult *aResult, void *aContext)
 {
-    static_cast<Interpreter *>(aContext)->HandleEnergyScanResult(aResult);
+    static_cast<InterpreterCoreMode *>(aContext)->HandleEnergyScanResult(aResult);
 }
 
-void Interpreter::HandleEnergyScanResult(otEnergyScanResult *aResult)
+void InterpreterCoreMode::HandleEnergyScanResult(otEnergyScanResult *aResult)
 {
     if (aResult == nullptr)
     {
@@ -6570,7 +6575,7 @@ exit:
  * Returns either `true` or `false`.
  * @sa otThreadIsSingleton
  */
-template <> otError Interpreter::Process<Cmd("singleton")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("singleton")>(Arg aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgs);
 
@@ -6580,7 +6585,7 @@ template <> otError Interpreter::Process<Cmd("singleton")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
-template <> otError Interpreter::Process<Cmd("sntp")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("sntp")>(Arg aArgs[])
 {
     otError          error = OT_ERROR_NONE;
     uint16_t         port  = OT_SNTP_DEFAULT_SERVER_PORT;
@@ -6630,7 +6635,8 @@ template <> otError Interpreter::Process<Cmd("sntp")>(Arg aArgs[])
 
         query.mMessageInfo = static_cast<const otMessageInfo *>(&messageInfo);
 
-        SuccessOrExit(error = otSntpClientQuery(GetInstancePtr(), &query, &Interpreter::HandleSntpResponse, this));
+        SuccessOrExit(error =
+                          otSntpClientQuery(GetInstancePtr(), &query, &InterpreterCoreMode::HandleSntpResponse, this));
 
         mSntpQueryingInProgress = true;
         error                   = OT_ERROR_PENDING;
@@ -6644,12 +6650,12 @@ exit:
     return error;
 }
 
-void Interpreter::HandleSntpResponse(void *aContext, uint64_t aTime, otError aResult)
+void InterpreterCoreMode::HandleSntpResponse(void *aContext, uint64_t aTime, otError aResult)
 {
-    static_cast<Interpreter *>(aContext)->HandleSntpResponse(aTime, aResult);
+    static_cast<InterpreterCoreMode *>(aContext)->HandleSntpResponse(aTime, aResult);
 }
 
-void Interpreter::HandleSntpResponse(uint64_t aTime, otError aResult)
+void InterpreterCoreMode::HandleSntpResponse(uint64_t aTime, otError aResult)
 {
     if (aResult == OT_ERROR_NONE)
     {
@@ -6670,7 +6676,7 @@ void Interpreter::HandleSntpResponse(uint64_t aTime, otError aResult)
 #endif // OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
 
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE || OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-template <> otError Interpreter::Process<Cmd("srp")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("srp")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -6705,7 +6711,7 @@ exit:
 }
 #endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE || OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
 
-template <> otError Interpreter::Process<Cmd("state")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("state")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -6768,7 +6774,7 @@ template <> otError Interpreter::Process<Cmd("state")>(Arg aArgs[])
     return error;
 }
 
-template <> otError Interpreter::Process<Cmd("thread")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("thread")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -6822,7 +6828,7 @@ template <> otError Interpreter::Process<Cmd("thread")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_TX_QUEUE_STATISTICS_ENABLE
-template <> otError Interpreter::Process<Cmd("timeinqueue")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("timeinqueue")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -6954,7 +6960,7 @@ template <> otError Interpreter::Process<Cmd("timeinqueue")>(Arg aArgs[])
 }
 #endif // OPENTHREAD_CONFIG_TX_QUEUE_STATISTICS_ENABLE
 
-template <> otError Interpreter::Process<Cmd("dataset")>(Arg aArgs[]) { return mDataset.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("dataset")>(Arg aArgs[]) { return mDataset.Process(aArgs); }
 
 /**
  * @cli txpower (get,set)
@@ -6973,7 +6979,7 @@ template <> otError Interpreter::Process<Cmd("dataset")>(Arg aArgs[]) { return m
  * @sa otPlatRadioGetTransmitPower
  * @sa otPlatRadioSetTransmitPower
  */
-template <> otError Interpreter::Process<Cmd("txpower")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("txpower")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
     int8_t  power;
@@ -7034,7 +7040,7 @@ exit:
  * - BR prefixes (OMR, on-link, NAT64)
  * - Discovered prefix table
  */
-template <> otError Interpreter::Process<Cmd("debug")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("debug")>(Arg aArgs[])
 {
     static constexpr uint16_t kMaxDebugCommandSize = 30;
 
@@ -7116,16 +7122,16 @@ template <> otError Interpreter::Process<Cmd("debug")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_BLE_TCAT_ENABLE && OPENTHREAD_CONFIG_CLI_BLE_SECURE_ENABLE
-template <> otError Interpreter::Process<Cmd("tcat")>(Arg aArgs[]) { return mTcat.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("tcat")>(Arg aArgs[]) { return mTcat.Process(aArgs); }
 #endif
 
 #if OPENTHREAD_CONFIG_TCP_ENABLE && OPENTHREAD_CONFIG_CLI_TCP_ENABLE
-template <> otError Interpreter::Process<Cmd("tcp")>(Arg aArgs[]) { return mTcp.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("tcp")>(Arg aArgs[]) { return mTcp.Process(aArgs); }
 #endif
 
-template <> otError Interpreter::Process<Cmd("udp")>(Arg aArgs[]) { return mUdp.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("udp")>(Arg aArgs[]) { return mUdp.Process(aArgs); }
 
-template <> otError Interpreter::Process<Cmd("unsecureport")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("unsecureport")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -7207,7 +7213,7 @@ template <> otError Interpreter::Process<Cmd("unsecureport")>(Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_UPTIME_ENABLE
-template <> otError Interpreter::Process<Cmd("uptime")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("uptime")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -7253,11 +7259,14 @@ template <> otError Interpreter::Process<Cmd("uptime")>(Arg aArgs[])
 #endif
 
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
-template <> otError Interpreter::Process<Cmd("commissioner")>(Arg aArgs[]) { return mCommissioner.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("commissioner")>(Arg aArgs[])
+{
+    return mCommissioner.Process(aArgs);
+}
 #endif
 
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
-template <> otError Interpreter::Process<Cmd("joiner")>(Arg aArgs[]) { return mJoiner.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("joiner")>(Arg aArgs[]) { return mJoiner.Process(aArgs); }
 #endif
 
 #if OPENTHREAD_FTD
@@ -7271,7 +7280,7 @@ template <> otError Interpreter::Process<Cmd("joiner")>(Arg aArgs[]) { return mJ
  * @par api_copy
  * #otThreadGetJoinerUdpPort
  */
-template <> otError Interpreter::Process<Cmd("joinerport")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("joinerport")>(Arg aArgs[])
 {
     /**
      * @cli joinerport (set)
@@ -7288,10 +7297,10 @@ template <> otError Interpreter::Process<Cmd("joinerport")>(Arg aArgs[])
 #endif
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
-template <> otError Interpreter::Process<Cmd("macfilter")>(Arg aArgs[]) { return mMacFilter.Process(aArgs); }
+template <> otError InterpreterCoreMode::Process<Cmd("macfilter")>(Arg aArgs[]) { return mMacFilter.Process(aArgs); }
 #endif
 
-template <> otError Interpreter::Process<Cmd("mac")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("mac")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -7409,7 +7418,7 @@ exit:
  * @note `OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE` is required for all `trel` sub-commands.
  */
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-template <> otError Interpreter::Process<Cmd("trel")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("trel")>(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
 
@@ -7581,7 +7590,7 @@ exit:
     return error;
 }
 
-void Interpreter::OutputTrelCounters(const otTrelCounters &aCounters)
+void InterpreterCoreMode::OutputTrelCounters(const otTrelCounters &aCounters)
 {
     Uint64StringBuffer u64StringBuffer;
 
@@ -7595,7 +7604,7 @@ void Interpreter::OutputTrelCounters(const otTrelCounters &aCounters)
 
 #endif
 
-template <> otError Interpreter::Process<Cmd("vendor")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("vendor")>(Arg aArgs[])
 {
     Error error = OT_ERROR_INVALID_ARGS;
 
@@ -7725,7 +7734,7 @@ template <> otError Interpreter::Process<Cmd("vendor")>(Arg aArgs[])
 
 #if OPENTHREAD_CONFIG_TMF_NETDIAG_CLIENT_ENABLE
 
-template <> otError Interpreter::Process<Cmd("networkdiagnostic")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("networkdiagnostic")>(Arg aArgs[])
 {
     static constexpr uint16_t kMaxTlvs = 35;
 
@@ -7806,7 +7815,7 @@ template <> otError Interpreter::Process<Cmd("networkdiagnostic")>(Arg aArgs[])
     if (aArgs[0] == "get")
     {
         SuccessOrExit(error = otThreadSendDiagnosticGet(GetInstancePtr(), &address, tlvTypes, count,
-                                                        &Interpreter::HandleDiagnosticGetResponse, this));
+                                                        &InterpreterCoreMode::HandleDiagnosticGetResponse, this));
         SetCommandTimeout(kNetworkDiagnosticTimeoutMsecs);
         error = OT_ERROR_PENDING;
     }
@@ -7837,18 +7846,18 @@ exit:
     return error;
 }
 
-void Interpreter::HandleDiagnosticGetResponse(otError              aError,
-                                              otMessage           *aMessage,
-                                              const otMessageInfo *aMessageInfo,
-                                              void                *aContext)
+void InterpreterCoreMode::HandleDiagnosticGetResponse(otError              aError,
+                                                      otMessage           *aMessage,
+                                                      const otMessageInfo *aMessageInfo,
+                                                      void                *aContext)
 {
-    static_cast<Interpreter *>(aContext)->HandleDiagnosticGetResponse(
+    static_cast<InterpreterCoreMode *>(aContext)->HandleDiagnosticGetResponse(
         aError, aMessage, static_cast<const Ip6::MessageInfo *>(aMessageInfo));
 }
 
-void Interpreter::HandleDiagnosticGetResponse(otError                 aError,
-                                              const otMessage        *aMessage,
-                                              const Ip6::MessageInfo *aMessageInfo)
+void InterpreterCoreMode::HandleDiagnosticGetResponse(otError                 aError,
+                                                      const otMessage        *aMessage,
+                                                      const Ip6::MessageInfo *aMessageInfo)
 {
     uint8_t               buf[16];
     uint16_t              bytesToPrint;
@@ -7979,14 +7988,14 @@ exit:
     return;
 }
 
-void Interpreter::OutputMode(uint8_t aIndentSize, const otLinkModeConfig &aMode)
+void InterpreterCoreMode::OutputMode(uint8_t aIndentSize, const otLinkModeConfig &aMode)
 {
     OutputLine(aIndentSize, "RxOnWhenIdle: %d", aMode.mRxOnWhenIdle);
     OutputLine(aIndentSize, "DeviceType: %d", aMode.mDeviceType);
     OutputLine(aIndentSize, "NetworkData: %d", aMode.mNetworkData);
 }
 
-void Interpreter::OutputConnectivity(uint8_t aIndentSize, const otNetworkDiagConnectivity &aConnectivity)
+void InterpreterCoreMode::OutputConnectivity(uint8_t aIndentSize, const otNetworkDiagConnectivity &aConnectivity)
 {
     OutputLine(aIndentSize, "ParentPriority: %d", aConnectivity.mParentPriority);
     OutputLine(aIndentSize, "LinkQuality3: %u", aConnectivity.mLinkQuality3);
@@ -7998,7 +8007,7 @@ void Interpreter::OutputConnectivity(uint8_t aIndentSize, const otNetworkDiagCon
     OutputLine(aIndentSize, "SedBufferSize: %u", aConnectivity.mSedBufferSize);
     OutputLine(aIndentSize, "SedDatagramCount: %u", aConnectivity.mSedDatagramCount);
 }
-void Interpreter::OutputRoute(uint8_t aIndentSize, const otNetworkDiagRoute &aRoute)
+void InterpreterCoreMode::OutputRoute(uint8_t aIndentSize, const otNetworkDiagRoute &aRoute)
 {
     OutputLine(aIndentSize, "IdSequence: %u", aRoute.mIdSequence);
     OutputLine(aIndentSize, "RouteData:");
@@ -8011,7 +8020,7 @@ void Interpreter::OutputRoute(uint8_t aIndentSize, const otNetworkDiagRoute &aRo
     }
 }
 
-void Interpreter::OutputRouteData(uint8_t aIndentSize, const otNetworkDiagRouteData &aRouteData)
+void InterpreterCoreMode::OutputRouteData(uint8_t aIndentSize, const otNetworkDiagRouteData &aRouteData)
 {
     OutputLine("RouteId: 0x%02x", aRouteData.mRouterId);
 
@@ -8020,7 +8029,7 @@ void Interpreter::OutputRouteData(uint8_t aIndentSize, const otNetworkDiagRouteD
     OutputLine(aIndentSize, "RouteCost: %u", aRouteData.mRouteCost);
 }
 
-void Interpreter::OutputLeaderData(uint8_t aIndentSize, const otLeaderData &aLeaderData)
+void InterpreterCoreMode::OutputLeaderData(uint8_t aIndentSize, const otLeaderData &aLeaderData)
 {
     OutputLine(aIndentSize, "PartitionId: 0x%08lx", ToUlong(aLeaderData.mPartitionId));
     OutputLine(aIndentSize, "Weighting: %u", aLeaderData.mWeighting);
@@ -8029,7 +8038,8 @@ void Interpreter::OutputLeaderData(uint8_t aIndentSize, const otLeaderData &aLea
     OutputLine(aIndentSize, "LeaderRouterId: 0x%02x", aLeaderData.mLeaderRouterId);
 }
 
-void Interpreter::OutputNetworkDiagMacCounters(uint8_t aIndentSize, const otNetworkDiagMacCounters &aMacCounters)
+void InterpreterCoreMode::OutputNetworkDiagMacCounters(uint8_t                         aIndentSize,
+                                                       const otNetworkDiagMacCounters &aMacCounters)
 {
     struct CounterName
     {
@@ -8055,7 +8065,8 @@ void Interpreter::OutputNetworkDiagMacCounters(uint8_t aIndentSize, const otNetw
     }
 }
 
-void Interpreter::OutputNetworkDiagMleCounters(uint8_t aIndentSize, const otNetworkDiagMleCounters &aMleCounters)
+void InterpreterCoreMode::OutputNetworkDiagMleCounters(uint8_t                         aIndentSize,
+                                                       const otNetworkDiagMleCounters &aMleCounters)
 {
     struct CounterName
     {
@@ -8102,7 +8113,7 @@ void Interpreter::OutputNetworkDiagMleCounters(uint8_t aIndentSize, const otNetw
     }
 }
 
-void Interpreter::OutputChildTableEntry(uint8_t aIndentSize, const otNetworkDiagChildEntry &aChildEntry)
+void InterpreterCoreMode::OutputChildTableEntry(uint8_t aIndentSize, const otNetworkDiagChildEntry &aChildEntry)
 {
     OutputLine("ChildId: 0x%04x", aChildEntry.mChildId);
 
@@ -8114,12 +8125,12 @@ void Interpreter::OutputChildTableEntry(uint8_t aIndentSize, const otNetworkDiag
 #endif // OPENTHREAD_CONFIG_TMF_NETDIAG_CLIENT_ENABLE
 
 #if OPENTHREAD_FTD
-void Interpreter::HandleDiscoveryRequest(const otThreadDiscoveryRequestInfo *aInfo, void *aContext)
+void InterpreterCoreMode::HandleDiscoveryRequest(const otThreadDiscoveryRequestInfo *aInfo, void *aContext)
 {
-    static_cast<Interpreter *>(aContext)->HandleDiscoveryRequest(*aInfo);
+    static_cast<InterpreterCoreMode *>(aContext)->HandleDiscoveryRequest(*aInfo);
 }
 
-void Interpreter::HandleDiscoveryRequest(const otThreadDiscoveryRequestInfo &aInfo)
+void InterpreterCoreMode::HandleDiscoveryRequest(const otThreadDiscoveryRequestInfo &aInfo)
 {
     OutputFormat("~ Discovery Request from ");
     OutputExtAddress(aInfo.mExtAddress);
@@ -8128,7 +8139,7 @@ void Interpreter::HandleDiscoveryRequest(const otThreadDiscoveryRequestInfo &aIn
 #endif
 
 #if OPENTHREAD_CONFIG_CLI_REGISTER_IP6_RECV_CALLBACK
-void Interpreter::HandleIp6Receive(otMessage *aMessage, void *aContext)
+void InterpreterCoreMode::HandleIp6Receive(otMessage *aMessage, void *aContext)
 {
     OT_UNUSED_VARIABLE(aContext);
 
@@ -8138,7 +8149,7 @@ void Interpreter::HandleIp6Receive(otMessage *aMessage, void *aContext)
 
 #if OPENTHREAD_CONFIG_VERHOEFF_CHECKSUM_ENABLE
 
-template <> otError Interpreter::Process<Cmd("verhoeff")>(Arg aArgs[])
+template <> otError InterpreterCoreMode::Process<Cmd("verhoeff")>(Arg aArgs[])
 {
     otError error;
 
@@ -8189,14 +8200,7 @@ exit:
 
 #endif // OPENTHREAD_FTD || OPENTHREAD_MTD
 
-void Interpreter::Initialize(otInstance *aInstance, otCliOutputCallback aCallback, void *aContext)
-{
-    Instance *instance = static_cast<Instance *>(aInstance);
-
-    Interpreter::sInterpreter = new (&sInterpreterRaw) Interpreter(instance, aCallback, aContext);
-}
-
-void Interpreter::OutputPrompt(void)
+void InterpreterCoreMode::OutputPrompt(void)
 {
 #if OPENTHREAD_CONFIG_CLI_PROMPT_ENABLE
     static const char sPrompt[] = "> ";
@@ -8212,12 +8216,12 @@ void Interpreter::OutputPrompt(void)
 #endif // OPENTHREAD_CONFIG_CLI_PROMPT_ENABLE
 }
 
-void Interpreter::HandleTimer(Timer &aTimer)
+void InterpreterCoreMode::HandleTimer(Timer &aTimer)
 {
-    static_cast<Interpreter *>(static_cast<TimerMilliContext &>(aTimer).GetContext())->HandleTimer();
+    static_cast<InterpreterCoreMode *>(static_cast<TimerMilliContext &>(aTimer).GetContext())->HandleTimer();
 }
 
-void Interpreter::HandleTimer(void)
+void InterpreterCoreMode::HandleTimer(void)
 {
 #if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_ENABLE
     if (mLocateInProgress)
@@ -8232,17 +8236,17 @@ void Interpreter::HandleTimer(void)
     }
 }
 
-void Interpreter::SetCommandTimeout(uint32_t aTimeoutMilli)
+void InterpreterCoreMode::SetCommandTimeout(uint32_t aTimeoutMilli)
 {
     OT_ASSERT(mCommandIsPending);
     mTimer.Start(aTimeoutMilli);
 }
 
-otError Interpreter::ProcessCommand(Arg aArgs[])
+otError InterpreterCoreMode::ProcessCommand(Arg aArgs[])
 {
-#define CmdEntry(aCommandString)                                   \
-    {                                                              \
-        aCommandString, &Interpreter::Process<Cmd(aCommandString)> \
+#define CmdEntry(aCommandString)                                           \
+    {                                                                      \
+        aCommandString, &InterpreterCoreMode::Process<Cmd(aCommandString)> \
     }
 
     static constexpr Command kCommands[] = {
@@ -8527,55 +8531,6 @@ otError Interpreter::ProcessCommand(Arg aArgs[])
     }
 
     return error;
-}
-
-extern "C" void otCliInit(otInstance *aInstance, otCliOutputCallback aCallback, void *aContext)
-{
-    Interpreter::Initialize(aInstance, aCallback, aContext);
-
-#if OPENTHREAD_CONFIG_CLI_VENDOR_COMMANDS_ENABLE && OPENTHREAD_CONFIG_CLI_MAX_USER_CMD_ENTRIES > 1
-    otCliVendorSetUserCommands();
-#endif
-}
-
-extern "C" void otCliInputLine(char *aBuf) { Interpreter::GetInterpreter().ProcessLine(aBuf); }
-
-extern "C" otError otCliSetUserCommands(const otCliCommand *aUserCommands, uint8_t aLength, void *aContext)
-{
-    return Interpreter::GetInterpreter().SetUserCommands(aUserCommands, aLength, aContext);
-}
-
-extern "C" void otCliOutputBytes(const uint8_t *aBytes, uint8_t aLength)
-{
-    Interpreter::GetInterpreter().OutputBytes(aBytes, aLength);
-}
-
-extern "C" void otCliOutputFormat(const char *aFmt, ...)
-{
-    va_list aAp;
-    va_start(aAp, aFmt);
-    Interpreter::GetInterpreter().OutputFormatV(aFmt, aAp);
-    va_end(aAp);
-}
-
-extern "C" void otCliAppendResult(otError aError) { Interpreter::GetInterpreter().OutputResult(aError); }
-
-extern "C" void otCliPlatLogv(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, va_list aArgs)
-{
-    OT_UNUSED_VARIABLE(aLogLevel);
-    OT_UNUSED_VARIABLE(aLogRegion);
-
-    VerifyOrExit(Interpreter::IsInitialized());
-
-    // CLI output is being used for logging, so we set the flag
-    // `EmittingCommandOutput` to false indicate this.
-    Interpreter::GetInterpreter().SetEmittingCommandOutput(false);
-    Interpreter::GetInterpreter().OutputFormatV(aFormat, aArgs);
-    Interpreter::GetInterpreter().OutputNewLine();
-    Interpreter::GetInterpreter().SetEmittingCommandOutput(true);
-
-exit:
-    return;
 }
 
 } // namespace Cli
