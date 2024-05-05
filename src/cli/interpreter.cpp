@@ -43,6 +43,13 @@ Interpreter &Interpreter::GetInterpreter(void) { return sInterpreter; }
 
 void Interpreter::Initialize(otInstance *aInstance, otCliOutputCallback aCallback, void *aContext)
 {
+    if (aInstance != nullptr)
+    {
+    }
+    else
+    {
+    }
+
     (void)sInterpreterRaw;
     (void)aInstance;
     (void)aCallback;
