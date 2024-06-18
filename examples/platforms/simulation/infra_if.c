@@ -36,6 +36,7 @@
 #include "simul_utils.h"
 #include "utils/code_utils.h"
 
+#if !OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE && !OPENTHREAD_RADIO
 
 #define DEBUG_LOG 0
@@ -336,3 +337,4 @@ OT_TOOL_WEAK void otPlatInfraIfRecvIcmp6Nd(otInstance         *aInstance,
 }
 
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE && !OPENTHREAD_RADIO
+#endif // !OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE

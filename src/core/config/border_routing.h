@@ -173,6 +173,14 @@
 #endif
 
 /**
+ * @def OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
+#define OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE 0
+#endif
+
+/**
  * @}
  *
  */

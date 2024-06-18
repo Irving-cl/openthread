@@ -200,8 +200,10 @@ void otSysInit(int aArgCount, char *aArgVector[])
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
     platformTrelInit(speedUpFactor);
 #endif
+#if !OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     platformInfraIfInit();
+#endif
 #endif
     platformRandomInit();
 }
@@ -214,8 +216,10 @@ void otSysDeinit(void)
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
     platformTrelDeinit();
 #endif
+#if !OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     platformInfraIfDeinit();
+#endif
 #endif
     platformLoggingDeinit();
 }
@@ -239,8 +243,10 @@ void otSysProcessDrivers(otInstance *aInstance)
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
     platformTrelUpdateFdSet(&read_fds, &write_fds, &timeout, &max_fd);
 #endif
+#if !OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     platformInfraIfUpdateFdSet(&read_fds, &write_fds, &max_fd);
+#endif
 #endif
 #if OPENTHREAD_CONFIG_MULTICAST_DNS_ENABLE && OPENTHREAD_SIMULATION_MDNS_SOCKET_IMPLEMENT_POSIX
     platformMdnsSocketUpdateFdSet(&read_fds, &max_fd);
@@ -276,8 +282,10 @@ void otSysProcessDrivers(otInstance *aInstance)
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
     platformTrelProcess(aInstance, &read_fds, &write_fds);
 #endif
+#if !OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     platformInfraIfProcess(aInstance, &read_fds, &write_fds);
+#endif
 #endif
 #if OPENTHREAD_CONFIG_MULTICAST_DNS_ENABLE && OPENTHREAD_SIMULATION_MDNS_SOCKET_IMPLEMENT_POSIX
     platformMdnsSocketProcess(aInstance, &read_fds);
