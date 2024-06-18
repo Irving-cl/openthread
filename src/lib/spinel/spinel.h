@@ -4947,6 +4947,49 @@ enum
 
     SPINEL_PROP_MULTIPAN__END = 0x910,
 
+    SPINEL_PROP_BORDER_ROUTING__BEGIN = 0x910,
+
+    /** Format: `Lb`
+     * Type: Write-only
+     *
+     * `L`: The index of the infrastructure interface.
+     * `b`: Whether the infrastructure interface is running.
+     * 
+     * This property is used to initialize the border routing module on NCP. NCP will respond with a
+     * SPINEL_PROP_LAST_STATUS to indicate the result.
+     * 
+     */
+    SPINEL_PROP_BORDER_ROUTING_INIT = SPINEL_PROP_BORDER_ROUTING__BEGIN + 1,
+
+    /** Format: `b`
+     * Type: Write-only
+     * 
+     * `b`: Whether to enable the border routing functionality on NCP.
+     * 
+     * This property is used to enable/disable the border routing functionality on NCP. NCP will respond with a
+     * SPINEL_PROP_LAST_STATUS to indicate the result.
+     * 
+     */
+    SPINEL_PROP_BORDER_ROUTING_ENABLE = SPINEL_PROP_BORDER_ROUTING__BEGIN + 2,
+
+    /// TODO: add doc
+    /** Format: `b`
+     *
+     */
+    SPINEL_PROP_INFRA_IF_STATE = SPINEL_PROP_BORDER_ROUTING__BEGIN + 3,
+
+    /** Format: `L6d`
+     *
+     */
+    SPINEL_PROP_INFRA_IF_RECV_ICMP6_ND = SPINEL_PROP_BORDER_ROUTING__BEGIN + 4,
+
+    /** Format: `L6d`
+     *
+     */
+    SPINEL_PROP_INFRA_IF_SEND_ICMP6_ND = SPINEL_PROP_BORDER_ROUTING__BEGIN + 5,
+
+    SPINEL_PROP_BORDER_ROUTING__END = 0x920,
+
     SPINEL_PROP_NEST__BEGIN = 0x3BC0,
 
     SPINEL_PROP_NEST_STREAM_MFG = SPINEL_PROP_NEST__BEGIN + 0,

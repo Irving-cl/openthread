@@ -1403,6 +1403,92 @@ exit:
 }
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
 
+#if OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
+#if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_BORDER_ROUTING_INIT>(void)
+{
+    otError  error = OT_ERROR_NONE;
+    uint32_t infraIfIndex;
+    bool     isRunning;
+
+    SuccessOrExit(error = mDecoder.ReadUint32(infraIfIndex));
+    SuccessOrExit(error = mDecoder.ReadBool(isRunning));
+
+    error = otBorderRoutingInit(mInstance, infraIfIndex, isRunning);
+
+exit:
+    return error;
+}
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_BORDER_ROUTING_ENABLE>(void)
+{
+    otError error = OT_ERROR_NONE;
+    bool    enable;
+
+    SuccessOrExit(error = mDecoder.ReadBool(enable));
+
+    error = otBorderRoutingSetEnabled(mInstance, enable);
+
+exit:
+    return error;
+}
+
+template <> otError NcpBase::HandlePropertyGet<SPINEL_PROP_INFRA_IF_STATE>(void) { return OT_ERROR_NONE; }
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_INFRA_IF_STATE>(void)
+{
+    otError  error = OT_ERROR_NONE;
+    uint32_t infraIfIndex;
+    bool     isRunning;
+
+    SuccessOrExit(error = mDecoder.ReadUint32(infraIfIndex));
+    SuccessOrExit(error = mDecoder.ReadBool(isRunning));
+
+    error = otPlatInfraIfStateChanged(mInstance, infraIfIndex, isRunning);
+
+exit:
+    return error;
+}
+
+template <> otError NcpBase::HandlePropertyGet<SPINEL_PROP_INFRA_IF_RECV_ICMP6_ND>(void) { return OT_ERROR_NONE; }
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_INFRA_IF_RECV_ICMP6_ND>(void)
+{
+    otError             error = OT_ERROR_NONE;
+    uint32_t            infraIfIndex;
+    const otIp6Address *address;
+    const uint8_t      *icmp6Data = nullptr;
+    uint16_t            len;
+
+    SuccessOrExit(error = mDecoder.ReadUint32(infraIfIndex));
+    SuccessOrExit(error = mDecoder.ReadIp6Address(address));
+    SuccessOrExit(error = mDecoder.ReadData(icmp6Data, len));
+
+    otPlatInfraIfRecvIcmp6Nd(mInstance, infraIfIndex, address, icmp6Data, len);
+exit:
+    return error;
+}
+
+otError NcpBase::InfraIfSendIcmp6Nd(uint32_t        aInfraIfIndex,
+                       const otIp6Address *aDestAddress,
+                       const uint8_t      *aBuffer,
+                       uint16_t            aBufferLength)
+{
+    otError           error    = OT_ERROR_NONE;
+    uint8_t           header   = SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0;
+
+    SuccessOrExit(error = mEncoder.BeginFrame(header, SPINEL_CMD_PROP_VALUE_IS, SPINEL_PROP_INFRA_IF_SEND_ICMP6_ND));
+    SuccessOrExit(error = mEncoder.WriteUint32(aInfraIfIndex));
+    SuccessOrExit(error = mEncoder.WriteIp6Address(*aDestAddress));
+    SuccessOrExit(error = mEncoder.WriteDataWithLen(aBuffer, aBufferLength));
+    SuccessOrExit(error = mEncoder.EndFrame());
+
+exit:
+    return error;
+}
+#endif // OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
+#endif // OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
+
 } // namespace Ncp
 } // namespace ot
 

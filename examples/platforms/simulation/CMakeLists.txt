@@ -45,6 +45,11 @@ if(OT_SIMULATION_MAX_NETWORK_SIZE)
     target_compile_definitions(ot-simulation-config INTERFACE "OPENTHREAD_SIMULATION_MAX_NETWORK_SIZE=${OT_SIMULATION_MAX_NETWORK_SIZE}")
 endif()
 
+option(OT_SIMULATION_INFRA_IF "enable simulation infra if")
+if (OT_SIMULATION_INFRA_IF)
+    target_compile_definitions(ot-simulation-config INTERFACE "OPENTHREAD_SIMULATION_IMPLEMENTS_INFRA_IF=${OPENTHREAD_SIMULATION_IMPLEMENTS_INFRA_IF}")
+endif()
+
 if(NOT OT_PLATFORM_CONFIG)
     set(OT_PLATFORM_CONFIG "openthread-core-simulation-config.h" PARENT_SCOPE)
 endif()
