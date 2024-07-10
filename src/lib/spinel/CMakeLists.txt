@@ -68,6 +68,7 @@ set(COMMON_INCLUDES
 )
 
 set(COMMON_SOURCES
+    mac_frame.cpp
     spinel.c
     spinel_buffer.cpp
     spinel_decoder.cpp

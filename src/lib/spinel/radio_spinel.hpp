@@ -38,8 +38,8 @@
 #include <openthread/platform/radio.h>
 
 #include "openthread-spinel-config.h"
-#include "core/radio/max_power_table.hpp"
 #include "lib/spinel/logger.hpp"
+#include "lib/spinel/max_power_table.hpp"
 #include "lib/spinel/radio_spinel_metrics.h"
 #include "lib/spinel/spinel.h"
 #include "lib/spinel/spinel_driver.hpp"
@@ -56,12 +56,12 @@ struct RadioSpinelCallbacks
      *
      * @param[in]  aInstance  The OpenThread instance structure.
      * @param[in]  aFrame     A pointer to the received frame or nullptr if the receive operation failed.
-     * @param[in]  aError     kErrorNone when successfully received a frame,
-     *                        kErrorAbort when reception was aborted and a frame was not received,
-     *                        kErrorNoBufs when a frame could not be received due to lack of rx buffer space.
+     * @param[in]  aError     OT_ERROR_NONE when successfully received a frame,
+     *                        OT_ERROR_ABORT when reception was aborted and a frame was not received,
+     *                        OT_ERROR_NO_BUFS when a frame could not be received due to lack of rx buffer space.
      *
      */
-    void (*mReceiveDone)(otInstance *aInstance, otRadioFrame *aFrame, Error aError);
+    void (*mReceiveDone)(otInstance *aInstance, otRadioFrame *aFrame, otError aError);
 
     /**
      * The callback notifies user of `RadioSpinel` that the transmit operation has completed, providing, if
@@ -70,13 +70,13 @@ struct RadioSpinelCallbacks
      * @param[in]  aInstance  The OpenThread instance structure.
      * @param[in]  aFrame     The transmitted frame.
      * @param[in]  aAckFrame  A pointer to the ACK frame, nullptr if no ACK was received.
-     * @param[in]  aError     kErrorNone when the frame was transmitted,
-     *                        kErrorNoAck when the frame was transmitted but no ACK was received,
-     *                        kErrorChannelAccessFailure tx failed due to activity on the channel,
-     *                        kErrorAbort when transmission was aborted for other reasons.
+     * @param[in]  aError     OT_ERROR_NONE when the frame was transmitted,
+     *                        OT_ERROR_NO_ACK when the frame was transmitted but no ACK was received,
+     *                        OT_ERROR_CHANNEL_ACCESS_FAILURE when tx failed due to activity on the channel,
+     *                        OT_ERROR_ABORT when transmission was aborted for other reasons.
      *
      */
-    void (*mTransmitDone)(otInstance *aInstance, otRadioFrame *aFrame, otRadioFrame *aAckFrame, Error aError);
+    void (*mTransmitDone)(otInstance *aInstance, otRadioFrame *aFrame, otRadioFrame *aAckFrame, otError aError);
 
     /**
      * This callback notifies user of `RadioSpinel` that energy scan is complete.
@@ -118,7 +118,7 @@ struct RadioSpinelCallbacks
      *                        OT_ERROR_NO_BUFS when a frame could not be received due to lack of rx buffer space.
      *
      */
-    void (*mDiagReceiveDone)(otInstance *aInstance, otRadioFrame *aFrame, Error aError);
+    void (*mDiagReceiveDone)(otInstance *aInstance, otRadioFrame *aFrame, otError aError);
 
     /**
      * This callback notifies diagnostics module using `RadioSpinel` that the transmission has completed.
@@ -132,7 +132,7 @@ struct RadioSpinelCallbacks
      * channel, OT_ERROR_ABORT when transmission was aborted for other reasons.
      *
      */
-    void (*mDiagTransmitDone)(otInstance *aInstance, otRadioFrame *aFrame, Error aError);
+    void (*mDiagTransmitDone)(otInstance *aInstance, otRadioFrame *aFrame, otError aError);
 #endif // OPENTHREAD_CONFIG_DIAG_ENABLE
 };
 
@@ -378,7 +378,6 @@ public:
      */
     uint8_t GetChannel(void) const { return mChannel; }
 
-#if OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
     /**
      * Enable the radio coex.
      *
@@ -411,7 +410,6 @@ public:
      *
      */
     otError GetCoexMetrics(otRadioCoexMetrics &aCoexMetrics);
-#endif // OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
 
     /**
      * Get currently active interface.
@@ -658,7 +656,6 @@ public:
      */
     void Process(const void *aContext);
 
-#if OPENTHREAD_CONFIG_DIAG_ENABLE
     /**
      * Enables/disables the factory diagnostics mode.
      *
@@ -704,7 +701,6 @@ public:
      *
      */
     void GetDiagOutputCallback(otPlatDiagOutputCallback &aCallback, void *&aContext);
-#endif
 
     /**
      * Returns the radio channel mask.
@@ -772,7 +768,6 @@ public:
      */
     otError GetRadioRegion(uint16_t *aRegionCode);
 
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
     /**
      * Enable/disable or update Enhanced-ACK Based Probing in radio for a specific Initiator.
      *
@@ -796,9 +791,7 @@ public:
     otError ConfigureEnhAckProbing(otLinkMetrics         aLinkMetrics,
                                    const otShortAddress &aShortAddress,
                                    const otExtAddress   &aExtAddress);
-#endif
 
-#if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE || OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     /**
      * Get the current accuracy, in units of ± ppm, of the clock used for scheduling CSL operations.
      *
@@ -808,9 +801,7 @@ public:
      *
      */
     uint8_t GetCslAccuracy(void);
-#endif
 
-#if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     /**
      * Get the current uncertainty, in units of 10 us, of the clock used for scheduling CSL operations.
      *
@@ -818,7 +809,6 @@ public:
      *
      */
     uint8_t GetCslUncertainty(void);
-#endif
 
     /**
      * Checks whether there is pending frame in the buffer.
@@ -968,7 +958,6 @@ public:
      */
     const otRadioSpinelMetrics *GetRadioSpinelMetrics(void) const { return &mRadioSpinelMetrics; }
 
-#if OPENTHREAD_CONFIG_PLATFORM_POWER_CALIBRATION_ENABLE
     /**
      * Add a calibrated power of the specified channel to the power calibration table.
      *
@@ -1015,7 +1004,6 @@ public:
      *
      */
     otError SetChannelTargetPower(uint8_t aChannel, int16_t aTargetPower);
-#endif
 
     /**
      * Convert the Spinel status code to OpenThread error code.
@@ -1277,9 +1265,9 @@ private:
     otMacKey     mPrevKey;
     otMacKey     mCurrKey;
     otMacKey     mNextKey;
-    uint16_t     mSrcMatchShortEntries[OPENTHREAD_CONFIG_MLE_MAX_CHILDREN];
+    uint16_t     mSrcMatchShortEntries[OPENTHREAD_SPINEL_CONFIG_SRC_MATCH_ENTRIES_COUNT];
     int16_t      mSrcMatchShortEntryCount;
-    otExtAddress mSrcMatchExtEntries[OPENTHREAD_CONFIG_MLE_MAX_CHILDREN];
+    otExtAddress mSrcMatchExtEntries[OPENTHREAD_SPINEL_CONFIG_SRC_MATCH_ENTRIES_COUNT];
     int16_t      mSrcMatchExtEntryCount;
     uint8_t      mScanChannel;
     uint16_t     mScanDuration;

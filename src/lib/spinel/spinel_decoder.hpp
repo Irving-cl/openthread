@@ -568,9 +568,10 @@ public:
     otError ResetToSaved(void);
 
 private:
-    otError ReadItem(const uint8_t **aPtr, uint16_t aSize);
-    void    ClearSavedPosition(void) { mSavedIndex = mLength; }
-    bool    IsSavedPositionValid(void) const { return (mSavedIndex < mLength); }
+    otError         ReadItem(const uint8_t **aPtr, uint16_t aSize);
+    void            ClearSavedPosition(void) { mSavedIndex = mLength; }
+    bool            IsSavedPositionValid(void) const { return (mSavedIndex < mLength); }
+    static uint16_t StringLength(const char *aString, uint16_t aMaxLength);
 
     const uint8_t *mFrame;          // Frame buffer.
     uint16_t       mLength;         // Frame length (number of bytes).

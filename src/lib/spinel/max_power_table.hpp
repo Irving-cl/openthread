@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2020, The OpenThread Authors.
+ *  Copyright (c) 2024, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,18 +26,22 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OT_CORE_RADIO_MAX_POWER_TABLE_HPP_
-#define OT_CORE_RADIO_MAX_POWER_TABLE_HPP_
+#ifndef MAX_POWER_TABLE_HPP_
+#define MAX_POWER_TABLE_HPP_
 
-#include "core/radio/radio.hpp"
-#include "openthread/platform/radio.h"
+#include <cstring>
+
+#include <openthread/platform/radio.h>
 
 namespace ot {
+namespace Spinel {
 
 class MaxPowerTable
 {
 public:
-    static constexpr int8_t kPowerDefault = 30; ///< Default power 1 watt (30 dBm).
+    static constexpr uint8_t kChannelMin   = OPENTHREAD_SPINEL_CONFIG_RADIO_CHANNEL_MIN;
+    static constexpr uint8_t kChannelMax   = OPENTHREAD_SPINEL_CONFIG_RADIO_CHANNEL_MAX;
+    static constexpr int8_t  kPowerDefault = 30; ///< Default power 1 watt (30 dBm).
 
     MaxPowerTable(void) { memset(mPowerTable, kPowerDefault, sizeof(mPowerTable)); }
 
@@ -49,7 +53,7 @@ public:
      * @returns The max supported transmit power in dBm.
      *
      */
-    int8_t GetTransmitPower(uint8_t aChannel) const { return mPowerTable[aChannel - Radio::kChannelMin]; }
+    int8_t GetTransmitPower(uint8_t aChannel) const { return mPowerTable[aChannel - kChannelMin]; }
 
     /**
      * Sets the max allowed transmit power of channel @p aChannel.
@@ -58,7 +62,7 @@ public:
      * @param[in]  aPower      The max supported transmit power in dBm.
      *
      */
-    void SetTransmitPower(uint8_t aChannel, int8_t aPower) { mPowerTable[aChannel - Radio::kChannelMin] = aPower; }
+    void SetTransmitPower(uint8_t aChannel, int8_t aPower) { mPowerTable[aChannel - kChannelMin] = aPower; }
 
     /**
      * Gets the supported channel masks.
@@ -68,9 +72,9 @@ public:
     {
         uint32_t channelMask = 0;
 
-        for (uint8_t i = Radio::kChannelMin; i <= Radio::kChannelMax; ++i)
+        for (uint8_t i = kChannelMin; i <= kChannelMax; ++i)
         {
-            if (mPowerTable[i - Radio::kChannelMin] != OT_RADIO_POWER_INVALID)
+            if (mPowerTable[i - kChannelMin] != OT_RADIO_POWER_INVALID)
             {
                 channelMask |= (1 << i);
             }
@@ -80,9 +84,10 @@ public:
     }
 
 private:
-    int8_t mPowerTable[Radio::kChannelMax - Radio::kChannelMin + 1];
+    int8_t mPowerTable[kChannelMax - kChannelMin + 1];
 };
 
+} // namespace Spinel
 } // namespace ot
 
-#endif // OT_CORE_RADIO_MAX_POWER_TABLE_HPP_
+#endif // MAX_POWER_TABLE_HPP_

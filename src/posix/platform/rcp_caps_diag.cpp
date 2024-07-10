@@ -28,6 +28,8 @@
 
 #include "rcp_caps_diag.hpp"
 
+#include "common/code_utils.hpp"
+#include "common/num_utils.hpp"
 #include "lib/utils/math.hpp"
 
 #if OPENTHREAD_POSIX_CONFIG_RCP_CAPS_DIAG_ENABLE

@@ -156,4 +156,57 @@
 #define OPENTHREAD_SPINEL_CONFIG_RCP_TX_WAIT_TIME_SECS 5
 #endif
 
+/**
+ * @def OPENTHREAD_SPINEL_CONFIG_RADIO_CHANNEL_MIN
+ *
+ * Defines the min radio channel used with spinel. This definition is only used to determine the
+ * scope of MaxPowerTable.
+ *
+ */
+#ifndef OPENTHREAD_SPINEL_CONFIG_RADIO_CHANNEL_MIN
+#define OPENTHREAD_SPINEL_CONFIG_RADIO_CHANNEL_MIN 11
+#endif
+
+/**
+ * @def OPENTHREAD_SPINEL_CONFIG_RADIO_CHANNEL_MAX
+ *
+ * Defines the max radio channel used with spinel. This definition is only used to determine the
+ * scope of MaxPowerTable.
+ *
+ */
+#ifndef OPENTHREAD_SPINEL_CONFIG_RADIO_CHANNEL_MAX
+#define OPENTHREAD_SPINEL_CONFIG_RADIO_CHANNEL_MAX 26
+#endif
+
+/**
+ * @def OPENTHREAD_SPINEL_CONFIG_SRC_MATCH_ENTRIES_COUNT
+ *
+ * Defines the count of the source match entries. This number should be larger than or equal to
+ * the maximum number of children supported.
+ *
+ */
+#ifndef OPENTHREAD_SPINEL_CONFIG_SRC_MATCH_ENTRIES_COUNT
+#define OPENTHREAD_SPINEL_CONFIG_SRC_MATCH_ENTRIES_COUNT 128
+#endif
+
+/**
+ * @def OPENTHREAD_SPINEL_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+ *
+ * Define to 1 if you want to enable key ref usage support as defined by platform.
+ *
+ */
+#ifndef OPENTHREAD_SPINEL_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
+#define OPENTHREAD_SPINEL_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE 0
+#endif
+
+/**
+ * @def OPENTHREAD_SPINEL_CONFIG_MULTIPAN_RCP_ENABLE
+ *
+ * Define to 1 to enable multipan RCP support.
+ *
+ */
+#ifndef OPENTHREAD_SPINEL_CONFIG_MULTIPAN_RCP_ENABLE
+#define OPENTHREAD_SPINEL_CONFIG_MULTIPAN_RCP_ENABLE 0
+#endif
+
 #endif // OPENTHREAD_SPINEL_CONFIG_H_

@@ -32,7 +32,6 @@
 
 #include "spinel_decoder.hpp"
 
-#include "common/string.hpp"
 #include "lib/utils/utils.hpp"
 
 namespace ot {
@@ -395,6 +394,21 @@ otError Decoder::ResetToSaved(void)
 
 exit:
     return error;
+}
+
+uint16_t Decoder::StringLength(const char *aString, uint16_t aMaxLength)
+{
+    uint16_t ret = 0;
+
+    EXPECT_NO_ERROR(aString != nullptr);
+
+    for (; (ret < aMaxLength) && (aString[ret] != '\0'); ret++)
+    {
+        // Empty loop.
+    }
+
+exit:
+    return ret;
 }
 
 } // namespace Spinel

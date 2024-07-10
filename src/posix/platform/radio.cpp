@@ -43,6 +43,7 @@
 #include "posix/platform/radio.hpp"
 #include "posix/platform/spinel_driver_getter.hpp"
 #include "posix/platform/spinel_manager.hpp"
+#include "radio/radio.hpp"
 #include "utils/parse_cmdline.hpp"
 
 #if OPENTHREAD_POSIX_CONFIG_CONFIGURATION_FILE_ENABLE
