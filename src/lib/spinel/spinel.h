@@ -4328,6 +4328,24 @@ enum
      */
     SPINEL_PROP_SRP_CLIENT_SERVICE_KEY_ENABLED = SPINEL_PROP_OPENTHREAD__BEGIN + 27,
 
+    /// SRP Server State
+    /** Format `b`: Write
+     * 
+     */
+    SPINEL_PROP_SRP_SERVER_ENABLED = SPINEL_PROP_OPENTHREAD__BEGIN + 28,
+    
+    /// SRP Server Host Entry
+    /** Format `` - Unsolicited notifications only
+     * 
+     */
+    SPINEL_PROP_SRP_SERVER_HOST = SPINEL_PROP_OPENTHREAD__BEGIN + 29,
+
+    /// SRP Server Update Id
+    /** Format : Write
+     * 
+     */   
+    SPINEL_PROP_SRP_SERVER_UPDATE_ID = SPINEL_PROP_OPENTHREAD__BEGIN + 30,
+
     SPINEL_PROP_OPENTHREAD__END = 0x2000,
 
     SPINEL_PROP_SERVER__BEGIN = 0xA0,

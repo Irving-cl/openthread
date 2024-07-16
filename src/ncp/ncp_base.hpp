@@ -750,6 +750,17 @@ protected:
     bool mSrpClientCallbackEnabled;
 #endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
 
+#if OPENTHREAD_FTD
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+    static void HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
+                                            const otSrpServerHost     *aHost,
+                                            uint32_t                   aTimeout,
+                                            void                      *aContext);
+    void        HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
+                                             const otSrpServerHost     *aHost,
+                                             uint32_t                   aTimeout);
+#endif
+#endif
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 
     uint32_t mFramingErrorCounter;          // Number of improperly formed received spinel frames.
