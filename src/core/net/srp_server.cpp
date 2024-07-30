@@ -637,6 +637,7 @@ void Server::Start(void)
     LogInfo("Start listening on port %u", mPort);
 
 #if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
+    LogWarn("!!! HandleServerStateChange");
     Get<AdvertisingProxy>().HandleServerStateChange();
 #endif
 

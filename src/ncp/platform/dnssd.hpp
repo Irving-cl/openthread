@@ -26,43 +26,17 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "infra_if.hpp"
+#ifndef NCP_PLATFORM_DNSSD_HPP_
+#define NCP_PLATFORM_DNSSD_HPP_
 
-#include "openthread-core-config.h"
-#include "ncp/ncp_config.h"
+#include <openthread/instance.h>
 
-#include <openthread/platform/infra_if.h>
+#include <openthread/platform/dnssd.h>
 
-#include "ncp/ncp_base.hpp"
+namespace ot {
+namespace Ncp {
 
-#if OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
-#if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-bool otPlatInfraIfHasAddress(uint32_t aInfraIfIndex, const otIp6Address *aAddress)
-{
-    OT_UNUSED_VARIABLE(aInfraIfIndex);
-    OT_UNUSED_VARIABLE(aAddress);
+} // namespace Ncp
+} // namespace ot
 
-    return true;
-}
-
-otError otPlatInfraIfSendIcmp6Nd(uint32_t            aInfraIfIndex,
-                                 const otIp6Address *aDestAddress,
-                                 const uint8_t      *aBuffer,
-                                 uint16_t            aBufferLength)
-{
-    otError           error = OT_ERROR_NONE;
-    ot::Ncp::NcpBase *ncp   = ot::Ncp::NcpBase::GetNcpInstance();
-
-    error = ncp->InfraIfSendIcmp6Nd(aInfraIfIndex, aDestAddress, aBuffer, aBufferLength);
-    return error;
-}
-
-otError otPlatInfraIfDiscoverNat64Prefix(uint32_t aInfraIfIndex)
-{
-    OT_UNUSED_VARIABLE(aInfraIfIndex);
-
-    return OT_ERROR_NONE;
-}
-
-#endif // OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-#endif // OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
+#endif // NCP_PLATFORM_DNSSD_HPP_

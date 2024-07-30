@@ -33,8 +33,6 @@
 
 #include "srp_advertising_proxy.hpp"
 
-#if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
-
 #include "common/as_core_type.hpp"
 #include "common/debug.hpp"
 #include "common/locator_getters.hpp"
@@ -42,6 +40,8 @@
 #include "common/serial_number.hpp"
 #include "common/type_traits.hpp"
 #include "instance/instance.hpp"
+
+#if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
 
 namespace ot {
 namespace Srp {
@@ -133,6 +133,8 @@ void AdvertisingProxy::UpdateState(void)
 {
     if (!Get<Dnssd>().IsReady() || !Get<BorderRouter::InfraIf>().IsRunning())
     {
+        LogWarn("!!! UpdateState, stop, dnssd:%u, infraIf:%u", Get<Dnssd>().IsReady(),
+                Get<BorderRouter::InfraIf>().IsRunning());
         Stop();
         ExitNow();
     }
@@ -373,7 +375,7 @@ void AdvertisingProxy::Advertise(Host &aHost, const Server::MessageMetadata &aMe
     Host    *existingHost;
 
     LogInfo("Adv update for '%s'", aHost.GetFullName());
-
+    LogInfo("state: %u", mState);
     mCounters.mAdvTotal++;
 
     VerifyOrExit(mState == kStateRunning);

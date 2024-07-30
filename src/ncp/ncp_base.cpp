@@ -306,6 +306,9 @@ NcpBase::NcpBase(Instance *aInstance)
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     , mSrpClientCallbackEnabled(false)
 #endif
+#if OPENTHREAD_CONFIG_NCP_DNSSD_ENABLE && OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+    , mDnssdState(OT_PLAT_DNSSD_STOPPED)
+#endif
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
     , mFramingErrorCounter(0)
     , mRxSpinelFrameCounter(0)
@@ -356,11 +359,6 @@ NcpBase::NcpBase(Instance *aInstance)
 #endif // OPENTHREAD_FTD
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     otSrpClientSetCallback(mInstance, HandleSrpClientCallback, this);
-#endif
-#if OPENTHREAD_FTD
-#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-    otSrpServerSetServiceUpdateHandler(mInstance, HandleSrpServerServiceUpdate, this);
-#endif
 #endif
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 #if OPENTHREAD_CONFIG_DIAG_ENABLE

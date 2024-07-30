@@ -53,14 +53,18 @@
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
 #include <openthread/srp_client.h>
 #endif
+#include <openthread/platform/dnssd.h>
 
 #include "changed_props_set.hpp"
+#include "common/clearable.hpp"
+#include "common/pool.hpp"
 #include "common/tasklet.hpp"
 #include "instance/instance.hpp"
 #include "lib/spinel/spinel.h"
 #include "lib/spinel/spinel_buffer.hpp"
 #include "lib/spinel/spinel_decoder.hpp"
 #include "lib/spinel/spinel_encoder.hpp"
+#include "ncp/platform/dnssd.hpp"
 
 #if OPENTHREAD_CONFIG_MULTIPAN_RCP_ENABLE
 #define SPINEL_HEADER_IID_BROADCAST OPENTHREAD_SPINEL_CONFIG_BROADCAST_IID
@@ -241,10 +245,90 @@ public:
      * @retval OT_ERROR_FAILED  Failed to send the ICMPv6 message.
      *
      */
-    otError InfraIfSendIcmp6Nd(uint32_t        aInfraIfIndex,
-                           const otIp6Address *aDestAddress,
-                           const uint8_t      *aBuffer,
-                           uint16_t            aBufferLength);
+    otError InfraIfSendIcmp6Nd(uint32_t            aInfraIfIndex,
+                               const otIp6Address *aDestAddress,
+                               const uint8_t      *aBuffer,
+                               uint16_t            aBufferLength);
+
+    /**
+     * Registers or updates a service on the infrastructure network's DNS-SD module (on host).
+     *
+     * @param[in] aService      Information about the service to register.
+     * @param[in] aRequestId    The ID associated with this request.
+     * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+     *
+     */
+    void DnssdRegisterService(const otPlatDnssdService   *aService,
+                              otPlatDnssdRequestId        aRequestId,
+                              otPlatDnssdRegisterCallback aCallback);
+
+    /**
+     * Unregisters a service on the infrastructure network's DNS-SD module (on host).
+     *
+     * @param[in] aService      Information about the service to unregister.
+     * @param[in] aRequestId    The ID associated with this request.
+     * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+     *
+     */
+    void DnssdUnregisterService(const otPlatDnssdService   *aService,
+                                otPlatDnssdRequestId        aRequestId,
+                                otPlatDnssdRegisterCallback aCallback);
+
+    /**
+     * Registers or updates a host on the infrastructure network's DNS-SD module (on host).
+     *
+     * @param[in] aHost         Information about the host to register.
+     * @param[in] aRequestId    The ID associated with this request.
+     * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+     *
+     */
+    void DnssdRegisterHost(const otPlatDnssdHost      *aHost,
+                           otPlatDnssdRequestId        aRequestId,
+                           otPlatDnssdRegisterCallback aCallback);
+
+    /**
+     * Unregisters a host on the infrastructure network's DNS-SD module (on host).
+     *
+     * @param[in] aHost         Information about the host to register.
+     * @param[in] aRequestId    The ID associated with this request.
+     * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+     *
+     */
+    void DnssdUnregisterHost(const otPlatDnssdHost      *aHost,
+                             otPlatDnssdRequestId        aRequestId,
+                             otPlatDnssdRegisterCallback aCallback);
+
+    /**
+     * Registers or updates a key record on the infrastructure network's DNS-SD module (on host).
+     *
+     * @param[in] aKey          Information about the key record to register.
+     * @param[in] aRequestId    The ID associated with this request.
+     * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+     *
+     */
+    void DnssdRegisterKey(const otPlatDnssdKey       *aKey,
+                          otPlatDnssdRequestId        aRequestId,
+                          otPlatDnssdRegisterCallback aCallback);
+
+    /**
+     * Unregisters a key record on the infrastructure network's DNS-SD module (on host).
+     *
+     * @param[in] aKey          Information about the key record to register.
+     * @param[in] aRequestId    The ID associated with this request.
+     * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+     *
+     */
+    void DnssdUnregisterKey(const otPlatDnssdKey       *aKey,
+                            otPlatDnssdRequestId        aRequestId,
+                            otPlatDnssdRegisterCallback aCallback);
+
+    /**
+     * Gets the Dnssd state.
+     *
+     * Returns the platform dnssd state.
+     *
+     */
+    otPlatDnssdState DnssdGetState(void);
 
 protected:
     static constexpr uint8_t kBitsPerByte = 8; ///< Number of bits in a byte.
@@ -750,17 +834,59 @@ protected:
     bool mSrpClientCallbackEnabled;
 #endif // OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
 
-#if OPENTHREAD_FTD
-#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-    static void HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
-                                            const otSrpServerHost     *aHost,
-                                            uint32_t                   aTimeout,
-                                            void                      *aContext);
-    void        HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
-                                             const otSrpServerHost     *aHost,
-                                             uint32_t                   aTimeout);
-#endif
-#endif
+#if OPENTHREAD_CONFIG_NCP_DNSSD_ENABLE && OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+
+    struct DnssdRequest : public LinkedListEntry<DnssdRequest>, Clearable<DnssdRequest>
+    {
+        bool Matches(otPlatDnssdRequestId aId) const { return mId == aId; }
+
+        otPlatDnssdRegisterCallback mCallback;
+        otPlatDnssdRequestId        mId;
+        DnssdRequest               *mNext;
+    };
+
+    template <typename DnssdObjType>
+    void DnssdUpdate(const DnssdObjType         *Obj,
+                     otPlatDnssdRequestId        aRequestId,
+                     otPlatDnssdRegisterCallback aCallback,
+                     bool                        aRegister)
+    {
+        otError          error   = OT_ERROR_NONE;
+        uint8_t          header  = SPINEL_HEADER_FLAG | SPINEL_HEADER_TX_NOTIFICATION_IID;
+        spinel_command_t cmd     = aRegister ? SPINEL_CMD_PROP_VALUE_INSERTED : SPINEL_CMD_PROP_VALUE_REMOVED;
+        DnssdRequest    *request = mDnssdRequestPool.Allocate();
+
+        VerifyOrExit(request != nullptr, error = OT_ERROR_NO_BUFS);
+
+        SuccessOrExit(error = mEncoder.BeginFrame(header, cmd));
+        SuccessOrExit(error = EncodeDnssd(aRequestId, Obj));
+        SuccessOrExit(error = mEncoder.EndFrame());
+
+        request->mId       = aRequestId;
+        request->mCallback = aCallback;
+        mDnssdRequestList.Add(*request);
+
+    exit:
+        if (error != OT_ERROR_NONE)
+        {
+            otLogWarnPlat("!!! Dnssd Update error");
+            if (request != nullptr)
+            {
+                mDnssdRequestPool.Free(*request);
+            }
+            aCallback(mInstance, aRequestId, error);
+        }
+        return;
+    }
+
+    template <typename DnssdObjType> otError EncodeDnssd(otPlatDnssdRequestId aRequestId, const DnssdObjType *aObj);
+
+    static constexpr uint8_t                       kMaxDnssdRegisterCallbacks = 10;
+    Pool<DnssdRequest, kMaxDnssdRegisterCallbacks> mDnssdRequestPool;
+    LinkedList<DnssdRequest>                       mDnssdRequestList;
+    otPlatDnssdState                               mDnssdState;
+#endif // OPENTHREAD_CONFIG_NCP_DNSSD_ENABLE && OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+
 #endif // OPENTHREAD_MTD || OPENTHREAD_FTD
 
     uint32_t mFramingErrorCounter;          // Number of improperly formed received spinel frames.

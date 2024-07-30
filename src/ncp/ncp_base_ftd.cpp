@@ -45,12 +45,13 @@
 #include <openthread/diag.h>
 #include <openthread/icmp6.h>
 #include <openthread/ncp.h>
-#include <openthread/thread_ftd.h>
 #include <openthread/srp_server.h>
+#include <openthread/thread_ftd.h>
 #include <openthread/platform/misc.h>
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
+#include "common/tasklet.hpp"
 #include "instance/instance.hpp"
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE
 #include "meshcop/commissioner.hpp"
@@ -1474,13 +1475,13 @@ exit:
     return error;
 }
 
-otError NcpBase::InfraIfSendIcmp6Nd(uint32_t        aInfraIfIndex,
-                       const otIp6Address *aDestAddress,
-                       const uint8_t      *aBuffer,
-                       uint16_t            aBufferLength)
+otError NcpBase::InfraIfSendIcmp6Nd(uint32_t            aInfraIfIndex,
+                                    const otIp6Address *aDestAddress,
+                                    const uint8_t      *aBuffer,
+                                    uint16_t            aBufferLength)
 {
-    otError           error    = OT_ERROR_NONE;
-    uint8_t           header   = SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0;
+    otError error  = OT_ERROR_NONE;
+    uint8_t header = SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0;
 
     SuccessOrExit(error = mEncoder.BeginFrame(header, SPINEL_CMD_PROP_VALUE_IS, SPINEL_PROP_INFRA_IF_SEND_ICMP6_ND));
     SuccessOrExit(error = mEncoder.WriteUint32(aInfraIfIndex));
@@ -1494,98 +1495,176 @@ exit:
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
 #endif // OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
 
-#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-void NcpBase::HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
-                                           const otSrpServerHost     *aHost,
-                                           uint32_t                   aTimeout,
-                                           void                      *aContext)
+#if OPENTHREAD_CONFIG_NCP_DNSSD_ENABLE && OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+
+template <>
+otError NcpBase::EncodeDnssd<otPlatDnssdService>(otPlatDnssdRequestId aRequestId, const otPlatDnssdService *aService)
 {
-    static_cast<NcpBase *>(aContext)->HandleSrpServerServiceUpdate(aId, aHost, aTimeout);
-}
-
-void NcpBase::HandleSrpServerServiceUpdate(otSrpServerServiceUpdateId aId,
-                                           const otSrpServerHost     *aHost,
-                                           uint32_t                   aTimeout)
-{
-    otError             error    = OT_ERROR_NONE;
-    unsigned int        command  = SPINEL_CMD_PROP_VALUE_INSERTED;
-    spinel_prop_key_t   property = SPINEL_PROP_SRP_SERVER_HOST;
-    uint8_t             hostAddrNum;
-    const otIp6Address *hostAddresses;
-    const otSrpServerService *service = nullptr;
-    otSrpServerLeaseInfo hostLeaseInfo;
-
-    (void)aTimeout;
-
-    otSrpServerHostGetLeaseInfo(aHost, &hostLeaseInfo);
-    hostAddresses = otSrpServerHostGetAddresses(aHost, &hostAddrNum);
-
-    SuccessOrExit(error = mEncoder.BeginFrame(SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0, command, property));
-
-    SuccessOrExit(error = mEncoder.WriteUint32(aId));
-    SuccessOrExit(error = mEncoder.WriteUtf8(otSrpServerHostGetFullName(aHost)));
-    SuccessOrExit(error = mEncoder.WriteUint32(hostLeaseInfo.mLease));
-    SuccessOrExit(error = mEncoder.WriteUint8(hostAddrNum));
-    for (uint8_t i = 0; i < hostAddrNum; i++)
+    otError error = OT_ERROR_NONE;
+    otLogWarnPlat("A");
+    SuccessOrExit(error = mEncoder.WriteUintPacked(SPINEL_PROP_DNSSD_SERVICE));
+    SuccessOrExit(error = mEncoder.WriteUint32(aRequestId));
+    SuccessOrExit(error = mEncoder.WriteUtf8(aService->mHostName == nullptr ? "" : aService->mHostName));
+    SuccessOrExit(error = mEncoder.WriteUtf8(aService->mServiceInstance == nullptr ? "" : aService->mServiceInstance));
+    SuccessOrExit(error = mEncoder.WriteUtf8(aService->mServiceType == nullptr ? "" : aService->mServiceType));
+    SuccessOrExit(error = mEncoder.WriteUint16(aService->mSubTypeLabelsLength));
+    otLogWarnPlat("B");
+    for (uint8_t i = 0; i < aService->mSubTypeLabelsLength; i++)
     {
-        SuccessOrExit(error = mEncoder.WriteIp6Address(hostAddresses[i]));
+        SuccessOrExit(error = mEncoder.WriteUtf8(aService->mSubTypeLabels[i]));
     }
-
-    while ((service = otSrpServerHostGetNextService(aHost, service)) != nullptr)
-    {
-        bool isDeleted = otSrpServerServiceIsDeleted(service);
-        uint16_t dataLen;
-        const uint8_t *txtData = otSrpServerServiceGetTxtData(service, &dataLen);
-
-        SuccessOrExit(error = mEncoder.OpenStruct());
-        SuccessOrExit(error = mEncoder.WriteUtf8(otSrpServerServiceGetInstanceName(service)));
-        SuccessOrExit(error = mEncoder.WriteBool(isDeleted));
-
-        if (!isDeleted)
-        {
-            uint8_t subTypeCount = otSrpServerServiceGetNumberOfSubTypes(service);
-
-            SuccessOrExit(error = mEncoder.WriteUint16(otSrpServerServiceGetPort(service)));
-            SuccessOrExit(error = mEncoder.WriteDataWithLen(txtData, dataLen));
-            SuccessOrExit(error = mEncoder.WriteUint8(subTypeCount));
-            for (uint8_t i = 0; i < subTypeCount; i++)
-            {
-                SuccessOrExit(error = mEncoder.WriteUtf8(otSrpServerServiceGetSubTypeServiceNameAt(service, i)));
-            }
-        }
-
-        SuccessOrExit(error = mEncoder.CloseStruct());
-    }
-
-    SuccessOrExit(error = mEncoder.EndFrame());
+    otLogWarnPlat("C");
+    SuccessOrExit(error = mEncoder.WriteUint16(aService->mPort));
+    SuccessOrExit(error = mEncoder.WriteData(aService->mTxtData, aService->mTxtDataLength));
+    otLogWarnPlat("D");
 
 exit:
-    return;
+    return error;
 }
 
-template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_SRP_SERVER_ENABLED>(void)
+template <> otError NcpBase::EncodeDnssd<otPlatDnssdHost>(otPlatDnssdRequestId aRequestId, const otPlatDnssdHost *aHost)
 {
-    bool enable;
+    otError error = OT_ERROR_NONE;
+otLogWarnPlat("E");
+    SuccessOrExit(error = mEncoder.WriteUintPacked(SPINEL_PROP_DNSSD_HOST));
+    SuccessOrExit(error = mEncoder.WriteUint32(aRequestId));
+    SuccessOrExit(error = mEncoder.WriteUtf8(aHost->mHostName == nullptr ? "" : aHost->mHostName));
+    SuccessOrExit(error = mEncoder.WriteUint16(aHost->mAddressesLength));
+    for (uint8_t i = 0; i < aHost->mAddressesLength; i++)
+    {
+        SuccessOrExit(error = mEncoder.WriteIp6Address(aHost->mAddresses[i]));
+    }
+otLogWarnPlat("F");
+exit:
+    return error;
+}
+
+template <> otError NcpBase::EncodeDnssd<otPlatDnssdKey>(otPlatDnssdRequestId aRequestId, const otPlatDnssdKey *aKey)
+{
     otError error = OT_ERROR_NONE;
 
-    SuccessOrExit(error = mDecoder.ReadBool(enable));
+    SuccessOrExit(error = mEncoder.WriteUintPacked(SPINEL_PROP_DNSSD_KEY_RECORD));
+    SuccessOrExit(error = mEncoder.WriteUint32(aRequestId));
+    SuccessOrExit(error = mEncoder.WriteUtf8(aKey->mName == nullptr ? "" : aKey->mName));
+    SuccessOrExit(error = mEncoder.WriteUtf8(aKey->mServiceType == nullptr ? "" : aKey->mServiceType));
+    SuccessOrExit(error = mEncoder.WriteData(aKey->mKeyData, aKey->mKeyDataLength));
 
+exit:
+    return error;
+}
+
+void NcpBase::DnssdRegisterService(const otPlatDnssdService   *aService,
+                                   otPlatDnssdRequestId        aRequestId,
+                                   otPlatDnssdRegisterCallback aCallback)
+{
+    DnssdUpdate(aService, aRequestId, aCallback, /* aRegister */ true);
+}
+
+void NcpBase::DnssdUnregisterService(const otPlatDnssdService   *aService,
+                                     otPlatDnssdRequestId        aRequestId,
+                                     otPlatDnssdRegisterCallback aCallback)
+{
+    DnssdUpdate(aService, aRequestId, aCallback, /* aRegister */ false);
+}
+
+void NcpBase::DnssdRegisterHost(const otPlatDnssdHost      *aHost,
+                                otPlatDnssdRequestId        aRequestId,
+                                otPlatDnssdRegisterCallback aCallback)
+{
+    DnssdUpdate(aHost, aRequestId, aCallback, /* aRegister */ true);
+}
+
+void NcpBase::DnssdUnregisterHost(const otPlatDnssdHost      *aHost,
+                                  otPlatDnssdRequestId        aRequestId,
+                                  otPlatDnssdRegisterCallback aCallback)
+{
+    DnssdUpdate(aHost, aRequestId, aCallback, /* aRegister */ false);
+}
+
+void NcpBase::DnssdRegisterKey(const otPlatDnssdKey       *aKey,
+                               otPlatDnssdRequestId        aRequestId,
+                               otPlatDnssdRegisterCallback aCallback)
+{
+    otLogWarnPlat("!!! NcpBase DnssdRegisterKey");
+    DnssdUpdate(aKey, aRequestId, aCallback, /* aRegister */ true);
+}
+
+void NcpBase::DnssdUnregisterKey(const otPlatDnssdKey       *aKey,
+                                 otPlatDnssdRequestId        aRequestId,
+                                 otPlatDnssdRegisterCallback aCallback)
+{
+    DnssdUpdate(aKey, aRequestId, aCallback, /* aRegister */ false);
+}
+
+otPlatDnssdState NcpBase::DnssdGetState(void) { return mDnssdState; }
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_DNSSD_STATE>(void)
+{
+    otError error = OT_ERROR_NONE;
+    uint8_t state;
+
+    SuccessOrExit(error = mDecoder.ReadUint8(state));
+    otLogWarnPlat("Srp HandlePropertySet, SPINEL_PROP_DNSSD_STATE, state:%u", state);
+
+    if (state != mDnssdState)
+    {
+        otLogWarnPlat("Srp Dnssd change state");
+        mDnssdState = static_cast<otPlatDnssdState>(state);
+        otPlatDnssdStateHandleStateChange(mInstance);
+    }
+
+exit:
+    return error;
+}
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_DNSSD_REQUEST_RESULT>(void)
+{
+    otError              error = OT_ERROR_NONE;
+    otPlatDnssdRequestId requestId;
+    uint8_t              result;
+    DnssdRequest        *request;
+
+    SuccessOrExit(error = mDecoder.ReadUint32(requestId));
+    SuccessOrExit(error = mDecoder.ReadUint8(result));
+
+    request = mDnssdRequestList.FindMatching(requestId);
+    VerifyOrExit(request != nullptr, error = OT_ERROR_NOT_FOUND);
+    if (request->mCallback != nullptr)
+    {
+        request->mCallback(mInstance, request->mId, static_cast<otError>(result));
+    }
+
+    mDnssdRequestList.Remove(*request);
+    mDnssdRequestPool.Free(*request);
+
+exit:
+    return error;
+}
+
+#endif // OPENTHREAD_CONFIG_NCP_DNSSD_ENABLE && OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_SRP_SERVER_ENABLED>(void)
+{
+    otError error = OT_ERROR_NONE;
+    bool    enable;
+
+    otLogWarnPlat("HandlePropertySet, SPINEL_PROP_SRP_SERVER_ENABLED");
+    SuccessOrExit(error = mDecoder.ReadBool(enable));
     otSrpServerSetEnabled(mInstance, enable);
 
 exit:
     return error;
 }
 
-template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_SRP_SERVER_UPDATE_ID>(void)
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_SRP_SERVER_AUTO_ENABLE_MODE>(void)
 {
-    otSrpServerServiceUpdateId id;
-    uint8_t serviceUpdateError;
     otError error = OT_ERROR_NONE;
+    bool    enable;
 
-    SuccessOrExit(error = mDecoder.ReadUint32(id));
-    SuccessOrExit(error = mDecoder.ReadUint8(serviceUpdateError));
-
-    otSrpServerHandleServiceUpdateResult(mInstance, id, static_cast<otError>(serviceUpdateError));
+    otLogWarnPlat("HandlePropertySet, SPINEL_PROP_SRP_SERVER_AUTO_ENABLE_MODE");
+    SuccessOrExit(error = mDecoder.ReadBool(enable));
+    otSrpServerSetAutoEnableMode(mInstance, enable);
 
 exit:
     return error;

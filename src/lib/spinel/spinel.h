@@ -4330,21 +4330,74 @@ enum
 
     /// SRP Server State
     /** Format `b`: Write
-     * 
+     *
      */
     SPINEL_PROP_SRP_SERVER_ENABLED = SPINEL_PROP_OPENTHREAD__BEGIN + 28,
-    
-    /// SRP Server Host Entry
-    /** Format `` - Unsolicited notifications only
-     * 
-     */
-    SPINEL_PROP_SRP_SERVER_HOST = SPINEL_PROP_OPENTHREAD__BEGIN + 29,
 
-    /// SRP Server Update Id
-    /** Format : Write
-     * 
-     */   
-    SPINEL_PROP_SRP_SERVER_UPDATE_ID = SPINEL_PROP_OPENTHREAD__BEGIN + 30,
+    /// SRP Server auto enable mode
+    /** Format `b`: Write
+     *
+     */
+    SPINEL_PROP_SRP_SERVER_AUTO_ENABLE_MODE = SPINEL_PROP_OPENTHREAD__BEGIN + 29,
+
+    /// Dnssd State
+    /** Format `b`: Write-only
+     *
+     * `C`: The dnssd state.
+     *
+     */
+    SPINEL_PROP_DNSSD_STATE = SPINEL_PROP_OPENTHREAD__BEGIN + 30,
+
+    /// Dnssd Request Result
+    /** Format `LC`: Write
+     *
+     * `L` : The Dnssd Request ID.
+     * `C` : The result of the request.
+     *
+     */
+    SPINEL_PROP_DNSSD_REQUEST_RESULT = SPINEL_PROP_OPENTHREAD__BEGIN + 31,
+
+    /// DNS-SD Host
+    /** Format `LUSA(6)`: Inserted/Removed
+     *
+     * `L`    : The Dnssd Request ID.
+     * `U`    : The host name.
+     * `S`    : The count of IPv6 addresses.
+     * `A(6)` : The IPv6 addresses of the host.
+     *
+     */
+    SPINEL_PROP_DNSSD_HOST = SPINEL_PROP_OPENTHREAD__BEGIN + 32,
+
+    /// DNS-SD Service
+    /**
+     * Format `LUUUSA(U)SD`: Inserted/Removed
+     *
+     * `L`    : The Dnssd Request ID.
+     * `U`    : The host name (does not include domain name).
+     * `U`    : The service instance name label (not the full name).
+     * `U`    : The service type (e.g., "_mt._udp", does not include domain name).
+     * `S`    : The count of sub-type labels.
+     * `A(U)` : Array of sub-type labels (can be NULL if no label).
+     * `S`    : The service port number.
+     * `D`    : Encoded TXT data bytes.
+     *
+     */
+    SPINEL_PROP_DNSSD_SERVICE = SPINEL_PROP_OPENTHREAD__BEGIN + 33,
+
+    /// DNS-SD Key Record
+    /**
+     * Format `UUSLLD`: Inserted/Removed
+     *
+     * `L` : The Dnssd Request ID.
+     * `U` : A host or a service instance name (does not include domain name).
+     * `U` : The service type if key is for a service (does not include domain name).
+     * `S` : The resource record class.
+     * `L` : The TTL in seconds.
+     * `L` : The infrastructure network interface index.
+     * `D` : Byte array containing the key record data.
+     *
+     */
+    SPINEL_PROP_DNSSD_KEY_RECORD = SPINEL_PROP_OPENTHREAD__BEGIN + 34,
 
     SPINEL_PROP_OPENTHREAD__END = 0x2000,
 

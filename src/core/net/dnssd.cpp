@@ -41,6 +41,7 @@
 
 namespace ot {
 
+RegisterLogModule("Dnssd");
 //---------------------------------------------------------------------------------------------------------------------
 // Dnssd::RequestIdRange
 
@@ -478,6 +479,7 @@ exit:
 void Dnssd::HandleStateChange(void)
 {
 #if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
+    LogWarn("!!! Dnssd HandleStateChange");
     Get<Srp::AdvertisingProxy>().HandleDnssdPlatformStateChange();
 #endif
 

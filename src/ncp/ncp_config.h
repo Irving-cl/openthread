@@ -189,4 +189,14 @@
 #define OPENTHREAD_ENABLE_NCP_VENDOR_HOOK 0
 #endif
 
+/**
+ * @def OPENTHREAD_CONFIG_NCP_PLATFORM_DNSSD
+ *
+ * Define to 1 to enable NCP platform DNS-SD support.
+ *
+ */
+#if OPENTHREAD_CONFIG_NCP_PLATFORM_DNSSD
+#define OPENTHREAD_CONFIG_NCP_PLATFORM_DNSSD 0
+#endif
+
 #endif // CONFIG_NCP_H_
