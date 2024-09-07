@@ -8243,8 +8243,55 @@ void Interpreter::SetCommandTimeout(uint32_t aTimeoutMilli)
     mTimer.Start(aTimeoutMilli);
 }
 
+template <typename... Args> struct CmdList;
+
+template <typename T, typename... Args> struct CmdList<T, Args...>
+{
+    using Other                  = CmdList<Args...>;
+    static constexpr uint8_t len = T::len + Other::len;
+
+    T     conditionalCmd;
+    Other other;
+};
+
+template <> struct CmdList<>
+{
+    static constexpr uint8_t len = 0;
+};
+
+template <CommandId kCommandId> struct ConditionalCmd
+{
+    static constexpr bool kDefined = false;
+};
+
+#define DEFINE_CMD(aCmdStr)                         \
+    template <> struct ConditionalCmd<Cmd(aCmdStr)> \
+    {                                               \
+        static constexpr char name[]   = CMD_ba;    \
+        static constexpr bool kDefined = true;      \
+    };                                              \
+    constexpr char ConditionalCmd<Cmd(aCmdStr)>::name[];
+
+#ifdef CMD_ba
+DEFINE_CMD(CMD_ba)
+#endif
+
+template <CommandId kCommandId> struct Interpreter::ConditionalCmdEntry<true, kCommandId>
+{
+    static constexpr uint8_t kLen = 1;
+
+    Command mCmd = {ConditionalCmd<kCommandId>::name, &Interpreter::Process<kCommandId>};
+};
+
 otError Interpreter::ProcessCommand(Arg aArgs[])
 {
+#define TestCmdEntry(aCommandString) \
+    ConditionalCmdEntry<ConditionalCmd<Cmd(aCommandString)>::kDefined, Cmd(aCommandString)>
+
+    using CommandsArray = CmdList<TestCmdEntry("ba")>;
+    CommandsArray a;
+    (void)a;
+
 #define CmdEntry(aCommandString)                                   \
     {                                                              \
         aCommandString, &Interpreter::Process<Cmd(aCommandString)> \

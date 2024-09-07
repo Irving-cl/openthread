@@ -78,6 +78,7 @@
 #include "cli/cli_tcp.hpp"
 #include "cli/cli_udp.hpp"
 #include "cli/cli_utils.hpp"
+#include "cli/cmd_condition_eval.h"
 
 #include "common/array.hpp"
 #include "common/code_utils.hpp"
@@ -201,6 +202,11 @@ private:
     static constexpr uint16_t kMaxTxtDataSize = OPENTHREAD_CONFIG_CLI_TXT_RECORD_MAX_SIZE;
 
     using Command = CommandEntry<Interpreter>;
+
+    template <bool, CommandId kCommandId> struct ConditionalCmdEntry
+    {
+        static constexpr uint8_t kLen = 0;
+    };
 
     void OutputPrompt(void);
     void OutputResult(otError aError);

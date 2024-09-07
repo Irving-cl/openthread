@@ -45,6 +45,7 @@
 #include <openthread/thread.h>
 
 #include "cli_config.h"
+#include "cmd_condition_eval.h"
 
 #include "common/binary_search.hpp"
 #include "common/num_utils.hpp"
@@ -54,6 +55,8 @@
 
 namespace ot {
 namespace Cli {
+
+class Utils;
 
 /**
  * Represents a ID number value associated with a CLI command string.
@@ -73,8 +76,6 @@ constexpr static CommandId Cmd(const char *aString)
 {
     return (aString[0] == '\0') ? 0 : (static_cast<uint8_t>(aString[0]) + Cmd(aString + 1) * 255u);
 }
-
-class Utils;
 
 /**
  * Implements the basic output functions.
