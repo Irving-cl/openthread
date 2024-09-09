@@ -55,6 +55,8 @@
 #endif
 
 #include "changed_props_set.hpp"
+#include "common/array.hpp"
+#include "common/equatable.hpp"
 #include "common/tasklet.hpp"
 #include "instance/instance.hpp"
 #include "lib/spinel/spinel.h"
@@ -224,6 +226,36 @@ public:
      * Called by the subclass to learn when the transfer to the host should be deferred.
      */
     bool ShouldDeferHostSend(void);
+
+    /**
+     * Send a ICMP6 ND message through the Infrastructure interface on the host.
+     *
+     * @param[in]  aInfraIfIndex  The index of the infrastructure interface this message is sent to.
+     * @param[in]  aDestAddress   The destination address this message is sent to.
+     * @param[in]  aBuffer        The ICMPv6 message buffer. The ICMPv6 checksum is left zero and the
+     *                            platform should do the checksum calculate.
+     * @param[in]  aBufferLength  The length of the message buffer.
+     *
+     * @note  Per RFC 4861, the implementation should send the message with IPv6 link-local source address
+     *        of interface @p aInfraIfIndex and IP Hop Limit 255.
+     *
+     * @retval OT_ERROR_NONE    Successfully sent the ICMPv6 message.
+     * @retval OT_ERROR_FAILED  Failed to send the ICMPv6 message.
+     *
+     */
+    otError InfraIfSendIcmp6Nd(uint32_t            aInfraIfIndex,
+                               const otIp6Address *aDestAddress,
+                               const uint8_t      *aBuffer,
+                               uint16_t            aBufferLength);
+
+    /**
+     * Check if the infrastructure interface has an IPv6 address.
+     *
+     * @param[in]  aInfraIfIndex  The index of the instructure interface to query.
+     * @param[in]  aAddress       The IPv6 address to query.
+     *
+     */
+    bool InfraIfHasAddress(uint32_t aInfraIfIndex, const otIp6Address *aAddress);
 
 protected:
     static constexpr uint8_t kBitsPerByte = 8; ///< Number of bits in a byte.
@@ -745,6 +777,20 @@ protected:
     spinel_status_t mDatasetSendMgmtPendingSetResult;
 
     uint64_t mLogTimestampBase; // Timestamp base used for logging
+
+#if OPENTHREAD_FTD && OPENTHREAD_CONFIG_NCP_INFRA_IF_ENABLE
+    class Ip6Address : public otIp6Address, public Equatable<Ip6Address>
+    {
+    public:
+        Ip6Address(void) { memset(mFields.m8, 0, sizeof(mFields.m8)); }
+
+        Ip6Address(const otIp6Address &aAddr) { memcpy(mFields.m8, &aAddr, sizeof(otIp6Address)); }
+    };
+
+    static constexpr uint8_t                kMaxInfraIfAddrs = 10;
+    ot::Array<Ip6Address, kMaxInfraIfAddrs> mInfraIfAddrs;
+    uint32_t                                mInfraIfIndex = 0;
+#endif
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
     char    *mDiagOutput;
