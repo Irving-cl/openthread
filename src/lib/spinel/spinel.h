@@ -4884,6 +4884,28 @@ enum
 
     SPINEL_PROP_DNSSD__END = 0x950,
 
+    SPINEL_PROP_BORDER_AGENT__BEGIN = 0x950,
+
+    /// Border Agent MeshCoP service state subscription.
+    /**
+     * Format: `b`: Write only.
+     *
+     * `b`: Whether to enable or disable the MeshCoP service state update.
+     */
+    SPINEL_PROP_BORDER_AGENT_MESHCOP_SERIVCE_STATE_SUBSCRIPTION = SPINEL_PROP_BORDER_AGENT__BEGIN + 1,
+
+    /// Border Agent MeshCoP service state.
+    /**
+     * Format: `bSD`: Unsolicited notifications only.
+     *
+     * `b`: Whether the border agent is running or not.
+     * `S`: The UDP port that is being used by the border agent. If the state is 'Stopped', the port MUST be 0.
+     * `D`: The encoded MeshCoP service TXT data (from Thread side).
+     */
+    SPINEL_PROP_BORDER_AGENT_MESHCOP_SERIVCE_STATE = SPINEL_PROP_BORDER_AGENT__BEGIN + 2,
+
+    SPINEL_PROP_BORDER_AGENT__END = 0x970,
+
     SPINEL_PROP_NEST__BEGIN = 0x3BC0,
 
     SPINEL_PROP_NEST_STREAM_MFG = SPINEL_PROP_NEST__BEGIN + 0,

@@ -55,6 +55,8 @@
 #include "meshcop/commissioner.hpp"
 #endif
 
+constexpr char kLogModuleName[] = "NcpFtd";
+
 #if OPENTHREAD_FTD
 namespace ot {
 namespace Ncp {
@@ -117,7 +119,7 @@ void NcpBase::HandleParentResponseInfo(const otThreadParentResponseInfo &aInfo)
 exit:
     return;
 }
-#endif
+#endif // OPENTHREAD_CONFIG_MLE_PARENT_RESPONSE_CALLBACK_API_ENABLE
 
 void NcpBase::HandleNeighborTableChanged(otNeighborTableEvent aEvent, const otNeighborTableEntryInfo *aEntry)
 {
@@ -189,6 +191,28 @@ exit:
         mUpdateChangedPropsTask.Post();
     }
 }
+
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
+
+void NcpBase::HandleBorderAgentMeshCoPServiceChanged(const uint8_t *aTxtData, uint16_t aLength, void *aContext)
+{
+    static_cast<NcpBase *>(aContext)->HandleBorderAgentMeshCoPServiceChanged(aTxtData, aLength);
+}
+
+void NcpBase::HandleBorderAgentMeshCoPServiceChanged(const uint8_t *aTxtData, uint16_t aLength)
+{
+    SuccessOrExit(mEncoder.BeginFrame(SPINEL_HEADER_FLAG | SPINEL_HEADER_IID_0, SPINEL_CMD_PROP_VALUE_IS,
+                                      SPINEL_PROP_BORDER_AGENT_MESHCOP_SERIVCE_STATE));
+    SuccessOrExit(mEncoder.WriteBool(otBorderAgentIsActive(mInstance)));
+    SuccessOrExit(mEncoder.WriteUint16(otBorderAgentGetUdpPort(mInstance)));
+    SuccessOrExit(mEncoder.WriteData(aTxtData, aLength));
+    SuccessOrExit(mEncoder.EndFrame());
+
+exit:
+    return;
+}
+
+#endif // OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
 
 // ----------------------------------------------------------------------------
 // MARK: Individual Property Handlers
@@ -1632,6 +1656,27 @@ exit:
 }
 
 #endif // OPENTHREAD_CONFIG_NCP_DNSSD_ENABLE && OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_BORDER_AGENT_MESHCOP_SERIVCE_STATE_SUBSCRIPTION>(void)
+{
+    otError error = OT_ERROR_NONE;
+    bool    enable;
+
+    SuccessOrExit(error = mDecoder.ReadBool(enable));
+    if (enable)
+    {
+        otBorderAgentSetMeshCoPServiceChangedCallback(mInstance, HandleBorderAgentMeshCoPServiceChanged, this);
+    }
+    else
+    {
+        otBorderAgentSetMeshCoPServiceChangedCallback(mInstance, nullptr, nullptr);
+    }
+
+exit:
+    return error;
+}
+#endif
 
 } // namespace Ncp
 } // namespace ot

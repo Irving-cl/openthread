@@ -34,7 +34,6 @@
 #include "border_agent.hpp"
 
 #if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
-
 #include "instance/instance.hpp"
 
 namespace ot {
