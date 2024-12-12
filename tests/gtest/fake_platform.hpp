@@ -32,6 +32,7 @@
 #include "openthread-core-config.h"
 
 #include <map>
+#include <string>
 #include <vector>
 
 #include <inttypes.h>
@@ -40,10 +41,43 @@
 #include <openthread/instance.h>
 #include <openthread/platform/alarm-micro.h>
 #include <openthread/platform/alarm-milli.h>
+#include <openthread/platform/dnssd.h>
 #include <openthread/platform/radio.h>
 #include <openthread/platform/time.h>
 
 namespace ot {
+
+class FakeDnssd
+{
+public:
+    FakeDnssd(void);
+    virtual ~FakeDnssd(void);
+
+    otPlatDnssdState GetState(void) { return mState; }
+    void             SetState(otPlatDnssdState aState);
+
+    struct ServiceEntry
+    {
+        ServiceEntry(const otPlatDnssdService   &aService,
+                     otPlatDnssdRequestId        aRequestId,
+                     otPlatDnssdRegisterCallback aCallback);
+
+        otPlatDnssdService          mService;
+        otPlatDnssdRequestId        mRequestId;
+        otPlatDnssdRegisterCallback mCallback;
+
+        std::vector<std::string> mSubTypes;
+        std::vector<uint8_t>     mTxtData;
+    };
+
+    std::vector<ServiceEntry> &GetServiceRegistrationEntries(void) { return mServiceRegistrationEntries; }
+    std::vector<ServiceEntry> &GetServiceUnregistrationEntries(void) { return mServiceUnregistrationEntries; }
+
+private:
+    otPlatDnssdState          mState;
+    std::vector<ServiceEntry> mServiceRegistrationEntries;
+    std::vector<ServiceEntry> mServiceUnregistrationEntries;
+};
 
 class FakePlatform
 {
@@ -66,6 +100,8 @@ public:
     void GoInUs(uint64_t aTimeoutInUs = 0);
 
     void GoInMs(uint32_t aTimeoutInMs = 0) { GoInUs(aTimeoutInMs * OT_US_PER_MS); }
+
+    FakeDnssd &GetDnssd(void) { return mDnssd; }
 
     virtual uint64_t GetNow() const { return mNow; }
 
@@ -139,6 +175,8 @@ protected:
     uint8_t mFlash[kFlashSwapSize * kFlashSwapNum];
 
     std::map<uint32_t, std::vector<std::vector<uint8_t>>> mSettings;
+
+    FakeDnssd mDnssd;
 };
 
 template <> inline void FakePlatform::HandleSchedule<&FakePlatform::mMilliAlarmStart>()

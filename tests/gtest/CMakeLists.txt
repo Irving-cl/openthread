@@ -58,6 +58,7 @@ target_link_libraries(ot-fake-ftd INTERFACE
 )
 
 add_executable(ot-ftd-gtest
+    border_agent_service_publisher_test.cpp
     dataset_test.cpp
 )
 target_link_libraries(ot-ftd-gtest

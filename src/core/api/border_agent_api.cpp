@@ -79,6 +79,13 @@ uint16_t otBorderAgentGetUdpPort(otInstance *aInstance)
     return AsCoreType(aInstance).Get<MeshCoP::BorderAgent>().GetUdpPort();
 }
 
+void otBorderAgentSetUdpPortChangedCallback(otInstance                         *aInstance,
+                                            otBorderAgentUdpPortChangedCallback aCallback,
+                                            void                               *aContext)
+{
+    return AsCoreType(aInstance).Get<MeshCoP::BorderAgent>().SetUdpPortChangedCallback(aCallback, aContext);
+}
+
 #if OPENTHREAD_CONFIG_BORDER_AGENT_EPHEMERAL_KEY_ENABLE
 
 bool otBorderAgentIsEphemeralKeyFeatureEnabled(otInstance *aInstance)
@@ -126,5 +133,22 @@ const otBorderAgentCounters *otBorderAgentGetCounters(otInstance *aInstance)
 }
 
 void otBorderAgentDisconnect(otInstance *aInstance) { AsCoreType(aInstance).Get<MeshCoP::BorderAgent>().Disconnect(); }
+
+#if OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+void otBorderAgentSetServicePublisherEnabled(otInstance *aInstance, bool aEnabled)
+{
+    AsCoreType(aInstance).Get<MeshCoP::BorderAgentPublisher>().SetEnabled(aEnabled);
+}
+
+otError otBorderAgentSetMeshCopServiceValues(otInstance                        *aInstance,
+                                             const char                        *aServiceInstanceName,
+                                             const char                        *aProductName,
+                                             const otBorderAgentVendorTxtEntry *aVendorTxtEntries,
+                                             uint8_t                            aLength)
+{
+    return AsCoreType(aInstance).Get<MeshCoP::BorderAgentPublisher>().SetMeshCopServiceValues(
+        aServiceInstanceName, aProductName, aVendorTxtEntries, aLength);
+}
+#endif // OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
 
 #endif // OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE

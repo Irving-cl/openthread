@@ -139,6 +139,7 @@ Error BorderAgent::Start(uint16_t aUdpPort, const uint8_t *aPsk, uint8_t aPskLen
     mState = kStateStarted;
 
     LogInfo("Border Agent start listening on port %u", GetUdpPort());
+    mUdpPortChangedCallback.InvokeIfSet(GetUdpPort());
 
 exit:
     LogWarnOnError(error, "start agent");
@@ -161,6 +162,8 @@ void BorderAgent::Stop(void)
     mDtlsTransport.Close();
 
     mState = kStateStopped;
+
+    mUdpPortChangedCallback.InvokeIfSet(0);
     LogInfo("Border Agent stopped");
 
 exit:
@@ -179,6 +182,11 @@ exit:
 }
 
 uint16_t BorderAgent::GetUdpPort(void) const { return mDtlsTransport.GetUdpPort(); }
+
+void BorderAgent::SetUdpPortChangedCallback(otBorderAgentUdpPortChangedCallback aCallback, void *aContext)
+{
+    mUdpPortChangedCallback.Set(aCallback, aContext);
+}
 
 void BorderAgent::HandleNotifierEvents(Events aEvents)
 {
@@ -476,7 +484,13 @@ void BorderAgent::HandleEphemeralKeyTimeout(void)
     RestartAfterRemovingEphemeralKey();
 }
 
-void BorderAgent::InvokeEphemeralKeyCallback(void) { mEphemeralKeyCallback.InvokeIfSet(); }
+void BorderAgent::InvokeEphemeralKeyCallback(void)
+{
+#if OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+    Get<MeshCoP::BorderAgentPublisher>().HandleEpskcStateChanged();
+#endif
+    mEphemeralKeyCallback.InvokeIfSet();
+}
 
 void BorderAgent::RestartAfterRemovingEphemeralKey(void)
 {
@@ -484,6 +498,9 @@ void BorderAgent::RestartAfterRemovingEphemeralKey(void)
 
     Stop();
     IgnoreError(Start(mOldUdpPort));
+#if OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+    Get<MeshCoP::BorderAgentPublisher>().UpdateMeshCopService();
+#endif
 }
 
 void BorderAgent::HandleDtlsTransportClosed(void *aContext)
@@ -515,6 +532,9 @@ void BorderAgent::SetEphemeralKeyFeatureEnabled(bool aEnabled)
     }
 
     // TODO: Update MeshCoP service after new module is added.
+#if OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+    Get<MeshCoP::BorderAgentPublisher>().UpdateMeshCopService();
+#endif
 
 exit:
     return;
