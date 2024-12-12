@@ -145,6 +145,9 @@ public:
      */
     uint16_t GetUdpPort(void) const;
 
+    typedef otBorderAgentUdpPortChangedCallback UdpPortChangedCallback;
+    void SetUdpPortChangedCallback(UdpPortChangedCallback aCallback, void *aContext);
+
     /**
      * Gets the state of the Border Agent service.
      *
@@ -356,9 +359,10 @@ private:
     using EphemeralKeyTask  = TaskletIn<BorderAgent, &BorderAgent::InvokeEphemeralKeyCallback>;
 #endif
 
-    State            mState;
-    Dtls::Transport  mDtlsTransport;
-    CoapDtlsSession *mCoapDtlsSession;
+    State                            mState;
+    Dtls::Transport                  mDtlsTransport;
+    CoapDtlsSession                 *mCoapDtlsSession;
+    Callback<UdpPortChangedCallback> mUdpPortChangedCallback;
 #if OPENTHREAD_CONFIG_BORDER_AGENT_ID_ENABLE
     Id   mId;
     bool mIdInitialized;

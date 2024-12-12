@@ -457,6 +457,12 @@ protected:
     static void HandleParentResponseInfo(otThreadParentResponseInfo *aInfo, void *aContext);
     void        HandleParentResponseInfo(const otThreadParentResponseInfo &aInfo);
 #endif
+
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
+    static void HandleBorderAgentUdpPortChanged(uint16_t aPort, void *aContext);
+    void        HandleBorderAgentUdpPortChanged(uint16_t aPort);
+#endif
+
 #endif
 
     static void HandleDatagramFromStack(otMessage *aMessage, void *aContext);

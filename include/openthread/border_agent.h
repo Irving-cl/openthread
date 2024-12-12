@@ -133,6 +133,12 @@ const otBorderAgentCounters *otBorderAgentGetCounters(otInstance *aInstance);
  */
 otBorderAgentState otBorderAgentGetState(otInstance *aInstance);
 
+typedef void (*otBorderAgentUdpPortChangedCallback)(uint16_t aPort, void *aContext);
+
+void otBorderAgentSetUdpPortChangedCallback(otInstance                         *aInstance,
+                                            otBorderAgentUdpPortChangedCallback aCallback,
+                                            void                               *aContext);
+
 /**
  * Gets the UDP port of the Thread Border Agent service.
  *
@@ -325,6 +331,18 @@ void otBorderAgentSetEphemeralKeyCallback(otInstance                       *aIns
  * @param[in] aInstance    The OpenThread instance.
  */
 void otBorderAgentDisconnect(otInstance *aInstance);
+
+void otBorderAgentSetEnabled(otInstance *aInstance, bool aIsEnabled);
+
+otError otBorderAgentSetMeshCopServiceValues(otInstance    *aInstance,
+                                             const char    *aServiceInstanceName,
+                                             const char    *aProductName,
+                                             const char    *aVendorName,
+                                             const uint8_t *aVendorOui);
+
+otError otBorderAgentSetMeshCopSerivceVendorTxtData(otInstance    *aInstance,
+                                                    const uint8_t *aVendorTxtData,
+                                                    uint16_t       aLen);
 
 /**
  * @}

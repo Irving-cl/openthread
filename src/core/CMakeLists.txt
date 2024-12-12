@@ -150,6 +150,7 @@ set(COMMON_SOURCES
     mac/wakeup_tx_scheduler.cpp
     meshcop/announce_begin_client.cpp
     meshcop/border_agent.cpp
+    meshcop/border_agent_publisher.cpp
     meshcop/commissioner.cpp
     meshcop/dataset.cpp
     meshcop/dataset_manager.cpp

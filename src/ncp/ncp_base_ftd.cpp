@@ -55,6 +55,8 @@
 #include "meshcop/commissioner.hpp"
 #endif
 
+constexpr char kLogModuleName[] = "NcpFtd";
+
 #if OPENTHREAD_FTD
 namespace ot {
 namespace Ncp {
@@ -189,6 +191,26 @@ exit:
         mUpdateChangedPropsTask.Post();
     }
 }
+
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
+void NcpBase::HandleBorderAgentUdpPortChanged(uint16_t aPort, void *aContext)
+{
+    static_cast<NcpBase *>(aContext)->HandleBorderAgentUdpPortChanged(aPort);
+}
+
+void NcpBase::HandleBorderAgentUdpPortChanged(uint16_t aPort)
+{
+    uint8_t          header = SPINEL_HEADER_FLAG | SPINEL_HEADER_TX_NOTIFICATION_IID;
+    spinel_command_t cmd    = SPINEL_CMD_PROP_VALUE_IS;
+
+    SuccessOrExit(mEncoder.BeginFrame(header, cmd, SPINEL_PROP_BORDER_AGENT_UDP_PORT));
+    SuccessOrExit(mEncoder.WriteUint16(aPort));
+    SuccessOrExit(mEncoder.EndFrame());
+
+exit:
+    return;
+}
+#endif
 
 // ----------------------------------------------------------------------------
 // MARK: Individual Property Handlers
@@ -1630,6 +1652,59 @@ template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_DNSSD_REQUEST_RESULT>
 exit:
     return error;
 }
+
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_BORDER_AGENT_MESHCOP_ENABLED>(void)
+{
+    otError error = OT_ERROR_NONE;
+    bool    enable;
+
+    SuccessOrExit(error = mDecoder.ReadBool(enable));
+    otBorderAgentSetEnabled(mInstance, enable);
+
+exit:
+    return error;
+}
+
+template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_BORDER_AGENT_MESHCOP_VALUES>(void)
+{
+    static constexpr uint16_t kVendorOuiLen = 3;
+
+    otError error = OT_ERROR_NONE;
+
+    const char    *baseServiceInstanceName = nullptr;
+    const char    *productName             = nullptr;
+    const char    *vendorName              = nullptr;
+    const uint8_t *vendorOui               = nullptr;
+    uint16_t       vendorOuiLen            = kVendorOuiLen;
+
+    SuccessOrExit(error = mDecoder.OpenStruct());
+    if (!mDecoder.IsAllReadInStruct())
+    {
+        mDecoder.ReadUtf8(baseServiceInstanceName);
+    }
+    SuccessOrExit(error = mDecoder.CloseStruct());
+    SuccessOrExit(error = mDecoder.OpenStruct());
+    if (!mDecoder.IsAllReadInStruct())
+    {
+        mDecoder.ReadUtf8(productName);
+    }
+    SuccessOrExit(error = mDecoder.CloseStruct());
+    SuccessOrExit(error = mDecoder.OpenStruct());
+    if (!mDecoder.IsAllReadInStruct())
+    {
+        mDecoder.ReadUtf8(vendorName);
+    }
+    SuccessOrExit(error = mDecoder.CloseStruct());
+    SuccessOrExit(error = mDecoder.ReadDataWithLen(vendorOui, vendorOuiLen));
+    VerifyOrExit(vendorOuiLen == kVendorOuiLen, error = OT_ERROR_INVALID_ARGS);
+
+    otBorderAgentSetMeshCopServiceValues(mInstance, baseServiceInstanceName, productName, vendorName, vendorOui);
+
+exit:
+    return error;
+}
+#endif // OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
 
 #endif // OPENTHREAD_CONFIG_NCP_DNSSD_ENABLE && OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
 

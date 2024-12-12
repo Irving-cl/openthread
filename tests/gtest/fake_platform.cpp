@@ -55,6 +55,36 @@ namespace ot {
 
 FakePlatform *FakePlatform::sPlatform = nullptr;
 
+FakeDnssd::FakeDnssd(void)
+    : mState(OT_PLAT_DNSSD_STOPPED)
+{
+}
+
+FakeDnssd::~FakeDnssd(void) {}
+
+void FakeDnssd::SetState(otPlatDnssdState aState)
+{
+    mState = aState;
+
+    otPlatDnssdStateHandleStateChange(FakePlatform::CurrentInstance());
+}
+
+FakeDnssd::ServiceEntry::ServiceEntry(const otPlatDnssdService   &aService,
+                                      otPlatDnssdRequestId        aRequestId,
+                                      otPlatDnssdRegisterCallback aCallback)
+    : mService(aService)
+    , mRequestId(aRequestId)
+    , mCallback(aCallback)
+{
+    // Copy SubType Labels and TxtData
+    for (uint8_t i = 0; i < mService.mSubTypeLabelsLength; i++)
+    {
+        mSubTypes.emplace_back(mService.mSubTypeLabels[i]);
+    }
+
+    mTxtData.assign(mService.mTxtData, mService.mTxtData + mService.mTxtDataLength);
+}
+
 FakePlatform::FakePlatform()
 {
     assert(sPlatform == nullptr);
@@ -576,5 +606,64 @@ otError otPlatUdpLeaveMulticastGroup(otUdpSocket *, otNetifIdentifier, const otI
 {
     return OT_ERROR_NOT_IMPLEMENTED;
 }
+
+// Plat Dnssd APIs
+otPlatDnssdState otPlatDnssdGetState(otInstance *) { return FakePlatform::CurrentPlatform().GetDnssd().GetState(); }
+
+void otPlatDnssdRegisterService(otInstance *,
+                                const otPlatDnssdService   *aService,
+                                otPlatDnssdRequestId        aRequestId,
+                                otPlatDnssdRegisterCallback aCallback)
+{
+    FakePlatform::CurrentPlatform().GetDnssd().GetServiceRegistrationEntries().emplace_back(*aService, aRequestId,
+                                                                                            aCallback);
+    auto &entry = FakePlatform::CurrentPlatform().GetDnssd().GetServiceRegistrationEntries().front();
+}
+
+void otPlatDnssdUnregisterService(otInstance *,
+                                  const otPlatDnssdService   *aService,
+                                  otPlatDnssdRequestId        aRequestId,
+                                  otPlatDnssdRegisterCallback aCallback)
+{
+    FakePlatform::CurrentPlatform().GetDnssd().GetServiceUnregistrationEntries().emplace_back(*aService, aRequestId,
+                                                                                              aCallback);
+}
+
+void otPlatDnssdRegisterHost(otInstance *, const otPlatDnssdHost *, otPlatDnssdRequestId, otPlatDnssdRegisterCallback)
+{
+}
+
+void otPlatDnssdUnregisterHost(otInstance *, const otPlatDnssdHost *, otPlatDnssdRequestId, otPlatDnssdRegisterCallback)
+{
+}
+
+void otPlatDnssdRegisterKey(otInstance *, const otPlatDnssdKey *, otPlatDnssdRequestId, otPlatDnssdRegisterCallback) {}
+
+void otPlatDnssdUnregisterKey(otInstance *, const otPlatDnssdKey *, otPlatDnssdRequestId, otPlatDnssdRegisterCallback)
+{
+}
+
+void otPlatDnssdStartBrowser(otInstance *, const otPlatDnssdBrowser *) {}
+
+void otPlatDnssdStopBrowser(otInstance *, const otPlatDnssdBrowser *) {}
+
+void otPlatDnssdStartSrvResolver(otInstance *, const otPlatDnssdSrvResolver *) {}
+
+void otPlatDnssdStopSrvResolver(otInstance *, const otPlatDnssdSrvResolver *) {}
+
+void otPlatDnssdStartTxtResolver(otInstance *, const otPlatDnssdTxtResolver *) {}
+
+void otPlatDnssdStopTxtResolver(otInstance *, const otPlatDnssdTxtResolver *) {}
+
+void otPlatDnssdStartIp6AddressResolver(otInstance *, const otPlatDnssdAddressResolver *) {}
+
+void otPlatDnssdStopIp6AddressResolver(otInstance *, const otPlatDnssdAddressResolver *) {}
+
+void otPlatDnssdStartIp4AddressResolver(otInstance *, const otPlatDnssdAddressResolver *) {}
+
+void otPlatDnssdStopIp4AddressResolver(otInstance *, const otPlatDnssdAddressResolver *) {}
+
+OT_TOOL_WEAK void otPlatDnssdStateHandleStateChange(otInstance *) {} // For ot-fake-platform RCP case.
+
 void otPlatAssertFail(const char *, int) {}
 } // extern "C"

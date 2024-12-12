@@ -475,6 +475,10 @@ exit:
 
 void Dnssd::HandleStateChange(void)
 {
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
+    Get<MeshCoP::BorderAgentPublisher>().HandleDnssdPlatformStateChange();
+#endif
+
 #if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
     Get<Srp::AdvertisingProxy>().HandleDnssdPlatformStateChange();
 #endif

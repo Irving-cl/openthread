@@ -4884,6 +4884,47 @@ enum
 
     SPINEL_PROP_DNSSD__END = 0x950,
 
+    SPINEL_PROP_BORDER_AGENT__BEGIN = 0x950,
+
+    /// Border Agent MeshCoP Service Publisher Enabled
+    /**
+     * Format: `b`.
+     * Type: Write-only.
+     *
+     * `b`: If the meshcop service publisher is enabled.
+     *
+     * Host uses this property to set enable/disble the MeshCop service publishing.
+     */
+    SPINEL_PROP_BORDER_AGENT_MESHCOP_ENABLED = SPINEL_PROP_BORDER_AGENT__BEGIN + 1,
+
+    /// Border Agent MeshCoP Service Values
+    /**
+     * Format: `t(U)t(U)t(U)d`.
+     * Type: Write-only.
+     *
+     * `t(U)`: The base service instance name.
+     * `t(U)`: The product name.
+     * `t(U)`: The vendor name.
+     * `d`   : The vendor oui data.
+     *
+     * Host uses this property to set the MeshCop service values.
+     */
+    SPINEL_PROP_BORDER_AGENT_MESHCOP_VALUES = SPINEL_PROP_BORDER_AGENT__BEGIN + 2,
+
+    /// Border Agent MeshCoP Service UDP Port.
+    /**
+     * Format: `S`.
+     * Type: Read-only.
+     *
+     * `S`: The UDP Port that is being used by the Border Agent Service on Thread side.
+     *
+     * This property is read-only and will only be sent by the NCP to the host as notifications. `0` indicates that
+     * no port is in use.
+     */
+    SPINEL_PROP_BORDER_AGENT_UDP_PORT = SPINEL_PROP_BORDER_AGENT__BEGIN + 3,
+
+    SPINEL_PROP_BORDER_AGENT__END = 0x970,
+
     SPINEL_PROP_NEST__BEGIN = 0x3BC0,
 
     SPINEL_PROP_NEST_STREAM_MFG = SPINEL_PROP_NEST__BEGIN + 0,

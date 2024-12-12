@@ -355,6 +355,9 @@ NcpBase::NcpBase(Instance *aInstance)
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     otNetworkTimeSyncSetCallback(mInstance, &NcpBase::HandleTimeSyncUpdate, this);
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
+    otBorderAgentSetUdpPortChangedCallback(mInstance, &NcpBase::HandleBorderAgentUdpPortChanged, this);
+#endif
 #if OPENTHREAD_CONFIG_UDP_FORWARD_ENABLE
     otUdpForwardSetForwarder(mInstance, &NcpBase::HandleUdpForwardStream, this);
 #endif

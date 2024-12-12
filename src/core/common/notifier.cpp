@@ -117,6 +117,9 @@ void Notifier::EmitEvents(void)
 #endif
 #if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
     Get<MeshCoP::BorderAgent>().HandleNotifierEvents(events);
+#if OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+    Get<MeshCoP::BorderAgentPublisher>().HandleNotifierEvents(events);
+#endif
 #endif
 #if OPENTHREAD_CONFIG_MLR_ENABLE || (OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE)
     Get<MlrManager>().HandleNotifierEvents(events);

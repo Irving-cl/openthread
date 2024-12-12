@@ -165,6 +165,9 @@ Instance::Instance(void)
 #endif
 #if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
     , mBorderAgent(*this)
+#if OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE
+    , mBorderAgentPublisher(*this)
+#endif
 #endif
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
     , mCommissioner(*this)
