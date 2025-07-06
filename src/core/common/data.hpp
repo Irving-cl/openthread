@@ -152,6 +152,14 @@ public:
     }
 
     /**
+     * Returns whether the data object is initialized.
+     *
+     * @retval TRUE   The `Data` object has been initialized.
+     * @retval FALSE  The `Data` object hasn't been initialized.
+     */
+    bool IsInitialized(void) const { return mBuffer != nullptr; }
+
+    /**
      * Returns a pointer to the data bytes buffer.
      *
      * @returns A pointer to the data bytes buffer (can be `nullptr` if `Data` is cleared).

@@ -2968,6 +2968,69 @@ public:
 } OT_TOOL_PACKED_END;
 
 /**
+ * This class represnets a DNS Name with its length in bytes.
+ */
+struct NameData : public Equatable<NameData>
+{
+    Name::Buffer mName;
+    uint8_t      mLength;
+
+    NameData(void)
+        : mLength(0)
+    {
+    }
+
+    NameData(const char *aName, uint8_t aLength)
+        : mLength(aLength)
+    {
+        memcpy(mName, aName, aLength);
+    }
+
+    bool IsEmpty(void) const { return mLength == 0; }
+};
+
+/**
+ * This class represents DNS Name information.
+ */
+struct NameInfo : public Clearable<NameInfo>
+{
+    NameData mInstanceName; ///< Instance name, or empty if the DNS name is not a service instance.
+    NameData mServiceName;  ///< Service name, or empty if the DNS name is not a service or service instance.
+    NameData mHostName;     ///< Host name, or empty if the DNS name is not a host name.
+    NameData mDomain;       ///< Domain name.
+
+    /**
+     * This method returns if the DNS name is a service instance.
+     *
+     * @returns Whether the DNS name is a service instance.
+     */
+    bool IsServiceInstance(void) const { return !mInstanceName.IsEmpty(); }
+
+    /**
+     * This method returns if the DNS name is a service.
+     *
+     * @returns Whether the DNS name is a service.
+     */
+    bool IsService(void) const { return !mServiceName.IsEmpty() && mInstanceName.IsEmpty(); }
+
+    /**
+     * This method returns if the DNS name is a host.
+     *
+     * @returns Whether the DNS name is a host.
+     */
+    bool IsHost(void) const { return mServiceName.IsEmpty(); }
+};
+
+/**
+ * This method parses a complete DNS name, separating it into its constituent parts if they exist.
+ *
+ * @param[in] aFullName  A const pointer to the full DNS name.
+ *
+ * @returns The NameInfo which contains constituent parts of the full name.
+ */
+NameInfo SplitFullDnsName(const char *aFullName);
+
+/**
  * @}
  */
 

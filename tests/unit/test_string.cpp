@@ -456,6 +456,68 @@ void TestStringCopy(void)
     printf(" -- PASS\n");
 }
 
+void TestStringRFind(void)
+{
+    char emptyString[1] = {'\0'};
+    char testString[]   = "Foo.bar.bar\\.";
+    char testString2[]  = "abcabcabcdabc";
+
+    printf("\nTest 12: StringRFind() function\n");
+
+    VerifyOrQuit(StringRFind(testString, 'F') == testString);
+    VerifyOrQuit(StringRFind(testString, 'o') == &testString[2]);
+    VerifyOrQuit(StringRFind(testString, '.') == &testString[12]);
+    VerifyOrQuit(StringRFind(testString, 'r') == &testString[10]);
+    VerifyOrQuit(StringRFind(testString, '\\') == &testString[11]);
+    VerifyOrQuit(StringRFind(testString, 'x') == nullptr);
+    VerifyOrQuit(StringRFind(testString, ',') == nullptr);
+
+    VerifyOrQuit(StringRFind(emptyString, 'F') == nullptr);
+    VerifyOrQuit(StringRFind(emptyString, '.') == nullptr);
+
+    VerifyOrQuit(StringRFind(testString, "Foo") == &testString[0]);
+    VerifyOrQuit(StringRFind(testString, "oo") == &testString[1]);
+    VerifyOrQuit(StringRFind(testString, "bar") == &testString[8]);
+    VerifyOrQuit(StringRFind(testString, "bar\\") == &testString[8]);
+    VerifyOrQuit(StringRFind(testString, "\\.") == &testString[11]);
+    VerifyOrQuit(StringRFind(testString, testString) == testString);
+    VerifyOrQuit(StringRFind(testString, "Fooo") == nullptr);
+    VerifyOrQuit(StringRFind(testString, "Far") == nullptr);
+    VerifyOrQuit(StringRFind(testString, "FOO") == nullptr);
+    VerifyOrQuit(StringRFind(testString, "BAR") == nullptr);
+    VerifyOrQuit(StringRFind(testString, "bar\\..") == nullptr);
+    VerifyOrQuit(StringRFind(testString, "") == &testString[13]);
+
+    VerifyOrQuit(StringRFind(emptyString, "foo") == nullptr);
+    VerifyOrQuit(StringRFind(emptyString, "bar") == nullptr);
+    VerifyOrQuit(StringRFind(emptyString, "") == &emptyString[0]);
+
+    // Verify when sub-string has repeated patterns
+    VerifyOrQuit(StringRFind(testString2, "abcabc") == &testString2[3]);
+    VerifyOrQuit(StringRFind(testString2, "abcabcd") == &testString2[3]);
+
+    VerifyOrQuit(StringRFind(testString, "FOO", kStringCaseInsensitiveMatch) == &testString[0]);
+    VerifyOrQuit(StringRFind(testString, "OO", kStringCaseInsensitiveMatch) == &testString[1]);
+    VerifyOrQuit(StringRFind(testString, "BAR", kStringCaseInsensitiveMatch) == &testString[8]);
+    VerifyOrQuit(StringRFind(testString, "BAR\\", kStringCaseInsensitiveMatch) == &testString[8]);
+    VerifyOrQuit(StringRFind(testString, "\\.", kStringCaseInsensitiveMatch) == &testString[11]);
+    VerifyOrQuit(StringRFind(testString, testString) == testString);
+    VerifyOrQuit(StringRFind(testString, "FOOO", kStringCaseInsensitiveMatch) == nullptr);
+    VerifyOrQuit(StringRFind(testString, "FAR", kStringCaseInsensitiveMatch) == nullptr);
+    VerifyOrQuit(StringRFind(testString, "BAR\\..", kStringCaseInsensitiveMatch) == nullptr);
+    VerifyOrQuit(StringRFind(testString, "", kStringCaseInsensitiveMatch) == &testString[13]);
+
+    VerifyOrQuit(StringRFind(emptyString, "FOO", kStringCaseInsensitiveMatch) == nullptr);
+    VerifyOrQuit(StringRFind(emptyString, "BAR", kStringCaseInsensitiveMatch) == nullptr);
+    VerifyOrQuit(StringRFind(emptyString, "", kStringCaseInsensitiveMatch) == &emptyString[0]);
+
+    // Verify when sub-string has repeated patterns
+    VerifyOrQuit(StringRFind(testString2, "ABCABC", kStringCaseInsensitiveMatch) == &testString2[3]);
+    VerifyOrQuit(StringRFind(testString2, "ABCABCD", kStringCaseInsensitiveMatch) == &testString2[3]);
+
+    printf(" -- PASS\n");
+}
+
 // gcc-4 does not support constexpr function
 #if __GNUC__ > 4
 static_assert(ot::AreStringsInOrder("a", "b"), "AreStringsInOrder() failed");
@@ -480,6 +542,7 @@ int main(void)
     ot::TestStringToLowercase();
     ot::TestStringParseUint8();
     ot::TestStringCopy();
+    ot::TestStringRFind();
     printf("\nAll tests passed.\n");
     return 0;
 }

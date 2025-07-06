@@ -1601,5 +1601,46 @@ exit:
     return contains;
 }
 
+bool NameEndsWithDot(const char *aName, uint16_t aNameLength)
+{
+    return aNameLength > 0 && aName[aNameLength - 1] == '.';
+}
+
+NameInfo SplitFullDnsName(const char *aFullName)
+{
+    NameInfo     nameInfo;
+    uint16_t     fullNameLength;
+    Name::Buffer fullName;
+    const char  *cur = nullptr;
+
+    VerifyOrExit(aFullName != nullptr);
+    fullNameLength = StringLength(aFullName, Name::kMaxNameLength);
+    memset(fullName, 0, sizeof(fullName));
+    memcpy(fullName, aFullName, fullNameLength);
+
+    if (!NameEndsWithDot(fullName, fullNameLength))
+    {
+        fullName[fullNameLength++] = '.';
+    }
+
+    cur = StringRFind(fullName, "._udp.");
+
+    if (cur == nullptr)
+    {
+        cur = StringRFind(fullName, "._tcp.");
+    }
+
+    if (cur == nullptr)
+    {
+        // host.domain or domain
+    }
+    else
+    {
+    }
+
+exit:
+    return nameInfo;
+}
+
 } // namespace Dns
 } // namespace ot
