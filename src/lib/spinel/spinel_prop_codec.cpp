@@ -114,6 +114,73 @@ exit:
     return error;
 }
 
+otError EncodeDnssdSrvResult(Encoder                    &aEncoder,
+                             const otPlatDnssdSrvResult &aSrvResult,
+                             const uint8_t              *aCallbackData,
+                             uint16_t                    aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aEncoder.OpenStruct());
+    SuccessOrExit(error = aEncoder.WriteUint32(aSrvResult.mTtl));
+    SuccessOrExit(error = aEncoder.WriteUtf8(aSrvResult.mServiceInstance));
+    SuccessOrExit(error = aEncoder.WriteUtf8(aSrvResult.mHostName));
+    SuccessOrExit(error = aEncoder.WriteUint16(aSrvResult.mPriority));
+    SuccessOrExit(error = aEncoder.WriteUint16(aSrvResult.mWeight));
+    SuccessOrExit(error = aEncoder.WriteUint16(aSrvResult.mPort));
+    SuccessOrExit(error = aEncoder.WriteUint32(aSrvResult.mInfraIfIndex));
+    SuccessOrExit(error = aEncoder.WriteData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aEncoder.CloseStruct());
+
+exit:
+    return error;
+}
+
+otError EncodeDnssdTxtResult(Encoder                    &aEncoder,
+                             const otPlatDnssdTxtResult &aTxtResult,
+                             const uint8_t              *aCallbackData,
+                             uint16_t                    aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aEncoder.OpenStruct());
+    SuccessOrExit(error = aEncoder.WriteUint32(aTxtResult.mTtl));
+    SuccessOrExit(error = aEncoder.WriteUtf8(aTxtResult.mServiceInstance));
+    SuccessOrExit(error = aEncoder.WriteDataWithLen(aTxtResult.mTxtData, aTxtResult.mTxtDataLength));
+    SuccessOrExit(error = aEncoder.WriteUint32(aTxtResult.mInfraIfIndex));
+    SuccessOrExit(error = aEncoder.WriteData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aEncoder.CloseStruct());
+
+exit:
+    return error;
+}
+
+otError EncodeDnssdAddressResult(Encoder                        &aEncoder,
+                                 const otPlatDnssdAddressResult &aAddressResult,
+                                 const uint8_t                  *aCallbackData,
+                                 uint16_t                        aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aEncoder.OpenStruct());
+    SuccessOrExit(error = aEncoder.WriteUtf8(aAddressResult.mHostName));
+    SuccessOrExit(error = aEncoder.OpenStruct());
+    for (uint16_t i = 0; i < aAddressResult.mAddressesLength; i++)
+    {
+        SuccessOrExit(error = aEncoder.OpenStruct());
+        SuccessOrExit(error = aEncoder.WriteIp6Address(aAddressResult.mAddresses[i].mAddress));
+        SuccessOrExit(error = aEncoder.WriteUint32(aAddressResult.mAddresses[i].mTtl));
+        SuccessOrExit(error = aEncoder.CloseStruct());
+    }
+    SuccessOrExit(error = aEncoder.CloseStruct());
+    SuccessOrExit(error = aEncoder.WriteUint32(aAddressResult.mInfraIfIndex));
+    SuccessOrExit(error = aEncoder.WriteData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aEncoder.CloseStruct());
+
+exit:
+    return error;
+}
+
 otError DecodeDnssdHost(Decoder              &aDecoder,
                         otPlatDnssdHost      &aHost,
                         otPlatDnssdRequestId &aRequestId,
@@ -215,6 +282,54 @@ exit:
     return error;
 }
 
+template <> otError EncodeDnssdDiscovery<otPlatDnssdSrvResolver>(Encoder &aEncoder, const otPlatDnssdSrvResolver &aDiscovery)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aEncoder.OpenStruct());
+    SuccessOrExit(error = aEncoder.WriteUtf8(aDiscovery.mServiceInstance));
+    SuccessOrExit(error = aEncoder.WriteUtf8(aDiscovery.mServiceType));
+    SuccessOrExit(error = aEncoder.WriteUint32(aDiscovery.mInfraIfIndex));
+    SuccessOrExit(error = aEncoder.WriteData(reinterpret_cast<const uint8_t *>(&aDiscovery.mCallback),
+                                             sizeof(aDiscovery.mCallback)));
+    SuccessOrExit(error = aEncoder.CloseStruct());
+
+exit:
+    return error;
+}
+
+template <> otError EncodeDnssdDiscovery<otPlatDnssdTxtResolver>(Encoder &aEncoder, const otPlatDnssdTxtResolver &aDiscovery)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aEncoder.OpenStruct());
+    SuccessOrExit(error = aEncoder.WriteUtf8(aDiscovery.mServiceInstance));
+    SuccessOrExit(error = aEncoder.WriteUtf8(aDiscovery.mServiceType));
+    SuccessOrExit(error = aEncoder.WriteUint32(aDiscovery.mInfraIfIndex));
+    SuccessOrExit(error = aEncoder.WriteData(reinterpret_cast<const uint8_t *>(&aDiscovery.mCallback),
+                                             sizeof(aDiscovery.mCallback)));
+    SuccessOrExit(error = aEncoder.CloseStruct());
+
+exit:
+    return error;
+}
+
+template <>
+otError EncodeDnssdDiscovery<otPlatDnssdAddressResolver>(Encoder &aEncoder, const otPlatDnssdAddressResolver &aDiscovery)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aEncoder.OpenStruct());
+    SuccessOrExit(error = aEncoder.WriteUtf8(aDiscovery.mHostName));
+    SuccessOrExit(error = aEncoder.WriteUint32(aDiscovery.mInfraIfIndex));
+    SuccessOrExit(error = aEncoder.WriteData(reinterpret_cast<const uint8_t *>(&aDiscovery.mCallback),
+                                             sizeof(aDiscovery.mCallback)));
+    SuccessOrExit(error = aEncoder.CloseStruct());
+
+exit:
+    return error;
+}
+
 otError EncodeDnssdBrowseResult(Encoder                       &aEncoder,
                                 const otPlatDnssdBrowseResult &aBrowseResult,
                                 const uint8_t                 *aCallbackData,
@@ -263,6 +378,59 @@ exit:
     return error;
 }
 
+otError DecodeDnssdSrvResolver(Decoder                &aDecoder,
+                               otPlatDnssdSrvResolver &aSrvResolver,
+                               const uint8_t         *&aCallbackData,
+                               uint16_t               &aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aDecoder.OpenStruct());
+    SuccessOrExit(error = aDecoder.ReadUtf8(aSrvResolver.mServiceInstance));
+    SuccessOrExit(error = aDecoder.ReadUtf8(aSrvResolver.mServiceType));
+    SuccessOrExit(error = aDecoder.ReadUint32(aSrvResolver.mInfraIfIndex));
+    SuccessOrExit(error = aDecoder.ReadData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aDecoder.CloseStruct());
+
+exit:
+    return error;
+}
+
+otError DecodeDnssdTxtResolver(Decoder                &aDecoder,
+                               otPlatDnssdTxtResolver &aTxtResolver,
+                               const uint8_t         *&aCallbackData,
+                               uint16_t               &aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aDecoder.OpenStruct());
+    SuccessOrExit(error = aDecoder.ReadUtf8(aTxtResolver.mServiceInstance));
+    SuccessOrExit(error = aDecoder.ReadUtf8(aTxtResolver.mServiceType));
+    SuccessOrExit(error = aDecoder.ReadUint32(aTxtResolver.mInfraIfIndex));
+    SuccessOrExit(error = aDecoder.ReadData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aDecoder.CloseStruct());
+
+exit:
+    return error;
+}
+
+otError DecodeDnssdAddressResolver(Decoder                    &aDecoder,
+                                   otPlatDnssdAddressResolver &aAddressResolver,
+                                   const uint8_t             *&aCallbackData,
+                                   uint16_t                   &aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aDecoder.OpenStruct());
+    SuccessOrExit(error = aDecoder.ReadUtf8(aAddressResolver.mHostName));
+    SuccessOrExit(error = aDecoder.ReadUint32(aAddressResolver.mInfraIfIndex));
+    SuccessOrExit(error = aDecoder.ReadData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aDecoder.CloseStruct());
+
+exit:
+    return error;
+}
+
 otError DecodeDnssdBrowseResult(Decoder                 &aDecoder,
                                 otPlatDnssdBrowseResult &aBrowseResult,
                                 const uint8_t          *&aCallbackData,
@@ -285,6 +453,75 @@ otError DecodeDnssdBrowseResult(Decoder                 &aDecoder,
     SuccessOrExit(error = aDecoder.ReadUint32(aBrowseResult.mTtl));
     SuccessOrExit(error = aDecoder.ReadUint32(aBrowseResult.mInfraIfIndex));
     SuccessOrExit(error = aDecoder.ReadData(aCallbackData, aCallbackDataLen));
+
+exit:
+    return error;
+}
+
+otError DecodeDnssdSrvResult(Decoder                &aDecoder,
+                             otPlatDnssdSrvResult &aSrvResult,
+                             const uint8_t         *&aCallbackData,
+                             uint16_t               &aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aDecoder.OpenStruct());
+    SuccessOrExit(error = aDecoder.ReadUint32(aSrvResult.mTtl));
+    SuccessOrExit(error = aDecoder.ReadUtf8(aSrvResult.mServiceInstance));
+    SuccessOrExit(error = aDecoder.ReadUtf8(aSrvResult.mHostName));
+    SuccessOrExit(error = aDecoder.ReadUint16(aSrvResult.mPriority));
+    SuccessOrExit(error = aDecoder.ReadUint16(aSrvResult.mWeight));
+    SuccessOrExit(error = aDecoder.ReadUint16(aSrvResult.mPort));
+    SuccessOrExit(error = aDecoder.ReadUint32(aSrvResult.mInfraIfIndex));
+    SuccessOrExit(error = aDecoder.ReadData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aDecoder.CloseStruct());
+
+exit:
+    return error;
+}
+
+otError DecodeDnssdTxtResult(Decoder                &aDecoder,
+                             otPlatDnssdTxtResult &aTxtResult,
+                             const uint8_t         *&aCallbackData,
+                             uint16_t               &aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aDecoder.OpenStruct());
+    SuccessOrExit(error = aDecoder.ReadUint32(aTxtResult.mTtl));
+    SuccessOrExit(error = aDecoder.ReadUtf8(aTxtResult.mServiceInstance));
+    SuccessOrExit(error = aDecoder.ReadDataWithLen(aTxtResult.mTxtData, aTxtResult.mTxtDataLength));
+    SuccessOrExit(error = aDecoder.ReadUint32(aTxtResult.mInfraIfIndex));
+    SuccessOrExit(error = aDecoder.ReadData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aDecoder.CloseStruct());
+
+exit:
+    return error;
+}
+
+otError DecodeDnssdAddressResult(Decoder                        &aDecoder,
+                                 otPlatDnssdAddressResult &aAddressResult,
+                                 const uint8_t                 *&aCallbackData,
+                                 uint16_t                        &aCallbackDataLen)
+{
+    otError error = OT_ERROR_NONE;
+
+    SuccessOrExit(error = aDecoder.OpenStruct());
+    SuccessOrExit(error = aDecoder.ReadUtf8(aAddressResult.mHostName));
+    SuccessOrExit(error = aDecoder.OpenStruct());
+    aAddressResult.mAddressesLength = 0;
+    while (!aDecoder.IsAllReadInStruct())
+    {
+        SuccessOrExit(error = aDecoder.OpenStruct());
+        SuccessOrExit(error = aDecoder.ReadIp6Address(aAddressResult.mAddresses[aAddressResult.mAddressesLength].mAddress));
+        SuccessOrExit(error = aDecoder.ReadUint32(aAddressResult.mAddresses[aAddressResult.mAddressesLength].mTtl));
+        SuccessOrExit(error = aDecoder.CloseStruct());
+        aAddressResult.mAddressesLength++;
+    }
+    SuccessOrExit(error = aDecoder.CloseStruct());
+    SuccessOrExit(error = aDecoder.ReadUint32(aAddressResult.mInfraIfIndex));
+    SuccessOrExit(error = aDecoder.ReadData(aCallbackData, aCallbackDataLen));
+    SuccessOrExit(error = aDecoder.CloseStruct());
 
 exit:
     return error;

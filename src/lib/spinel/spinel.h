@@ -4925,6 +4925,93 @@ enum
      */
     SPINEL_PROP_DNSSD_BROWSE_RESULT = SPINEL_PROP_DNSSD__BEGIN + 7,
 
+    /// DNS-SD Service Resolver
+    /**
+     * Format: `t(UUL D)`: Insert/Remove
+     *
+     * `U`: Service Instance
+     * `U`: Service Type
+     * `L`: The infrastructure network interface index.
+     * `D`: Callback data
+     */
+    SPINEL_PROP_DNSSD_SRV_RESOLVER = SPINEL_PROP_DNSSD__BEGIN + 8,
+
+    /// DNS-SD TXT Resolver
+    /**
+     * Format: `t(UUL D)`: Insert/Remove
+     *
+     * `U`: Service Instance
+     * `U`: Service Type
+     * `L`: The infrastructure network interface index.
+     * `D`: Callback data
+     */
+    SPINEL_PROP_DNSSD_TXT_RESOLVER = SPINEL_PROP_DNSSD__BEGIN + 9,
+
+    /// DNS-SD Address Resolver
+    /**
+     * Format: `t(UL D)`: Insert/Remove
+     *
+     * `U`: Hostname
+     * `L`: The infrastructure network interface index.
+     * `D`: Callback data
+     */
+    SPINEL_PROP_DNSSD_ADDRESS_RESOLVER = SPINEL_PROP_DNSSD__BEGIN + 10,
+
+    /**
+     * DNS-SD SRV Resolution Result
+     *
+     * Format: `t(LUUUSS L D)`: Set
+     *
+     * Reports the result of a DNS-SD service resolution on the infrastructure
+     * network.
+     *
+     * Content of the `otPlatDnssdSrvResult` struct:
+     *  `L`: TTL
+     *  `U`: Service Instance
+     *  `U`: Hostname
+     *  `S`: Priority
+     *  `S`: Weight
+     *  `S`: Port
+     *  `L`: The infrastructure network interface index.
+     *  `D`: Callback data
+     */
+    SPINEL_PROP_DNSSD_SRV_RESULT = SPINEL_PROP_DNSSD__BEGIN + 11,
+
+    /**
+     * DNS-SD TXT Resolution Result
+     *
+     * Format: `t(LUd L D)`: Set
+     *
+     * Reports the result of a DNS-SD TXT resolution on the infrastructure
+     * network.
+     *
+     * Content of the `otPlatDnssdTxtResult` struct:
+     *  `L`: TTL
+     *  `U`: Service Instance
+     *  `d`: TXT data
+     *  `L`: The infrastructure network interface index.
+     *  `D`: Callback data
+     */
+    SPINEL_PROP_DNSSD_TXT_RESULT = SPINEL_PROP_DNSSD__BEGIN + 12,
+
+    /**
+     * DNS-SD Address Resolution Result
+     *
+     * Format: `t(UA(6L) L D)`: Set
+     *
+     * Reports the result of a DNS-SD address resolution on the infrastructure
+     * network.
+     *
+     * Content of the `otPlatDnssdAddressResult` struct:
+     *  `U`: Hostname
+     *  `A(6L)`: Array of Address and TTL pairs
+     *    `6`: IPv6 Address
+     *    `L`: TTL
+     *  `L`: The infrastructure network interface index.
+     *  `D`: Callback data
+     */
+    SPINEL_PROP_DNSSD_ADDRESS_RESULT = SPINEL_PROP_DNSSD__BEGIN + 13,
+
     SPINEL_PROP_DNSSD__END = 0x950,
 
     SPINEL_PROP_BORDER_AGENT__BEGIN = 0x950,

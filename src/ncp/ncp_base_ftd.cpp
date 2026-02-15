@@ -1740,6 +1740,36 @@ void NcpBase::DnssdStopBrowser(const otPlatDnssdBrowser *aBrowser)
     DnssdUpdateDiscovery(aBrowser, /* aStart */ false);
 }
 
+void NcpBase::DnssdStartSrvResolver(const otPlatDnssdSrvResolver *aResolver)
+{
+    DnssdUpdateDiscovery(aResolver, /* aStart */ true);
+}
+
+void NcpBase::DnssdStopSrvResolver(const otPlatDnssdSrvResolver *aResolver)
+{
+    DnssdUpdateDiscovery(aResolver, /* aStart */ false);
+}
+
+void NcpBase::DnssdStartTxtResolver(const otPlatDnssdTxtResolver *aResolver)
+{
+    DnssdUpdateDiscovery(aResolver, /* aStart */ true);
+}
+
+void NcpBase::DnssdStopTxtResolver(const otPlatDnssdTxtResolver *aResolver)
+{
+    DnssdUpdateDiscovery(aResolver, /* aStart */ false);
+}
+
+void NcpBase::DnssdStartAddrResolver(const otPlatDnssdAddressResolver *aResolver)
+{
+    DnssdUpdateDiscovery(aResolver, /* aStart */ true);
+}
+
+void NcpBase::DnssdStopAddrResolver(const otPlatDnssdAddressResolver *aResolver)
+{
+    DnssdUpdateDiscovery(aResolver, /* aStart */ false);
+}
+
 otPlatDnssdState NcpBase::DnssdGetState(void) { return mDnssdState; }
 
 template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_DNSSD_STATE>(void)

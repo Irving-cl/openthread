@@ -325,6 +325,48 @@ public:
     void DnssdStopBrowser(const otPlatDnssdBrowser *aBrowser);
 
     /**
+     * Starts a service resolver.
+     *
+     * @param[in] aResolver  The resolver to be started.
+     */
+    void DnssdStartSrvResolver(const otPlatDnssdSrvResolver *aResolver);
+
+    /**
+     * Stops a service resolver.
+     *
+     * @param[in] aResolver  The resolver to be stopped.
+     */
+    void DnssdStopSrvResolver(const otPlatDnssdSrvResolver *aResolver);
+
+    /**
+     * Starts a TXT resolver.
+     *
+     * @param[in] aResolver  The resolver to be started.
+     */
+    void DnssdStartTxtResolver(const otPlatDnssdTxtResolver *aResolver);
+
+    /**
+     * Stops a TXT resolver.
+     *
+     * @param[in] aResolver  The resolver to be stopped.
+     */
+    void DnssdStopTxtResolver(const otPlatDnssdTxtResolver *aResolver);
+
+    /**
+     * Starts an address resolver.
+     *
+     * @param[in] aResolver  The resolver to be started.
+     */
+    void DnssdStartAddrResolver(const otPlatDnssdAddressResolver *aResolver);
+
+    /**
+     * Stops an address resolver.
+     *
+     * @param[in] aResolver  The resolver to be stopped.
+     */
+    void DnssdStopAddrResolver(const otPlatDnssdAddressResolver *aResolver);
+
+    /**
      * Gets the Dnssd state.
      *
      * Returns the platform dnssd state.
@@ -943,6 +985,21 @@ protected:
 template <> struct NcpBase::DnssdDiscoveryPropKeyFor<otPlatDnssdBrowser>
 {
     static constexpr spinel_prop_key_t Key = SPINEL_PROP_DNSSD_BROWSER;
+};
+
+template <> struct NcpBase::DnssdDiscoveryPropKeyFor<otPlatDnssdSrvResolver>
+{
+    static constexpr spinel_prop_key_t Key = SPINEL_PROP_DNSSD_SRV_RESOLVER;
+};
+
+template <> struct NcpBase::DnssdDiscoveryPropKeyFor<otPlatDnssdTxtResolver>
+{
+    static constexpr spinel_prop_key_t Key = SPINEL_PROP_DNSSD_TXT_RESOLVER;
+};
+
+template <> struct NcpBase::DnssdDiscoveryPropKeyFor<otPlatDnssdAddressResolver>
+{
+    static constexpr spinel_prop_key_t Key = SPINEL_PROP_DNSSD_ADDRESS_RESOLVER;
 };
 #endif
 
